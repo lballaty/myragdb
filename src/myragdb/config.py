@@ -50,8 +50,12 @@ class RepositoryConfig(BaseModel):
     file_patterns: FilePatterns = Field(default_factory=FilePatterns)
 
     @validator('path')
-    def validate_path_exists(cls, v):
-        """Validate that repository path exists."""
+    def validate_path_exists(cls, v, values):
+        """Validate that repository path exists (only for enabled repositories)."""
+        # Skip validation for disabled repositories
+        if not values.get('enabled', True):
+            return v
+
         path = Path(v).expanduser()
         if not path.exists():
             raise ValueError(f"Repository path does not exist: {v}")

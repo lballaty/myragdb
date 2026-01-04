@@ -9,7 +9,6 @@ from typing import List, Optional
 from dataclasses import dataclass
 
 import chromadb
-from chromadb.config import Settings as ChromaSettings
 from sentence_transformers import SentenceTransformer
 
 from myragdb.indexers.file_scanner import ScannedFile
@@ -85,13 +84,9 @@ class VectorIndexer:
         """
         Path(self.index_dir).mkdir(parents=True, exist_ok=True)
 
-        chroma_settings = ChromaSettings(
-            chroma_db_impl="duckdb+parquet",
-            persist_directory=self.index_dir,
-            anonymized_telemetry=False
+        return chromadb.PersistentClient(
+            path=self.index_dir,
         )
-
-        return chromadb.Client(chroma_settings)
 
     def _get_or_create_collection(self):
         """
