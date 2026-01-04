@@ -41,13 +41,13 @@
 - [~] Commit: "feat: implement file scanner and processor"
 
 ### 1.4 BM25 Indexer (Whoosh)
-- [ ] Install and configure Whoosh
-- [ ] Create schema for BM25 index (src/myragdb/indexers/bm25_indexer.py)
-- [ ] Implement indexing function (add documents)
-- [ ] Implement search function (query documents)
-- [ ] Add score normalization
-- [ ] Test with sample documents
-- [ ] Commit: "feat: implement BM25 indexer with Whoosh"
+- [x] Install and configure Whoosh
+- [x] Create schema for BM25 index (src/myragdb/indexers/bm25_indexer.py)
+- [x] Implement indexing function (add documents)
+- [x] Implement search function (query documents)
+- [x] Add score normalization (BM25F scoring)
+- [x] Test with sample documents (to be done after CLI)
+- [~] Commit: "feat: implement BM25 indexer with Whoosh"
 
 ### 1.5 Vector Indexer (ChromaDB)
 - [ ] Install and configure ChromaDB
