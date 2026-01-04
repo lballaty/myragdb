@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyRAGDB - Hybrid Search System</title>
+    <link rel="stylesheet" href="static/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🔍 MyRAGDB</h1>
+            <p class="subtitle">Hybrid Search System - BM25 + Vector Embeddings</p>
+            <div id="status-indicator" class="status-indicator">
+                <span class="status-dot"></span>
+                <span class="status-text">Checking...</span>
+            </div>
+        </header>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-button active" data-tab="search">Search</button>
+            <button class="tab-button" data-tab="activity">Activity Monitor</button>
+            <button class="tab-button" data-tab="stats">Statistics</button>
+        </div>
+
+        <!-- Search Tab -->
+        <div id="search-tab" class="tab-content active">
+            <div class="search-section">
+                <div class="search-box">
+                    <input
+                        type="text"
+                        id="search-input"
+                        placeholder="Search for code, documentation, patterns..."
+                        autocomplete="off"
+                    >
+                    <button id="search-button" class="primary-button">Search</button>
+                </div>
+
+                <div class="search-filters">
+                    <label>
+                        <span>Search Type:</span>
+                        <select id="search-type">
+                            <option value="hybrid">Hybrid (BM25 + Vector)</option>
+                            <option value="bm25">BM25 Only</option>
+                            <option value="semantic">Semantic Only</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Results:</span>
+                        <select id="result-limit">
+                            <option value="5">5</option>
+                            <option value="10" selected>10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div id="search-results" class="search-results"></div>
+            </div>
+        </div>
+
+        <!-- Activity Monitor Tab -->
+        <div id="activity-tab" class="tab-content">
+            <div class="activity-section">
+                <div class="activity-controls">
+                    <button id="refresh-activity" class="secondary-button">🔄 Refresh</button>
+                    <button id="clear-activity" class="secondary-button">🗑️ Clear</button>
+                </div>
+                <div id="activity-log" class="activity-log"></div>
+            </div>
+        </div>
+
+        <!-- Statistics Tab -->
+        <div id="stats-tab" class="tab-content">
+            <div class="stats-section">
+                <div class="stats-grid" id="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">BM25 Documents</div>
+                        <div class="stat-value" id="stat-bm25">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Vector Chunks</div>
+                        <div class="stat-value" id="stat-vector">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Searches</div>
+                        <div class="stat-value" id="stat-searches">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Avg Response Time</div>
+                        <div class="stat-value" id="stat-avg-time">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/js/app.js"></script>
+</body>
+</html>

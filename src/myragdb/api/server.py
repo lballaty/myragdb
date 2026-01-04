@@ -4,9 +4,12 @@
 # Created: 2026-01-04
 
 import time
+from pathlib import Path
 from typing import List
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 import uvicorn
 
 from myragdb.api.models import (
@@ -77,17 +80,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount static files for web UI
+web_ui_path = Path(__file__).parent.parent.parent.parent / "web-ui"
+if web_ui_path.exists():
+    app.mount("/static", StaticFiles(directory=str(web_ui_path / "static")), name="static")
 
-@app.get("/", response_model=HealthResponse)
+
+@app.get("/")
 async def root():
     """
-    Root endpoint - health check.
+    Serve the web UI.
 
-    Business Purpose: Confirms service is running and accessible.
+    Business Purpose: Provides web interface for searching and monitoring.
     """
+    index_path = web_ui_path / "index.html"
+    if index_path.exists():
+        return FileResponse(str(index_path))
     return HealthResponse(
         status="healthy",
-        message="MyRAGDB service is running"
+        message="MyRAGDB service is running (Web UI not found)"
     )
 
 
