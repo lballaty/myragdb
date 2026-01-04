@@ -45,6 +45,7 @@ setup(
         "structlog>=24.1.0",
         "click>=8.1.7",
         "rich>=13.7.0",
+        "httpx>=0.26.0",
         "prometheus-client>=0.19.0",
     ],
     extras_require={

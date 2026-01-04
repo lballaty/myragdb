@@ -92,13 +92,15 @@
 - [~] Commit: "feat: implement command-line interface"
 
 ### 1.9 Python Client Library
-- [ ] Create SearchClient class (agent_library/search_client.py)
-- [ ] Implement .search() method
-- [ ] Add connection handling
-- [ ] Add error handling and retries
-- [ ] Create example usage script
-- [ ] Test from Python REPL
-- [ ] Commit: "feat: implement Python client library for agents"
+- [x] Create SearchClient class (agent_library/search_client.py)
+- [x] Implement .search() method
+- [x] Implement .get_stats() method
+- [x] Implement .health_check() method
+- [x] Add connection handling (httpx)
+- [x] Add error handling
+- [x] Create example usage script
+- [x] Test from Python REPL (to be done after indexing)
+- [~] Commit: "feat: implement Python client library for agents"
 
 ### 1.10 Initial Indexing
 - [ ] Create indexing script (scripts/initial_index.py)
