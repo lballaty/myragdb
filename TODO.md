@@ -33,12 +33,12 @@
 - [~] Commit: "feat: implement configuration system"
 
 ### 1.3 File Scanner & Processor
-- [ ] Implement file discovery (src/myragdb/indexers/file_scanner.py)
-- [ ] Add file type detection
-- [ ] Implement text extraction from files
-- [ ] Add file filtering (include/exclude patterns)
-- [ ] Handle encoding detection
-- [ ] Commit: "feat: implement file scanner and processor"
+- [x] Implement file discovery (src/myragdb/indexers/file_scanner.py)
+- [x] Add file type detection
+- [x] Implement text extraction from files
+- [x] Add file filtering (include/exclude patterns)
+- [x] Handle encoding detection
+- [~] Commit: "feat: implement file scanner and processor"
 
 ### 1.4 BM25 Indexer (Whoosh)
 - [ ] Install and configure Whoosh
