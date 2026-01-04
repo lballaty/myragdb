@@ -82,13 +82,14 @@
 - [~] Commit: "feat: implement FastAPI server with search endpoints"
 
 ### 1.8 CLI Interface
-- [ ] Create CLI module (src/myragdb/cli.py)
-- [ ] Implement search command
-- [ ] Add formatted output (table/list view)
-- [ ] Add color coding for scores
-- [ ] Add --limit and --min-score flags
-- [ ] Test CLI searches
-- [ ] Commit: "feat: implement command-line interface"
+- [x] Create CLI module (src/myragdb/cli.py)
+- [x] Implement search command
+- [x] Implement stats command
+- [x] Add formatted output (Rich panels and tables)
+- [x] Add color coding for scores
+- [x] Add --limit, --min-score, --type, --repos flags
+- [x] Test CLI searches (to be done after indexing)
+- [~] Commit: "feat: implement command-line interface"
 
 ### 1.9 Python Client Library
 - [ ] Create SearchClient class (agent_library/search_client.py)
