@@ -69,14 +69,17 @@
 - [~] Commit: "feat: implement hybrid search with ranking"
 
 ### 1.7 FastAPI Backend - Basic
-- [ ] Create FastAPI app (src/myragdb/api/server.py)
-- [ ] Add CORS middleware
-- [ ] Create Pydantic models (src/myragdb/api/models.py)
-- [ ] Implement POST /search/hybrid endpoint
-- [ ] Add basic error handling
-- [ ] Add health check endpoint GET /health
-- [ ] Test with curl
-- [ ] Commit: "feat: implement FastAPI server with hybrid search endpoint"
+- [x] Create FastAPI app (src/myragdb/api/server.py)
+- [x] Add CORS middleware
+- [x] Create Pydantic models (src/myragdb/api/models.py)
+- [x] Implement POST /search/hybrid endpoint
+- [x] Implement POST /search/bm25 endpoint
+- [x] Implement POST /search/semantic endpoint
+- [x] Add basic error handling
+- [x] Add health check endpoint GET /health
+- [x] Add stats endpoint GET /stats
+- [x] Test with curl (to be done after indexing)
+- [~] Commit: "feat: implement FastAPI server with search endpoints"
 
 ### 1.8 CLI Interface
 - [ ] Create CLI module (src/myragdb/cli.py)
