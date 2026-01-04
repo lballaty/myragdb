@@ -98,7 +98,7 @@ class Settings(BaseSettings):
     """
     # Server Configuration
     host: str = Field(default="localhost", alias="MYRAGDB_HOST")
-    port: int = Field(default=3002, alias="MYRAGDB_PORT")
+    port: int = Field(default=3003, alias="MYRAGDB_PORT")
     workers: int = Field(default=4, alias="MYRAGDB_WORKERS")
 
     # Indexing Configuration

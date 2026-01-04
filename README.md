@@ -73,23 +73,19 @@ for result in results:
 #### Web UI
 
 ```bash
-# Start backend
+# Start server (serves both API and Web UI)
 python -m myragdb.api.server
 
-# In another terminal, start frontend
-cd web-ui
-npm install
-npm run dev
-
-# Open browser to http://localhost:5173
+# Open browser to http://localhost:3003
 ```
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────┐
-│  FastAPI REST Service (localhost:3002)  │
+│  FastAPI REST Service (localhost:3003)  │
 ├─────────────────────────────────────────┤
+│  GET  /                 (Web UI)        │
 │  POST /search/hybrid    (BM25 + Vector) │
 │  POST /search/bm25      (Keyword only)  │
 │  POST /search/semantic  (Vector only)   │
