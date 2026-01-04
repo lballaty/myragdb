@@ -103,12 +103,12 @@
 - [~] Commit: "feat: implement Python client library for agents"
 
 ### 1.10 Initial Indexing
-- [ ] Create indexing script (scripts/initial_index.py)
-- [ ] Index xLLMArionComply repository
+- [x] Create indexing script (scripts/initial_index.py)
+- [~] Index xLLMArionComply repository (ready to run)
 - [ ] Verify files indexed correctly
 - [ ] Test search queries
 - [ ] Document indexing process
-- [ ] Commit: "feat: add initial indexing script and index first repo"
+- [~] Commit: "feat: add initial indexing script"
 
 ### 1.11 Phase 1 Testing & Validation
 - [ ] Test CLI search with various queries
