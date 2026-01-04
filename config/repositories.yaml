@@ -1,0 +1,39 @@
+# File: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb/config/repositories.yaml
+# Description: Repository configuration for indexing
+# Author: Libor Ballaty <libor@arionetworks.com>
+# Created: 2026-01-04
+
+repositories:
+  - name: xLLMArionComply
+    path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/xLLMArionComply
+    enabled: true
+    priority: high
+    file_patterns:
+      include:
+        - "**/*.md"
+        - "**/*.py"
+        - "**/*.ts"
+        - "**/*.tsx"
+        - "**/*.dart"
+      exclude:
+        - "**/node_modules/**"
+        - "**/.git/**"
+        - "**/venv/**"
+        - "**/archive-*/**"
+        - "**/*.lock"
+        - "**/__pycache__/**"
+        - "**/dist/**"
+        - "**/build/**"
+
+  - name: RepoDot
+    path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/RepoDot
+    enabled: true
+    priority: high
+    file_patterns:
+      include:
+        - "**/*.md"
+        - "**/*.py"
+      exclude:
+        - "**/venv/**"
+        - "**/.git/**"
+        - "**/__pycache__/**"
