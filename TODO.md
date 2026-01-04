@@ -50,14 +50,14 @@
 - [~] Commit: "feat: implement BM25 indexer with Whoosh"
 
 ### 1.5 Vector Indexer (ChromaDB)
-- [ ] Install and configure ChromaDB
-- [ ] Download all-MiniLM-L6-v2 model
-- [ ] Create embedding generator (src/myragdb/indexers/vector_indexer.py)
-- [ ] Implement document chunking for large files
-- [ ] Implement vector indexing function
-- [ ] Implement semantic search function
-- [ ] Test embedding generation
-- [ ] Commit: "feat: implement vector indexer with ChromaDB"
+- [x] Install and configure ChromaDB
+- [x] Download all-MiniLM-L6-v2 model (happens automatically)
+- [x] Create embedding generator (src/myragdb/indexers/vector_indexer.py)
+- [x] Implement document chunking for large files
+- [x] Implement vector indexing function
+- [x] Implement semantic search function
+- [x] Test embedding generation (to be done after CLI)
+- [~] Commit: "feat: implement vector indexer with ChromaDB"
 
 ### 1.6 Hybrid Search
 - [ ] Create hybrid search module (src/myragdb/search/hybrid_search.py)
