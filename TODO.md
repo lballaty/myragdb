@@ -1,0 +1,393 @@
+# MyRAGDB Implementation TODO
+
+**File:** /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb/TODO.md
+**Description:** Granular task tracking for MyRAGDB implementation
+**Author:** Libor Ballaty <libor@arionetworks.com>
+**Created:** 2026-01-04
+
+---
+
+## Legend
+- `[ ]` Pending
+- `[~]` In Progress
+- `[x]` Completed
+
+---
+
+## Phase 1: Minimal CLI-Ready System
+
+### 1.1 Project Structure & Setup
+- [ ] Create directory structure (src/myragdb/, config/, agent_library/, tests/)
+- [ ] Create setup.py with package metadata
+- [ ] Create requirements.txt with dependencies
+- [ ] Create .gitignore (Python standard + data/)
+- [ ] Create README.md with quick start guide
+- [ ] Initialize __init__.py files in all packages
+- [ ] Commit: "feat: initialize project structure"
+
+### 1.2 Configuration System
+- [ ] Create config/repositories.yaml template
+- [ ] Implement config loader (src/myragdb/config.py)
+- [ ] Add environment variable support (.env)
+- [ ] Add configuration validation
+- [ ] Commit: "feat: implement configuration system"
+
+### 1.3 File Scanner & Processor
+- [ ] Implement file discovery (src/myragdb/indexers/file_scanner.py)
+- [ ] Add file type detection
+- [ ] Implement text extraction from files
+- [ ] Add file filtering (include/exclude patterns)
+- [ ] Handle encoding detection
+- [ ] Commit: "feat: implement file scanner and processor"
+
+### 1.4 BM25 Indexer (Whoosh)
+- [ ] Install and configure Whoosh
+- [ ] Create schema for BM25 index (src/myragdb/indexers/bm25_indexer.py)
+- [ ] Implement indexing function (add documents)
+- [ ] Implement search function (query documents)
+- [ ] Add score normalization
+- [ ] Test with sample documents
+- [ ] Commit: "feat: implement BM25 indexer with Whoosh"
+
+### 1.5 Vector Indexer (ChromaDB)
+- [ ] Install and configure ChromaDB
+- [ ] Download all-MiniLM-L6-v2 model
+- [ ] Create embedding generator (src/myragdb/indexers/vector_indexer.py)
+- [ ] Implement document chunking for large files
+- [ ] Implement vector indexing function
+- [ ] Implement semantic search function
+- [ ] Test embedding generation
+- [ ] Commit: "feat: implement vector indexer with ChromaDB"
+
+### 1.6 Hybrid Search
+- [ ] Create hybrid search module (src/myragdb/search/hybrid_search.py)
+- [ ] Implement parallel BM25 + vector search
+- [ ] Implement score normalization
+- [ ] Implement result merging (deduplicate by file path)
+- [ ] Implement weighted ranking (0.4 BM25 + 0.6 vector)
+- [ ] Add snippet extraction
+- [ ] Commit: "feat: implement hybrid search with ranking"
+
+### 1.7 FastAPI Backend - Basic
+- [ ] Create FastAPI app (src/myragdb/api/server.py)
+- [ ] Add CORS middleware
+- [ ] Create Pydantic models (src/myragdb/api/models.py)
+- [ ] Implement POST /search/hybrid endpoint
+- [ ] Add basic error handling
+- [ ] Add health check endpoint GET /health
+- [ ] Test with curl
+- [ ] Commit: "feat: implement FastAPI server with hybrid search endpoint"
+
+### 1.8 CLI Interface
+- [ ] Create CLI module (src/myragdb/cli.py)
+- [ ] Implement search command
+- [ ] Add formatted output (table/list view)
+- [ ] Add color coding for scores
+- [ ] Add --limit and --min-score flags
+- [ ] Test CLI searches
+- [ ] Commit: "feat: implement command-line interface"
+
+### 1.9 Python Client Library
+- [ ] Create SearchClient class (agent_library/search_client.py)
+- [ ] Implement .search() method
+- [ ] Add connection handling
+- [ ] Add error handling and retries
+- [ ] Create example usage script
+- [ ] Test from Python REPL
+- [ ] Commit: "feat: implement Python client library for agents"
+
+### 1.10 Initial Indexing
+- [ ] Create indexing script (scripts/initial_index.py)
+- [ ] Index xLLMArionComply repository
+- [ ] Verify files indexed correctly
+- [ ] Test search queries
+- [ ] Document indexing process
+- [ ] Commit: "feat: add initial indexing script and index first repo"
+
+### 1.11 Phase 1 Testing & Validation
+- [ ] Test CLI search with various queries
+- [ ] Test Python client with sample agent code
+- [ ] Verify search results are relevant
+- [ ] Check performance (< 500ms target)
+- [ ] Update README with Phase 1 usage examples
+- [ ] Commit: "docs: add Phase 1 usage examples and validation"
+
+---
+
+## Phase 2: Production Backend
+
+### 2.1 Multi-Repository Support
+- [ ] Enhance config to support multiple repos
+- [ ] Implement repository filtering in queries
+- [ ] Add repository priority weighting
+- [ ] Index RepoDot repository
+- [ ] Test multi-repo searches
+- [ ] Commit: "feat: add multi-repository support"
+
+### 2.2 Metadata Management
+- [ ] Create SQLite schema (src/myragdb/db/schema.sql)
+- [ ] Implement metadata database (src/myragdb/db/metadata.py)
+- [ ] Track file_path, repository, last_modified, content_hash
+- [ ] Implement incremental indexing logic
+- [ ] Add deduplication
+- [ ] Commit: "feat: implement SQLite metadata tracking"
+
+### 2.3 Additional API Endpoints
+- [ ] Implement POST /search/bm25
+- [ ] Implement POST /search/semantic
+- [ ] Implement GET /stats
+- [ ] Implement POST /index/repository
+- [ ] Implement GET /repositories
+- [ ] Update API documentation
+- [ ] Commit: "feat: add complete API endpoint suite"
+
+### 2.4 Advanced Search Features
+- [ ] Add file type filtering to search
+- [ ] Add date range filtering
+- [ ] Implement min score threshold
+- [ ] Add configurable result limits
+- [ ] Enhance snippet extraction with context
+- [ ] Commit: "feat: implement advanced search filters"
+
+### 2.5 Production Quality Improvements
+- [ ] Set up structured logging (structlog)
+- [ ] Add comprehensive error handling
+- [ ] Implement request validation
+- [ ] Add performance metrics collection
+- [ ] Create proper HTTP status codes
+- [ ] Commit: "feat: add production-grade logging and error handling"
+
+### 2.6 Agent Library Enhancements
+- [ ] Create QueryBuilder class (agent_library/query_builder.py)
+- [ ] Add retry logic with exponential backoff
+- [ ] Add timeout handling
+- [ ] Create documentation sync example (agent_library/examples/documentation_sync.py)
+- [ ] Create pattern finder example (agent_library/examples/pattern_finder.py)
+- [ ] Commit: "feat: enhance agent library with QueryBuilder and examples"
+
+### 2.7 Phase 2 Testing & Documentation
+- [ ] Write unit tests for indexers
+- [ ] Write integration tests for API
+- [ ] Test all endpoints with curl/httpie
+- [ ] Update README with all API endpoints
+- [ ] Create API usage guide
+- [ ] Commit: "test: add comprehensive test suite for Phase 2"
+
+---
+
+## Phase 3: Web UI Foundation
+
+### 3.1 React Project Setup
+- [ ] Create web-ui/ directory
+- [ ] Initialize Vite + React + TypeScript project
+- [ ] Configure Tailwind CSS
+- [ ] Set up project structure (components/, pages/, services/)
+- [ ] Configure ESLint and Prettier
+- [ ] Commit: "feat: initialize React web UI project"
+
+### 3.2 API Integration Layer
+- [ ] Create API client (web-ui/src/services/api.ts)
+- [ ] Create search service (web-ui/src/services/searchService.ts)
+- [ ] Set up React Query
+- [ ] Create TypeScript types for API responses
+- [ ] Commit: "feat: implement API integration layer"
+
+### 3.3 State Management
+- [ ] Set up Zustand
+- [ ] Create search store (web-ui/src/stores/searchStore.ts)
+- [ ] Create settings store (web-ui/src/stores/settingsStore.ts)
+- [ ] Add local storage persistence
+- [ ] Commit: "feat: implement state management with Zustand"
+
+### 3.4 Core Components - Search
+- [ ] Create SearchBar component
+- [ ] Implement debounced input
+- [ ] Add search-as-you-type option
+- [ ] Create SearchFilters component (repo/file type)
+- [ ] Commit: "feat: implement search input components"
+
+### 3.5 Core Components - Results
+- [ ] Create SearchResults component
+- [ ] Create ResultCard component
+- [ ] Add score visualization
+- [ ] Implement result list rendering
+- [ ] Add empty state
+- [ ] Commit: "feat: implement search results display"
+
+### 3.6 File Preview
+- [ ] Create ResultPreview component
+- [ ] Implement simple text preview with Prism.js
+- [ ] Add syntax highlighting
+- [ ] Add line number highlighting
+- [ ] Add copy to clipboard
+- [ ] Commit: "feat: implement file preview with syntax highlighting"
+
+### 3.7 Layout & Styling
+- [ ] Create Header component
+- [ ] Create main layout
+- [ ] Create SearchPage
+- [ ] Implement responsive design (desktop first)
+- [ ] Add loading states
+- [ ] Commit: "feat: implement app layout and styling"
+
+### 3.8 Search Flow Integration
+- [ ] Connect SearchBar to search store
+- [ ] Connect filters to search logic
+- [ ] Connect results to API
+- [ ] Test full search flow
+- [ ] Add error handling UI
+- [ ] Commit: "feat: integrate search flow end-to-end"
+
+### 3.9 Phase 3 Testing & Polish
+- [ ] Test UI in Chrome/Firefox/Safari
+- [ ] Fix any UI bugs
+- [ ] Add loading spinners
+- [ ] Polish styling
+- [ ] Update README with web UI instructions
+- [ ] Commit: "feat: polish web UI and add documentation"
+
+---
+
+## Phase 4: Advanced Features
+
+### 4.1 Auto-Indexing / File Watching
+- [ ] Install watchdog library
+- [ ] Implement file watcher (src/myragdb/indexers/file_watcher.py)
+- [ ] Add debouncing logic (wait 5s after changes)
+- [ ] Implement background task queue
+- [ ] Add progress reporting
+- [ ] Test with file edits
+- [ ] Commit: "feat: implement auto-indexing with file watching"
+
+### 4.2 Settings Page - Backend
+- [ ] Add PUT /repositories/:name endpoint
+- [ ] Add DELETE /repositories/:name endpoint
+- [ ] Add POST /repositories endpoint (add new)
+- [ ] Implement repository validation
+- [ ] Commit: "feat: add repository management API"
+
+### 4.3 Settings Page - Frontend
+- [ ] Create SettingsPage component
+- [ ] Create RepositoryList component
+- [ ] Create RepositoryCard component
+- [ ] Add add/edit/remove repository forms
+- [ ] Add manual reindex trigger
+- [ ] Connect to backend API
+- [ ] Commit: "feat: implement settings page for repository management"
+
+### 4.4 Statistics Dashboard - Backend
+- [ ] Enhance GET /stats endpoint with detailed metrics
+- [ ] Track search performance metrics
+- [ ] Add repository-specific stats
+- [ ] Commit: "feat: enhance statistics endpoint"
+
+### 4.5 Statistics Dashboard - Frontend
+- [ ] Create StatsPage component
+- [ ] Add repository status table
+- [ ] Add performance metrics display
+- [ ] Add charts with recharts (optional)
+- [ ] Commit: "feat: implement statistics dashboard"
+
+### 4.6 Search History
+- [ ] Implement history tracking (local storage)
+- [ ] Create HistoryPage component
+- [ ] Add recent searches list
+- [ ] Add save favorite searches
+- [ ] Add search suggestions
+- [ ] Commit: "feat: implement search history"
+
+### 4.7 Enhanced UI Features
+- [ ] Integrate Monaco editor for preview
+- [ ] Implement keyboard shortcuts (useKeyboardShortcuts hook)
+- [ ] Add dark mode support
+- [ ] Implement virtualized scrolling for results
+- [ ] Add pagination
+- [ ] Commit: "feat: add advanced UI features"
+
+### 4.8 Code-Aware Chunking
+- [ ] Implement AST parsing for Python files
+- [ ] Implement AST parsing for TypeScript files
+- [ ] Add function/class boundary detection
+- [ ] Enhance chunking strategy
+- [ ] Commit: "feat: implement code-aware chunking"
+
+### 4.9 Phase 4 Testing
+- [ ] Write E2E tests with Playwright
+- [ ] Test file watching thoroughly
+- [ ] Test all new UI features
+- [ ] Performance testing
+- [ ] Commit: "test: add E2E tests for advanced features"
+
+---
+
+## Phase 5: Operations & Polish
+
+### 5.1 System Service Setup
+- [ ] Create launchd plist (scripts/com.arionetworks.myragdb.plist)
+- [ ] Create install_service.sh script
+- [ ] Create uninstall_service.sh script
+- [ ] Test auto-start on boot
+- [ ] Add log rotation
+- [ ] Commit: "feat: add launchd service configuration"
+
+### 5.2 Performance Optimization
+- [ ] Implement index caching
+- [ ] Implement embedding cache
+- [ ] Optimize query performance
+- [ ] Optimize frontend bundle size
+- [ ] Add compression for API responses
+- [ ] Commit: "perf: optimize search and indexing performance"
+
+### 5.3 Comprehensive Testing
+- [ ] Ensure all unit tests pass
+- [ ] Ensure all integration tests pass
+- [ ] Run E2E test suite
+- [ ] Create performance benchmark suite
+- [ ] Run benchmarks and document results
+- [ ] Commit: "test: complete test coverage and benchmarks"
+
+### 5.4 Documentation
+- [ ] Update README with complete guide
+- [ ] Create API documentation (OpenAPI/Swagger)
+- [ ] Create agent integration guide
+- [ ] Create troubleshooting guide
+- [ ] Create architecture diagrams
+- [ ] Commit: "docs: add comprehensive documentation"
+
+### 5.5 Deployment & Installation
+- [ ] Create installation script
+- [ ] Create initial indexing script
+- [ ] Create backup/restore scripts
+- [ ] Test installation on fresh system
+- [ ] Document upgrade path
+- [ ] Commit: "feat: add installation and deployment scripts"
+
+### 5.6 Final Polish & Release
+- [ ] Fix any remaining bugs
+- [ ] Polish UI/UX
+- [ ] Verify all success metrics met
+- [ ] Create release notes
+- [ ] Tag version 1.0.0
+- [ ] Commit: "chore: prepare v1.0.0 release"
+
+---
+
+## Current Status
+
+**Active Phase:** Phase 1 - Minimal CLI-Ready System
+**Current Task:** 1.1 - Project Structure & Setup
+**Next Commit:** "feat: initialize project structure"
+
+---
+
+## Notes
+
+- Update this file after completing each task
+- Mark tasks with [x] when complete
+- Mark current task with [~] while in progress
+- Commit this file along with code changes
+- Review and update estimates as we learn
+
+---
+
+Questions: libor@arionetworks.com
