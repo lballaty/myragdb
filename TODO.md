@@ -60,13 +60,13 @@
 - [~] Commit: "feat: implement vector indexer with ChromaDB"
 
 ### 1.6 Hybrid Search
-- [ ] Create hybrid search module (src/myragdb/search/hybrid_search.py)
-- [ ] Implement parallel BM25 + vector search
-- [ ] Implement score normalization
-- [ ] Implement result merging (deduplicate by file path)
-- [ ] Implement weighted ranking (0.4 BM25 + 0.6 vector)
-- [ ] Add snippet extraction
-- [ ] Commit: "feat: implement hybrid search with ranking"
+- [x] Create hybrid search module (src/myragdb/search/hybrid_search.py)
+- [x] Implement BM25 + vector search (sequential for now)
+- [x] Implement score normalization
+- [x] Implement result merging (deduplicate by file path)
+- [x] Implement weighted ranking (0.4 BM25 + 0.6 vector)
+- [x] Add snippet extraction
+- [~] Commit: "feat: implement hybrid search with ranking"
 
 ### 1.7 FastAPI Backend - Basic
 - [ ] Create FastAPI app (src/myragdb/api/server.py)
