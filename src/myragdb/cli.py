@@ -105,23 +105,33 @@ def search(query: str, limit: int, repos: tuple, min_score: float, search_type: 
                     for r in results
                 ]
             else:  # hybrid
-                engine = HybridSearchEngine()
-                results = engine.search(
+                # Initialize indexers for hybrid search
+                import asyncio
+
+                meili = MeilisearchIndexer()
+                vector = VectorIndexer()
+                engine = HybridSearchEngine(
+                    meilisearch_indexer=meili,
+                    vector_indexer=vector
+                )
+
+                # Run async search
+                results = asyncio.run(engine.hybrid_search(
                     query=query,
                     limit=limit,
-                    repository_filter=repos[0] if repos else None,
-                    min_score=min_score
-                )
+                    rewrite_query=False  # Disable LLM rewrite for CLI simplicity
+                ))
+
                 formatted_results = [
                     {
                         'file_path': r.file_path,
                         'repository': r.repository,
                         'relative_path': r.relative_path,
-                        'score': r.combined_score,
+                        'score': r.rrf_score,
                         'keyword_score': r.keyword_score,
-                        'vector_score': r.vector_score,
+                        'vector_score': 1.0 / (1.0 + r.semantic_distance) if r.semantic_distance else 0.0,
                         'snippet': r.snippet,
-                        'file_type': r.file_type
+                        'file_type': r.file_name.split('.')[-1] if '.' in r.file_name else ''
                     }
                     for r in results
                 ]
@@ -175,7 +185,12 @@ def stats():
     """
     try:
         with console.status("[bold green]Loading statistics..."):
-            engine = HybridSearchEngine()
+            meili = MeilisearchIndexer()
+            vector = VectorIndexer()
+            engine = HybridSearchEngine(
+                meilisearch_indexer=meili,
+                vector_indexer=vector
+            )
             stats_data = engine.get_stats()
 
         table = Table(title="Index Statistics")

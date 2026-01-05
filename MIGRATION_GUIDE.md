@@ -10,7 +10,7 @@
 ## Migration Status
 
 ### ✅ Completed
-1. Removed Whoosh dependency from `requirements.txt`
+1. Removed Whoosh dependency from `requirements.txt` and `setup.py`
 2. Installed Meilisearch Python SDK (v0.31.0)
 3. Created `id_generator.py` - Base64 hash IDs for Meilisearch/ChromaDB parity
 4. Created `meilisearch_indexer.py` - Full featured indexer with:
@@ -20,12 +20,16 @@
    - 50k batch indexing
    - Incremental indexing (mtime-based)
    - Base64 hash primary keys
+5. **Fixed API key configuration** - MeilisearchIndexer now uses config settings by default
+6. **Fixed method signatures** - CLI search methods now use correct `repository_filter` parameter
+7. **Removed all legacy code** - Deleted `bm25_indexer.py`, updated all imports and references
+8. **CLI keyword search working** - Tested and verified with Meilisearch authentication
 
 ### ⏳ In Progress
-5. Hybrid search with RRF (draft created, needs directory)
-6. LLM router for llama.cpp ports
-7. Update `server.py` to use Meilisearch
-8. Update `vector_indexer.py` to use Base64 IDs
+9. Hybrid search with RRF (draft created, needs directory)
+10. LLM router for llama.cpp ports
+11. Update `server.py` to use Meilisearch
+12. Update `vector_indexer.py` to use Base64 IDs
 
 ---
 

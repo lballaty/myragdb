@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from myragdb.indexers.meilisearch_indexer import MeilisearchIndexer, MeilisearchResult
 from myragdb.indexers.vector_indexer import VectorIndexer
 from myragdb.llm.query_rewriter import QueryRewriter, RewrittenQuery
+from myragdb.config import load_repositories_config
 
 
 @dataclass
@@ -104,6 +105,40 @@ class HybridSearchEngine:
         self.vector = vector_indexer
         self.query_rewriter = query_rewriter or QueryRewriter()
         self.rrf_k = rrf_k
+
+        # Load repository priorities for score weighting
+        self.repo_priorities = self._load_repository_priorities()
+
+    def _load_repository_priorities(self) -> Dict[str, float]:
+        """
+        Load repository priority weights from configuration.
+
+        Business Purpose: Applies priority weighting to search results so that
+        documents from high-priority repositories rank higher than low-priority ones.
+
+        Priority weights:
+        - high: 1.5x multiplier
+        - medium: 1.0x (no change)
+        - low: 0.7x multiplier
+
+        Returns:
+            Dictionary mapping repository name to priority multiplier
+        """
+        priority_weights = {
+            "high": 1.5,
+            "medium": 1.0,
+            "low": 0.7
+        }
+
+        try:
+            repo_config = load_repositories_config()
+            return {
+                repo.name: priority_weights.get(repo.priority, 1.0)
+                for repo in repo_config.repositories
+            }
+        except Exception as e:
+            print(f"[HybridSearch] Warning: Could not load repository priorities: {e}")
+            return {}
 
     def reciprocal_rank_fusion(
         self,
@@ -292,10 +327,14 @@ class HybridSearchEngine:
                 except Exception as e:
                     print(f"[HybridSearch] Error fetching ChromaDB metadata: {e}")
 
+            # Apply repository priority weighting to RRF score
+            priority_multiplier = self.repo_priorities.get(repository, 1.0)
+            weighted_rrf_score = rrf_score * priority_multiplier
+
             hybrid_results.append(HybridSearchResult(
                 document_id=doc_id,
                 file_path=file_path,
-                rrf_score=rrf_score,
+                rrf_score=weighted_rrf_score,
                 keyword_rank=keyword_rank,
                 semantic_rank=semantic_rank,
                 keyword_score=keyword_score,

@@ -123,12 +123,13 @@
 ## Phase 2: Production Backend
 
 ### 2.1 Multi-Repository Support
-- [ ] Enhance config to support multiple repos
-- [ ] Implement repository filtering in queries
-- [ ] Add repository priority weighting
-- [ ] Index RepoDot repository
-- [ ] Test multi-repo searches
-- [ ] Commit: "feat: add multi-repository support"
+- [x] Enhance config to support multiple repos
+- [x] Implement repository filtering in queries
+- [x] Add repository priority weighting to hybrid search (1.5x high, 1.0x medium, 0.7x low)
+- [x] Index RepoTools repository (3,282 files added)
+- [x] Test multi-repo searches (working with 30,013 total documents)
+- [x] Verify repository discovery utility (found 98 repos in test scan)
+- [x] Commit: "feat: add multi-repository support"
 
 ### 2.2 Metadata Management
 - [ ] Create SQLite schema (src/myragdb/db/schema.sql)

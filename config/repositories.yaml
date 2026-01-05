@@ -57,16 +57,38 @@ repositories:
         - "**/*.lock"
         - "**/coverage/**"
 
-# Disabled repositories (commented out):
-# - name: RepoDot
-#   path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/RepoDot
-#   enabled: true
-#   priority: high
-#   file_patterns:
-#     include:
-#       - "**/*.md"
-#       - "**/*.py"
-#     exclude:
-#       - "**/venv/**"
-#       - "**/.git/**"
-#       - "**/__pycache__/**"
+  - name: RepoTools
+    path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/RepoTools
+    enabled: true
+    priority: high
+    file_patterns:
+      include:
+        # Documentation
+        - "**/*.md"
+        - "**/*.txt"
+        # Code files
+        - "**/*.py"
+        - "**/*.js"
+        - "**/*.ts"
+        - "**/*.tsx"
+        # Configuration
+        - "**/*.json"
+        - "**/*.yaml"
+        - "**/*.yml"
+        # Scripts
+        - "**/*.sh"
+      exclude:
+        # Dependencies
+        - "**/node_modules/**"
+        - "**/venv/**"
+        # Version control
+        - "**/.git/**"
+        # Python artifacts
+        - "**/__pycache__/**"
+        - "**/.pytest_cache/**"
+        - "**/.mypy_cache/**"
+        # Build outputs
+        - "**/dist/**"
+        - "**/build/**"
+        # Archives
+        - "**/archive-*/**"
