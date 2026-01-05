@@ -1,94 +1,190 @@
-# File: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb/config/repositories.yaml
-# Description: Repository configuration for indexing
-# Author: Libor Ballaty <libor@arionetworks.com>
-# Created: 2026-01-04
-
 repositories:
-  - name: xLLMArionComply
-    path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/xLLMArionComply
-    enabled: true
-    priority: high
-    file_patterns:
-      include:
-        # Documentation
-        - "**/*.md"
-        - "**/*.txt"
-        # Code files
-        - "**/*.py"
-        - "**/*.js"
-        - "**/*.jsx"
-        - "**/*.ts"
-        - "**/*.tsx"
-        - "**/*.dart"
-        # Configuration/Data files
-        - "**/*.json"
-        - "**/*.yaml"
-        - "**/*.yml"
-        - "**/*.toml"
-        # Scripts
-        - "**/*.sh"
-        - "**/*.sql"
-      exclude:
-        # Dependencies and libraries
-        - "**/node_modules/**"
-        - "**/vendor/**"
-        - "**/ios/Pods/**"
-        # Version control
-        - "**/.git/**"
-        # Python artifacts
-        - "**/venv/**"
-        - "**/__pycache__/**"
-        - "**/.pytest_cache/**"
-        - "**/.mypy_cache/**"
-        # Build outputs
-        - "**/dist/**"
-        - "**/build/**"
-        - "**/target/**"
-        - "**/.next/**"
-        - "**/.nuxt/**"
-        # Dart/Flutter artifacts
-        - "**/.dart_tool/**"
-        # Android/Gradle artifacts
-        - "**/android/.gradle/**"
-        - "**/.gradle/**"
-        # Archives and backups
-        - "**/archive-*/**"
-        # Lock files and coverage
-        - "**/*.lock"
-        - "**/coverage/**"
-
-  - name: RepoTools
-    path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/RepoTools
-    enabled: true
-    priority: high
-    file_patterns:
-      include:
-        # Documentation
-        - "**/*.md"
-        - "**/*.txt"
-        # Code files
-        - "**/*.py"
-        - "**/*.js"
-        - "**/*.ts"
-        - "**/*.tsx"
-        # Configuration
-        - "**/*.json"
-        - "**/*.yaml"
-        - "**/*.yml"
-        # Scripts
-        - "**/*.sh"
-      exclude:
-        # Dependencies
-        - "**/node_modules/**"
-        - "**/venv/**"
-        # Version control
-        - "**/.git/**"
-        # Python artifacts
-        - "**/__pycache__/**"
-        - "**/.pytest_cache/**"
-        - "**/.mypy_cache/**"
-        # Build outputs
-        - "**/dist/**"
-        - "**/build/**"
-        # Archives
-        - "**/archive-*/**"
+- name: xLLMArionComply
+  path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/xLLMArionComply
+  enabled: true
+  priority: high
+  file_patterns:
+    include:
+    - '**/*.md'
+    - '**/*.txt'
+    - '**/*.py'
+    - '**/*.js'
+    - '**/*.jsx'
+    - '**/*.ts'
+    - '**/*.tsx'
+    - '**/*.dart'
+    - '**/*.json'
+    - '**/*.yaml'
+    - '**/*.yml'
+    - '**/*.toml'
+    - '**/*.sh'
+    - '**/*.sql'
+    exclude:
+    - '**/node_modules/**'
+    - '**/vendor/**'
+    - '**/ios/Pods/**'
+    - '**/.git/**'
+    - '**/venv/**'
+    - '**/__pycache__/**'
+    - '**/.pytest_cache/**'
+    - '**/.mypy_cache/**'
+    - '**/dist/**'
+    - '**/build/**'
+    - '**/target/**'
+    - '**/.next/**'
+    - '**/.nuxt/**'
+    - '**/.dart_tool/**'
+    - '**/android/.gradle/**'
+    - '**/.gradle/**'
+    - '**/archive-*/**'
+    - '**/*.lock'
+    - '**/coverage/**'
+- name: RepoTools
+  path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/RepoTools
+  enabled: true
+  priority: high
+  file_patterns:
+    include:
+    - '**/*.md'
+    - '**/*.txt'
+    - '**/*.py'
+    - '**/*.js'
+    - '**/*.ts'
+    - '**/*.tsx'
+    - '**/*.json'
+    - '**/*.yaml'
+    - '**/*.yml'
+    - '**/*.sh'
+    exclude:
+    - '**/node_modules/**'
+    - '**/venv/**'
+    - '**/.git/**'
+    - '**/__pycache__/**'
+    - '**/.pytest_cache/**'
+    - '**/.mypy_cache/**'
+    - '**/dist/**'
+    - '**/build/**'
+    - '**/archive-*/**'
+  excluded: false
+- name: ISO27001DocumentGenerator
+  path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/ISO27001DocumentGenerator
+  enabled: true
+  priority: medium
+  file_patterns:
+    include:
+    - '**/*.md'
+    - '**/*.txt'
+    - '**/*.py'
+    - '**/*.js'
+    - '**/*.jsx'
+    - '**/*.ts'
+    - '**/*.tsx'
+    - '**/*.dart'
+    - '**/*.json'
+    - '**/*.yaml'
+    - '**/*.yml'
+    - '**/*.toml'
+    - '**/*.sh'
+    - '**/*.sql'
+    exclude:
+    - '**/node_modules/**'
+    - '**/vendor/**'
+    - '**/ios/Pods/**'
+    - '**/.git/**'
+    - '**/venv/**'
+    - '**/__pycache__/**'
+    - '**/.pytest_cache/**'
+    - '**/.mypy_cache/**'
+    - '**/dist/**'
+    - '**/build/**'
+    - '**/target/**'
+    - '**/.next/**'
+    - '**/.nuxt/**'
+    - '**/.dart_tool/**'
+    - '**/android/.gradle/**'
+    - '**/.gradle/**'
+    - '**/archive-*/**'
+    - '**/*.lock'
+    - '**/coverage/**'
+  excluded: false
+- name: gettingThroughTheDay
+  path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/gettingThroughTheDay
+  enabled: true
+  priority: medium
+  file_patterns:
+    include:
+    - '**/*.md'
+    - '**/*.txt'
+    - '**/*.py'
+    - '**/*.js'
+    - '**/*.jsx'
+    - '**/*.ts'
+    - '**/*.tsx'
+    - '**/*.dart'
+    - '**/*.json'
+    - '**/*.yaml'
+    - '**/*.yml'
+    - '**/*.toml'
+    - '**/*.sh'
+    - '**/*.sql'
+    exclude:
+    - '**/node_modules/**'
+    - '**/vendor/**'
+    - '**/ios/Pods/**'
+    - '**/.git/**'
+    - '**/venv/**'
+    - '**/__pycache__/**'
+    - '**/.pytest_cache/**'
+    - '**/.mypy_cache/**'
+    - '**/dist/**'
+    - '**/build/**'
+    - '**/target/**'
+    - '**/.next/**'
+    - '**/.nuxt/**'
+    - '**/.dart_tool/**'
+    - '**/android/.gradle/**'
+    - '**/.gradle/**'
+    - '**/archive-*/**'
+    - '**/*.lock'
+    - '**/coverage/**'
+- name: iframe-test
+  path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/iframe-test
+  enabled: true
+  priority: medium
+  file_patterns:
+    include:
+    - '**/*.md'
+    - '**/*.txt'
+    - '**/*.py'
+    - '**/*.js'
+    - '**/*.jsx'
+    - '**/*.ts'
+    - '**/*.tsx'
+    - '**/*.dart'
+    - '**/*.json'
+    - '**/*.yaml'
+    - '**/*.yml'
+    - '**/*.toml'
+    - '**/*.sh'
+    - '**/*.sql'
+    exclude:
+    - '**/node_modules/**'
+    - '**/vendor/**'
+    - '**/ios/Pods/**'
+    - '**/.git/**'
+    - '**/venv/**'
+    - '**/__pycache__/**'
+    - '**/.pytest_cache/**'
+    - '**/.mypy_cache/**'
+    - '**/dist/**'
+    - '**/build/**'
+    - '**/target/**'
+    - '**/.next/**'
+    - '**/.nuxt/**'
+    - '**/.dart_tool/**'
+    - '**/android/.gradle/**'
+    - '**/.gradle/**'
+    - '**/archive-*/**'
+    - '**/*.lock'
+    - '**/coverage/**'
+  excluded: false

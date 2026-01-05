@@ -228,7 +228,7 @@ async def list_tools() -> list[Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "scan_path": {
+                    "root_path": {
                         "type": "string",
                         "description": "Base directory to scan for repositories (e.g., '/Users/username/Projects')"
                     },
@@ -238,7 +238,7 @@ async def list_tools() -> list[Tool]:
                         "default": 3
                     }
                 },
-                "required": ["scan_path"]
+                "required": ["root_path"]
             }
         ),
         Tool(
@@ -520,7 +520,7 @@ async def _trigger_reindex(client: httpx.AsyncClient, args: dict) -> list[TextCo
 async def _discover_repositories(client: httpx.AsyncClient, args: dict) -> list[TextContent]:
     """Discover new repositories."""
     payload = {
-        "scan_path": args["scan_path"],
+        "root_path": args["root_path"],
         "max_depth": args.get("max_depth", 3)
     }
 
@@ -528,10 +528,10 @@ async def _discover_repositories(client: httpx.AsyncClient, args: dict) -> list[
     response.raise_for_status()
     data = response.json()
 
-    discovered = data.get("discovered", [])
+    discovered = data.get("repositories_found", [])
     count = len(discovered)
 
-    output = f"# Repository Discovery: {args['scan_path']}\n\n"
+    output = f"# Repository Discovery: {args['root_path']}\n\n"
     output += f"Found {count} repository/repositories\n\n"
 
     if count == 0:

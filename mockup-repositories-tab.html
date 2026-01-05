@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyRAGDB - Repositories Tab Mockup (Consolidated)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, var(--primary-color), #0ea5e9);
+            color: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .version-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .repo-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.9rem;
+            border-radius: 14px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: 2px solid #6ee7b7;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .progress-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.9rem;
+            border-radius: 14px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: #78350f;
+            border: 2px solid #fcd34d;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .subtitle {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--text-muted);
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: -2px;
+        }
+
+        .tab-button.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        /* Main Content */
+        .content {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        /* Section Headers */
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .section-header h2 {
+            color: var(--text-color);
+            font-size: 1.5rem;
+        }
+
+        .section {
+            margin-bottom: 3rem;
+        }
+
+        /* Discovery Section */
+        .discovery-controls {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            background: var(--bg-color);
+            border-radius: 8px;
+        }
+
+        .discovery-controls input[type="text"] {
+            padding: 0.75rem;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .discovery-controls select {
+            padding: 0.75rem;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .primary-button {
+            padding: 0.75rem 1.5rem;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .primary-button:hover {
+            background: var(--primary-hover);
+        }
+
+        .secondary-button {
+            padding: 0.75rem 1.5rem;
+            background: var(--border-color);
+            color: var(--text-color);
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .secondary-button:hover {
+            background: #cbd5e1;
+        }
+
+        /* Filters */
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: var(--bg-color);
+            border-radius: 8px;
+        }
+
+        .filters label {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .filters input,
+        .filters select {
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.95rem;
+        }
+
+        /* Bulk Actions */
+        .bulk-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: var(--bg-color);
+            border-radius: 8px;
+            flex-wrap: wrap;
+        }
+
+        .bulk-actions label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        /* Repository Cards */
+        .repo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .repo-card {
+            background: var(--bg-color);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            transition: all 0.2s;
+        }
+
+        .repo-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow);
+        }
+
+        .repo-card.indexed {
+            opacity: 0.85;
+        }
+
+        .repo-card-header {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .repo-card-header input[type="checkbox"] {
+            margin-top: 0.25rem;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .repo-card-header input[type="checkbox"]:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .repo-info {
+            flex: 1;
+        }
+
+        .repo-name {
+            font-weight: 600;
+            font-size: 1.05rem;
+            color: var(--text-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .repo-path {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            word-break: break-all;
+            margin-bottom: 0.5rem;
+        }
+
+        .repo-badges {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 0.75rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge.new {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge.indexed {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .priority-dropdown {
+            padding: 0.25rem 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .repo-meta {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        .repo-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-small {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.85rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .btn-add {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-add:hover {
+            background: #059669;
+        }
+
+        .btn-preview {
+            background: var(--border-color);
+            color: var(--text-color);
+        }
+
+        .btn-preview:hover {
+            background: #cbd5e1;
+        }
+
+        .btn-reindex {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .btn-reindex:hover {
+            background: #d97706;
+        }
+
+        .btn-remove {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-remove:hover {
+            background: #dc2626;
+        }
+
+        .btn-configure {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-configure:hover {
+            background: var(--primary-hover);
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            background: var(--bg-color);
+            border-radius: 8px;
+        }
+
+        .pagination-info {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .pagination-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Re-indexing Section */
+        .reindex-section {
+            background: var(--bg-color);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .repository-header {
+            padding-bottom: 0.75rem;
+            margin-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .repository-header label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .repository-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .repository-item {
+            display: flex;
+            align-items: start;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s;
+        }
+
+        .repository-item:hover {
+            border-color: var(--primary-color);
+            background: #f8fafc;
+        }
+
+        .repository-item input[type="checkbox"] {
+            margin-top: 0.25rem;
+            cursor: pointer;
+        }
+
+        .repository-info {
+            flex: 1;
+        }
+
+        .repository-name {
+            font-weight: 600;
+            color: var(--text-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .repository-path {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            word-break: break-all;
+        }
+
+        .repository-badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 0.25rem;
+        }
+
+        .repository-badge.enabled {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .repository-badge.priority-high {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .repository-badge.priority-medium {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .repository-badge.priority-low {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+
+        /* Index Options */
+        .index-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            background: var(--bg-color);
+            border-radius: 8px;
+        }
+
+        .index-option-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .index-option-group h4 {
+            color: var(--text-color);
+            font-size: 0.95rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .index-option-group label {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            padding: 0.75rem;
+            background: white;
+            border-radius: 6px;
+            border: 2px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .index-option-group label:hover {
+            border-color: var(--primary-color);
+            background: #f8fafc;
+        }
+
+        .index-option-group input[type="checkbox"],
+        .index-option-group input[type="radio"] {
+            margin-right: 0.5rem;
+            cursor: pointer;
+        }
+
+        .option-hint {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-style: italic;
+            margin-left: 1.5rem;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--bg-color);
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+            border-top: 4px solid var(--primary-color);
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .discovery-controls {
+                grid-template-columns: 1fr;
+            }
+
+            .filters {
+                grid-template-columns: 1fr;
+            }
+
+            .repo-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .bulk-actions {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-top">
+                <h1>🔍 MyRAGDB</h1>
+                <span class="version-badge">v2026.01.05</span>
+                <span class="repo-status-badge">
+                    <span>✅</span>
+                    <span>2 repositories available</span>
+                </span>
+                <span class="progress-badge">
+                    <span>⏳</span>
+                    <span>Indexing: RepoTools (1/2)</span>
+                </span>
+            </div>
+            <p class="subtitle">Hybrid Search System - Meilisearch Keyword + Vector Embeddings</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-button">Search</button>
+            <button class="tab-button">Activity Monitor</button>
+            <button class="tab-button active">Repositories</button>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content">
+            <!-- SECTION 1: Repository Discovery -->
+            <div class="section">
+                <div class="section-header">
+                    <h2>📂 Repository Discovery</h2>
+                </div>
+
+                <div class="discovery-controls">
+                    <input type="text" placeholder="Root path to scan (e.g., /Users/user/projects)" value="/Users/liborballaty/LocalProjects">
+                    <select>
+                        <option>Depth: 1</option>
+                        <option selected>Depth: 2</option>
+                        <option>Depth: 3</option>
+                        <option>Depth: 4</option>
+                        <option>Depth: 5</option>
+                    </select>
+                    <button class="primary-button">🔍 Scan for Repositories</button>
+                </div>
+
+                <!-- Filters -->
+                <div class="filters">
+                    <label>
+                        <span>Search Repositories</span>
+                        <input type="text" placeholder="Search by name or path...">
+                    </label>
+                    <label>
+                        <span>Status Filter</span>
+                        <select>
+                            <option>All Repositories (98)</option>
+                            <option>New Only (96)</option>
+                            <option>Already Indexed (2)</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Priority Filter</span>
+                        <select>
+                            <option>All Priorities</option>
+                            <option>High Priority</option>
+                            <option>Medium Priority</option>
+                            <option>Low Priority</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Last Indexed</span>
+                        <input type="date">
+                    </label>
+                </div>
+
+                <!-- Bulk Actions -->
+                <div class="bulk-actions">
+                    <button class="secondary-button">Select All New (96)</button>
+                    <button class="secondary-button">Select All Visible (20)</button>
+                    <label>
+                        <span>Default Priority:</span>
+                        <select class="priority-dropdown">
+                            <option>High</option>
+                            <option selected>Medium</option>
+                            <option>Low</option>
+                        </select>
+                    </label>
+                    <button class="primary-button">➕ Add Selected to Config (12 selected)</button>
+                </div>
+
+                <!-- Repository Cards -->
+                <div class="repo-grid">
+                    <!-- NEW Repository Example 1 -->
+                    <div class="repo-card">
+                        <div class="repo-card-header">
+                            <input type="checkbox" checked>
+                            <div class="repo-info">
+                                <div class="repo-name">ArionCompliance</div>
+                                <div class="repo-path">/Users/liborballaty/LocalProjects/ArionCompliance</div>
+                                <div class="repo-badges">
+                                    <span class="badge new">NEW</span>
+                                    <select class="priority-dropdown">
+                                        <option>High</option>
+                                        <option selected>Medium</option>
+                                        <option>Low</option>
+                                    </select>
+                                </div>
+                                <div class="repo-actions">
+                                    <button class="btn-small btn-add">➕ Add</button>
+                                    <button class="btn-small btn-preview">👁️ Preview</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- NEW Repository Example 2 -->
+                    <div class="repo-card">
+                        <div class="repo-card-header">
+                            <input type="checkbox" checked>
+                            <div class="repo-info">
+                                <div class="repo-name">DataPipeline</div>
+                                <div class="repo-path">/Users/liborballaty/LocalProjects/DataPipeline</div>
+                                <div class="repo-badges">
+                                    <span class="badge new">NEW</span>
+                                    <select class="priority-dropdown">
+                                        <option selected>High</option>
+                                        <option>Medium</option>
+                                        <option>Low</option>
+                                    </select>
+                                </div>
+                                <div class="repo-actions">
+                                    <button class="btn-small btn-add">➕ Add</button>
+                                    <button class="btn-small btn-preview">👁️ Preview</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- INDEXED Repository Example 1 -->
+                    <div class="repo-card indexed">
+                        <div class="repo-card-header">
+                            <input type="checkbox" disabled>
+                            <div class="repo-info">
+                                <div class="repo-name">xLLMArionComply</div>
+                                <div class="repo-path">/Users/liborballaty/LocalProjects/GitHubProjectsDocuments/xLLMArionComply</div>
+                                <div class="repo-badges">
+                                    <span class="badge indexed">INDEXED</span>
+                                    <select class="priority-dropdown">
+                                        <option selected>High</option>
+                                        <option>Medium</option>
+                                        <option>Low</option>
+                                    </select>
+                                </div>
+                                <div class="repo-meta">
+                                    📄 1,234 files • 45.2 MB • Last indexed: 2 hours ago
+                                </div>
+                                <div class="repo-actions">
+                                    <button class="btn-small btn-reindex">🔄 Re-index</button>
+                                    <button class="btn-small btn-remove">🗑️ Remove</button>
+                                    <button class="btn-small btn-configure">⚙️ Configure</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- INDEXED Repository Example 2 -->
+                    <div class="repo-card indexed">
+                        <div class="repo-card-header">
+                            <input type="checkbox" disabled>
+                            <div class="repo-info">
+                                <div class="repo-name">RepoTools</div>
+                                <div class="repo-path">/Users/liborballaty/LocalProjects/GitHubProjectsDocuments/RepoTools</div>
+                                <div class="repo-badges">
+                                    <span class="badge indexed">INDEXED</span>
+                                    <select class="priority-dropdown">
+                                        <option>High</option>
+                                        <option selected>Medium</option>
+                                        <option>Low</option>
+                                    </select>
+                                </div>
+                                <div class="repo-meta">
+                                    📄 567 files • 12.8 MB • Last indexed: 5 days ago
+                                </div>
+                                <div class="repo-actions">
+                                    <button class="btn-small btn-reindex">🔄 Re-index</button>
+                                    <button class="btn-small btn-remove">🗑️ Remove</button>
+                                    <button class="btn-small btn-configure">⚙️ Configure</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination">
+                    <div class="pagination-info">Showing 1-20 of 98 repositories</div>
+                    <div class="pagination-controls">
+                        <button class="secondary-button" disabled>← Previous</button>
+                        <button class="secondary-button">Next →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 2: Re-indexing -->
+            <div class="section">
+                <div class="section-header">
+                    <h2>🔄 Re-index Repositories</h2>
+                </div>
+
+                <div class="reindex-section">
+                    <div class="repository-header">
+                        <label>
+                            <input type="checkbox" id="select-all-repos">
+                            <strong>Select All</strong>
+                        </label>
+                    </div>
+                    <div class="repository-list">
+                        <div class="repository-item">
+                            <input type="checkbox" checked>
+                            <div class="repository-info">
+                                <div class="repository-name">xLLMArionComply</div>
+                                <div class="repository-path">/Users/liborballaty/LocalProjects/GitHubProjectsDocuments/xLLMArionComply</div>
+                                <div>
+                                    <span class="repository-badge enabled">Enabled</span>
+                                    <span class="repository-badge priority-high">HIGH</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="repository-item">
+                            <input type="checkbox" checked>
+                            <div class="repository-info">
+                                <div class="repository-name">RepoTools</div>
+                                <div class="repository-path">/Users/liborballaty/LocalProjects/GitHubProjectsDocuments/RepoTools</div>
+                                <div>
+                                    <span class="repository-badge enabled">Enabled</span>
+                                    <span class="repository-badge priority-medium">MEDIUM</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Index Options -->
+                <div class="index-options">
+                    <div class="index-option-group">
+                        <h4>Index Types:</h4>
+                        <label>
+                            <div>
+                                <input type="checkbox" checked>
+                                <strong>Keyword (Meilisearch)</strong>
+                            </div>
+                            <span class="option-hint">Fast keyword matching with typo tolerance</span>
+                        </label>
+                        <label>
+                            <div>
+                                <input type="checkbox" checked>
+                                <strong>Vector (Semantic Search)</strong>
+                            </div>
+                            <span class="option-hint">Slow but understands meaning</span>
+                        </label>
+                    </div>
+
+                    <div class="index-option-group">
+                        <h4>Index Mode:</h4>
+                        <label>
+                            <div>
+                                <input type="radio" name="index-mode" checked>
+                                <strong>Incremental Update</strong>
+                            </div>
+                            <span class="option-hint">Fast - updates existing indexes</span>
+                        </label>
+                        <label>
+                            <div>
+                                <input type="radio" name="index-mode">
+                                <strong>Full Rebuild</strong>
+                            </div>
+                            <span class="option-hint">Slow - clears and rebuilds from scratch</span>
+                        </label>
+                    </div>
+                </div>
+
+                <button class="primary-button" style="width: 100%; padding: 1rem; font-size: 1.1rem;">🔄 Re-index Selected Repositories</button>
+            </div>
+
+            <!-- SECTION 3: Statistics -->
+            <div class="section">
+                <div class="section-header">
+                    <h2>📊 System Statistics</h2>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Keyword Documents</div>
+                        <div class="stat-value">30,013</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Vector Chunks</div>
+                        <div class="stat-value">477,824</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Searches</div>
+                        <div class="stat-value">1,247</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Avg Response Time</div>
+                        <div class="stat-value">234ms</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Last Indexing Run</div>
+                        <div class="stat-value" style="font-size: 1.2rem;">2 hours ago</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Current Status</div>
+                        <div class="stat-value" style="font-size: 1.5rem; color: #10b981;">Ready</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
