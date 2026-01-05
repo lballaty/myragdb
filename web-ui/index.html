@@ -10,11 +10,28 @@
     <div class="container">
         <!-- Header -->
         <header class="header">
-            <h1>🔍 MyRAGDB</h1>
-            <p class="subtitle">Hybrid Search System - BM25 + Vector Embeddings</p>
-            <div id="status-indicator" class="status-indicator">
-                <span class="status-dot"></span>
-                <span class="status-text">Checking...</span>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 12px;">
+                <h1>🔍 MyRAGDB</h1>
+                <span id="version-badge" class="version-badge">v...</span>
+            </div>
+            <p class="subtitle">Hybrid Search System - Meilisearch Keyword + Vector Embeddings</p>
+            <div style="display: flex; align-items: center; justify-content: center; flex-wrap: wrap;">
+                <div id="status-indicator" class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Checking...</span>
+                </div>
+                <div id="indexing-progress" class="indexing-progress" style="display: none;">
+                    <div class="indexing-progress-header">
+                        <span class="spinner" style="width: 14px; height: 14px; border-width: 2px;"></span>
+                        <span id="indexing-header-text">Indexing...</span>
+                    </div>
+                    <div class="indexing-progress-details">
+                        <div id="indexing-detail-text"></div>
+                        <div class="indexing-progress-bar">
+                            <div id="indexing-progress-bar-fill" class="indexing-progress-bar-fill" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -42,8 +59,8 @@
                     <label>
                         <span>Search Type:</span>
                         <select id="search-type">
-                            <option value="hybrid">Hybrid (BM25 + Vector)</option>
-                            <option value="bm25">BM25 Only</option>
+                            <option value="hybrid">Hybrid (Keyword + Vector)</option>
+                            <option value="bm25">Keyword Only</option>
                             <option value="semantic">Semantic Only</option>
                         </select>
                     </label>
@@ -76,9 +93,63 @@
         <!-- Statistics Tab -->
         <div id="stats-tab" class="tab-content">
             <div class="stats-section">
+                <div class="reindex-section">
+                    <h3>Re-index Repositories</h3>
+                    <div class="repository-selection">
+                        <div class="repository-header">
+                            <label>
+                                <input type="checkbox" id="select-all-repos">
+                                <strong>Select All</strong>
+                            </label>
+                        </div>
+                        <div id="repository-list" class="repository-list">
+                            <div class="loading">Loading repositories...</div>
+                        </div>
+                    </div>
+
+                    <!-- Index Type Selection -->
+                    <div class="index-options">
+                        <div class="index-option-group">
+                            <h4>Index Types:</h4>
+                            <label>
+                                <input type="checkbox" id="index-bm25" checked>
+                                <strong>Keyword (Meilisearch)</strong>
+                                <span class="option-hint">Fast keyword matching with typo tolerance</span>
+                            </label>
+                            <label>
+                                <input type="checkbox" id="index-vector" checked>
+                                <strong>Vector (Semantic Search)</strong>
+                                <span class="option-hint">Slow but understands meaning</span>
+                            </label>
+                        </div>
+
+                        <div class="index-option-group">
+                            <h4>Index Mode:</h4>
+                            <label>
+                                <input type="radio" name="index-mode" id="mode-incremental" value="incremental" checked>
+                                <strong>Incremental Update</strong>
+                                <span class="option-hint">Fast - updates existing indexes</span>
+                            </label>
+                            <label>
+                                <input type="radio" name="index-mode" id="mode-full" value="full">
+                                <strong>Full Rebuild</strong>
+                                <span class="option-hint">Slow - clears and rebuilds from scratch</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="stats-controls">
+                        <button id="reindex-button" class="primary-button">🔄 Re-index Selected Repositories</button>
+                        <div id="indexing-status" class="indexing-status" style="display: none;">
+                            <span class="spinner"></span>
+                            <span>Indexing in progress...</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="stats-grid" id="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-label">BM25 Documents</div>
+                        <div class="stat-label">Keyword Documents</div>
                         <div class="stat-value" id="stat-bm25">-</div>
                     </div>
                     <div class="stat-card">
@@ -93,7 +164,27 @@
                         <div class="stat-label">Avg Response Time</div>
                         <div class="stat-value" id="stat-avg-time">-</div>
                     </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Last Indexed</div>
+                        <div class="stat-value" id="stat-last-index">Never</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Index Status</div>
+                        <div class="stat-value" id="stat-index-status">Ready</div>
+                    </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="reindex-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>⚠️ Confirm Re-indexing</h2>
+            <p id="modal-message"></p>
+            <div class="modal-buttons">
+                <button id="modal-cancel" class="secondary-button">Cancel</button>
+                <button id="modal-confirm" class="primary-button">Proceed</button>
             </div>
         </div>
     </div>

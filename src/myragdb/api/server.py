@@ -555,7 +555,7 @@ def run_keyword_index(
             if files:
                 mode_str = "full rebuild" if full_rebuild else "incremental"
                 print(f"[Keyword]   Found {len(files)} files in {repo.name} ({mode_str})")
-                target_meilisearch.index_files(files, batch_size=100)
+                target_meilisearch.index_files_batch(files, batch_size=100, incremental=not full_rebuild)
                 indexing_state["keyword"]["files_processed"] += len(files)
             else:
                 print(f"[Keyword]   No files found in {repo.name}")
