@@ -172,6 +172,8 @@ document.addEventListener('DOMContentLoaded', () => {
 function initializeSearch() {
     const searchInput = document.getElementById('search-input');
     const searchButton = document.getElementById('search-button');
+    const toggleAdvanced = document.getElementById('toggle-advanced-filters');
+    const advancedFilters = document.getElementById('advanced-filters');
 
     searchButton.addEventListener('click', performSearch);
 
@@ -180,12 +182,24 @@ function initializeSearch() {
             performSearch();
         }
     });
+
+    // Toggle advanced filters
+    if (toggleAdvanced) {
+        toggleAdvanced.addEventListener('click', () => {
+            const isVisible = advancedFilters.style.display !== 'none';
+            advancedFilters.style.display = isVisible ? 'none' : 'block';
+            toggleAdvanced.textContent = isVisible ? '🔽 Advanced Filters' : '🔼 Advanced Filters';
+        });
+    }
 }
 
 async function performSearch() {
     const query = document.getElementById('search-input').value.trim();
     const searchType = document.getElementById('search-type').value;
     const limit = parseInt(document.getElementById('result-limit').value);
+    const repository = document.getElementById('repository-filter').value;
+    const folderFilter = document.getElementById('folder-filter').value.trim();
+    const extensionFilter = document.getElementById('extension-filter').value.trim();
     const resultsDiv = document.getElementById('search-results');
     const searchButton = document.getElementById('search-button');
 
@@ -201,13 +215,19 @@ async function performSearch() {
 
     const startTime = performance.now();
 
+    // Build request body with filters
+    const requestBody = { query, limit };
+    if (repository) requestBody.repository_filter = repository;
+    if (folderFilter) requestBody.folder_filter = folderFilter;
+    if (extensionFilter) requestBody.extension_filter = extensionFilter;
+
     try {
         const response = await fetch(`${API_BASE_URL}/search/${searchType}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ query, limit })
+            body: JSON.stringify(requestBody)
         });
 
         if (!response.ok) {
@@ -509,6 +529,7 @@ async function loadRepositories() {
         state.repositories = repositories;
 
         renderRepositories();
+        populateRepositoryFilter();
 
         // Log repository names explicitly
         const repoNames = repositories.map(r => r.name).join(', ');
@@ -518,6 +539,25 @@ async function loadRepositories() {
         repositoryList.innerHTML = `<div class="error">Failed to load repositories: ${error.message}</div>`;
         addActivityLog('error', `Failed to load repositories: ${error.message}`);
     }
+}
+
+function populateRepositoryFilter() {
+    const filterSelect = document.getElementById('repository-filter');
+    if (!filterSelect) return;
+
+    // Keep the "All Repositories" option
+    filterSelect.innerHTML = '<option value="">All Repositories</option>';
+
+    // Add each repository as an option
+    state.repositories.forEach(repo => {
+        const option = document.createElement('option');
+        option.value = repo.name;
+        option.textContent = `${repo.name} ${repo.enabled ? '' : '(disabled)'}`;
+        option.disabled = !repo.enabled;
+        filterSelect.appendChild(option);
+    });
+
+    addActivityLog('info', `Repository filter populated with ${state.repositories.length} options`);
 }
 
 function renderRepositories() {

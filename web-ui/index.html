@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.05.2.5.2">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.05.2.6.0">
 </head>
 <body>
     <div class="container">
@@ -69,6 +69,12 @@
                         </select>
                     </label>
                     <label>
+                        <span>Repository:</span>
+                        <select id="repository-filter">
+                            <option value="">All Repositories</option>
+                        </select>
+                    </label>
+                    <label>
                         <span>Results:</span>
                         <select id="result-limit">
                             <option value="5">5</option>
@@ -77,6 +83,23 @@
                             <option value="50">50</option>
                         </select>
                     </label>
+                </div>
+
+                <div class="search-filters-advanced" id="advanced-filters" style="display: none;">
+                    <label>
+                        <span>Folder Filter:</span>
+                        <input type="text" id="folder-filter" placeholder="e.g., src/components">
+                    </label>
+                    <label>
+                        <span>Extension Filter:</span>
+                        <input type="text" id="extension-filter" placeholder="e.g., .py, .ts">
+                    </label>
+                </div>
+
+                <div style="margin-top: 8px;">
+                    <button id="toggle-advanced-filters" class="secondary-button" style="font-size: 0.9em; padding: 6px 12px;">
+                        🔽 Advanced Filters
+                    </button>
                 </div>
 
                 <div id="search-results" class="search-results"></div>
@@ -218,6 +241,6 @@
         </div>
     </div>
 
-    <script src="static/js/app.js?v=2026.01.05.2.5.2"></script>
+    <script src="static/js/app.js?v=2026.01.05.2.6.0"></script>
 </body>
 </html>
