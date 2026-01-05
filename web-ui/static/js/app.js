@@ -213,7 +213,10 @@ async function performSearch() {
     const query = document.getElementById('search-input').value.trim();
     const searchType = document.getElementById('search-type').value;
     const limit = parseInt(document.getElementById('result-limit').value);
-    const repository = document.getElementById('repository-filter').value;
+    const repositorySelect = document.getElementById('repository-filter');
+    const selectedRepos = Array.from(repositorySelect.selectedOptions)
+        .map(opt => opt.value)
+        .filter(val => val !== ''); // Exclude "All Repositories" empty value
     const folderFilter = document.getElementById('folder-filter').value.trim();
     const extensionFilter = document.getElementById('extension-filter').value.trim();
     const resultsDiv = document.getElementById('search-results');
@@ -233,7 +236,10 @@ async function performSearch() {
 
     // Build request body with filters
     const requestBody = { query, limit };
-    if (repository) requestBody.repository_filter = repository;
+    // Use repositories array if specific repos selected, otherwise omit (search all)
+    if (selectedRepos.length > 0) {
+        requestBody.repositories = selectedRepos;
+    }
     if (folderFilter) requestBody.folder_filter = folderFilter;
     if (extensionFilter) requestBody.extension_filter = extensionFilter;
 
@@ -603,8 +609,13 @@ function populateRepositoryFilter() {
     // Keep the "All Repositories" option
     filterSelect.innerHTML = '<option value="">All Repositories</option>';
 
+    // Sort repositories alphabetically by name
+    const sortedRepos = [...state.repositories].sort((a, b) =>
+        a.name.localeCompare(b.name)
+    );
+
     // Add each repository as an option
-    state.repositories.forEach(repo => {
+    sortedRepos.forEach(repo => {
         const option = document.createElement('option');
         option.value = repo.name;
         option.textContent = `${repo.name} ${repo.enabled ? '' : '(disabled)'}`;
@@ -612,7 +623,7 @@ function populateRepositoryFilter() {
         filterSelect.appendChild(option);
     });
 
-    addActivityLog('info', `Repository filter populated with ${state.repositories.length} options`);
+    addActivityLog('info', `Repository filter populated with ${state.repositories.length} options (alphabetically sorted)`);
 }
 
 function renderRepositories() {
@@ -1435,9 +1446,36 @@ function triggerSingleReindex(repoName) {
     alert(`Re-index functionality for: ${repoName}\n\nThis would trigger re-indexing for this specific repository.`);
 }
 
-function removeRepository(repoName) {
-    if (confirm(`Are you sure you want to remove "${repoName}" from configuration?`)) {
-        alert(`Remove functionality for: ${repoName}\n\nThis would remove the repository from config/repositories.yaml.`);
+async function removeRepository(repoName) {
+    if (!confirm(`Are you sure you want to remove "${repoName}" from configuration?\n\nThis will NOT delete any files on disk, only removes it from the indexing configuration.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/repositories/${encodeURIComponent(repoName)}`, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            addActivityLog('info', `Repository "${repoName}" removed from configuration`);
+
+            // Refresh discovery results to show updated status
+            const scanButton = document.getElementById('scan-repositories-button');
+            if (scanButton) {
+                scanButton.click();
+            }
+
+            // Also refresh repositories list
+            loadRepositories();
+        } else {
+            const error = await response.json();
+            addActivityLog('error', `Failed to remove repository: ${error.detail || 'Unknown error'}`);
+            alert(`Failed to remove repository: ${error.detail || 'Unknown error'}`);
+        }
+    } catch (error) {
+        addActivityLog('error', `Failed to remove repository: ${error.message}`);
+        alert(`Failed to remove repository: ${error.message}`);
     }
 }
 
@@ -1456,7 +1494,7 @@ async function toggleRepositoryExcluded(repoName, excludedValue) {
 
         if (response.ok) {
             const result = await response.json();
-            logActivity(`Repository "${repoName}" ${excludedValue ? 'locked (excluded)' : 'unlocked'}`);
+            addActivityLog('info', `Repository "${repoName}" ${excludedValue ? 'locked (excluded)' : 'unlocked'}`);
 
             // Refresh discovery results to show updated status
             const scanButton = document.getElementById('scan-repositories-button');
@@ -1468,9 +1506,11 @@ async function toggleRepositoryExcluded(repoName, excludedValue) {
             loadRepositories();
         } else {
             const error = await response.json();
+            addActivityLog('error', `Failed to update repository: ${error.detail || 'Unknown error'}`);
             alert(`Failed to update repository: ${error.detail || 'Unknown error'}`);
         }
     } catch (error) {
+        addActivityLog('error', `Failed to update repository: ${error.message}`);
         alert(`Failed to update repository: ${error.message}`);
     }
 }

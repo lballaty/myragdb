@@ -652,6 +652,58 @@ async def update_repository_settings(repo_name: str, excluded: Optional[bool] = 
         raise HTTPException(status_code=500, detail=f"Error updating repository: {str(e)}")
 
 
+@app.delete("/repositories/{repo_name}")
+async def delete_repository(repo_name: str):
+    """
+    Remove repository from configuration.
+
+    Business Purpose: Allows removing repositories from indexing configuration.
+    Does not delete any files on disk, only removes from config/repositories.yaml.
+
+    Args:
+        repo_name: Name of the repository to remove
+
+    Returns:
+        Confirmation of removal
+
+    Example:
+        DELETE /repositories/myragdb
+    """
+    try:
+        import yaml
+        config_path = "config/repositories.yaml"
+
+        # Load current configuration
+        with open(config_path, 'r') as f:
+            config_data = yaml.safe_load(f)
+
+        # Find and remove repository
+        repos = config_data.get('repositories', [])
+        original_count = len(repos)
+        repos = [repo for repo in repos if repo['name'] != repo_name]
+
+        if len(repos) == original_count:
+            raise HTTPException(status_code=404, detail=f"Repository '{repo_name}' not found")
+
+        # Update configuration
+        config_data['repositories'] = repos
+
+        # Save updated configuration
+        with open(config_path, 'w') as f:
+            yaml.safe_dump(config_data, f, default_flow_style=False, sort_keys=False)
+
+        return {
+            "status": "success",
+            "message": f"Repository '{repo_name}' removed from configuration",
+            "repository_name": repo_name
+        }
+
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Configuration file not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error removing repository: {str(e)}")
+
+
 @app.post("/search/hybrid", response_model=SearchResponse)
 async def search_hybrid(request: SearchRequest):
     """

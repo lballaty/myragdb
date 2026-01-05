@@ -15,8 +15,8 @@ from datetime import datetime
 # Example: 2026.01.05.1.0.0 = January 5, 2026, major version 1.0.0
 _BUILD_DATE = datetime(2026, 1, 5)  # Update this when creating new releases
 _MAJOR_VERSION = 2  # Increment for breaking changes
-_MINOR_VERSION = 10  # Increment for new features (backward compatible)
-_PATCH_VERSION = 1  # Increment for bug fixes only
+_MINOR_VERSION = 13  # Increment for new features (backward compatible)
+_PATCH_VERSION = 2  # Increment for bug fixes only
 
 __version__ = f"{_BUILD_DATE.year}.{_BUILD_DATE.month:02d}.{_BUILD_DATE.day:02d}.{_MAJOR_VERSION}.{_MINOR_VERSION}.{_PATCH_VERSION}"
 __version_info__ = (_BUILD_DATE.year, _BUILD_DATE.month, _BUILD_DATE.day, _MAJOR_VERSION, _MINOR_VERSION, _PATCH_VERSION)
@@ -24,9 +24,15 @@ __build_date__ = _BUILD_DATE.strftime("%Y-%m-%d")
 
 # Release notes for current version
 RELEASE_NOTES = f"""
-MyRAGDB v{__version__} - UI Bug Fixes + Cache Busting ({__build_date__})
+MyRAGDB v{__version__} - Repository Lock/Remove Bug Fixes ({__build_date__})
 
-Changes in v2026.01.05.1.0.3:
+Changes in v2026.01.05.2.13.2:
+- Fixed lock/unlock button (logActivity → addActivityLog)
+- Implemented remove repository endpoint (DELETE /repositories/:name)
+- Remove button now actually removes repositories from config
+- Both actions now log to activity monitor
+
+Previous changes (v2026.01.05.2.13.1):
 - Fixed keyword search 404 error (HTML dropdown value mismatch)
 - Added cache busting to CSS/JS assets (prevents stale browser cache)
 - HTML dropdown now correctly calls /search/keyword endpoint
