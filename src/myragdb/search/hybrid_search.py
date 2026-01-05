@@ -184,6 +184,7 @@ class HybridSearchEngine:
         query: str,
         limit: int = 10,
         rewrite_query: bool = True,
+        repository_filter: Optional[str] = None,
         folder_filter: Optional[str] = None,
         extension_filter: Optional[str] = None
     ) -> List[HybridSearchResult]:
@@ -239,6 +240,7 @@ class HybridSearchEngine:
                 results = self.meilisearch.search(
                     query=keywords,
                     limit=fetch_limit,
+                    repository_filter=repository_filter,
                     folder_filter=folder_filter,
                     extension_filter=extension_filter
                 )
@@ -251,9 +253,15 @@ class HybridSearchEngine:
         async def fetch_chromadb() -> tuple[List[str], List[float]]:
             """Fetch semantic results from ChromaDB."""
             try:
+                # Build where clause for repository filter
+                where_clause = None
+                if repository_filter:
+                    where_clause = {"repository": repository_filter}
+
                 results = self.vector.collection.query(
                     query_texts=[semantic_intent],
-                    n_results=fetch_limit
+                    n_results=fetch_limit,
+                    where=where_clause
                 )
                 doc_ids = results['ids'][0] if results['ids'] else []
                 distances = results['distances'][0] if results['distances'] else []

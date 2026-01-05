@@ -470,7 +470,10 @@ async def search_hybrid(request: SearchRequest):
         # Execute hybrid search
         results = await engine.hybrid_search(
             query=request.query,
-            limit=request.limit
+            limit=request.limit,
+            repository_filter=request.repository_filter,
+            folder_filter=request.folder_filter,
+            extension_filter=request.extension_filter
         )
 
         # Convert to API response format
@@ -525,7 +528,10 @@ async def search_keyword(request: SearchRequest):
         # Execute Meilisearch keyword search
         results = meili.search(
             query=request.query,
-            limit=request.limit
+            limit=request.limit,
+            repository_filter=request.repository_filter,
+            folder_filter=request.folder_filter,
+            extension_filter=request.extension_filter
         )
 
         # Convert to API response format
@@ -585,7 +591,7 @@ async def search_semantic(request: SearchRequest):
         results = vector.search(
             query=request.query,
             limit=request.limit,
-            repository=request.repositories[0] if request.repositories else None
+            repository=request.repository_filter or (request.repositories[0] if request.repositories else None)
         )
 
         # Convert to API response format

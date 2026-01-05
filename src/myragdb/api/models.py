@@ -38,6 +38,18 @@ class SearchRequest(BaseModel):
         default=None,
         description="Filter by specific repositories (None = all)"
     )
+    repository_filter: Optional[str] = Field(
+        default=None,
+        description="Filter by single repository name"
+    )
+    folder_filter: Optional[str] = Field(
+        default=None,
+        description="Filter by folder path (e.g., 'src/components')"
+    )
+    extension_filter: Optional[str] = Field(
+        default=None,
+        description="Filter by file extension (e.g., '.py', '.ts')"
+    )
     file_types: Optional[List[str]] = Field(
         default=None,
         description="Filter by file types (e.g., ['.md', '.py'])"
