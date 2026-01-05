@@ -125,7 +125,7 @@ from myragdb.version import __version__
 # Create FastAPI app
 app = FastAPI(
     title="MyRAGDB",
-    description="Hybrid search service combining BM25 and vector embeddings",
+    description="Hybrid search service combining keyword (Meilisearch) and vector embeddings",
     version=__version__,
     docs_url="/docs",
     redoc_url="/redoc"
@@ -208,7 +208,7 @@ async def get_stats():
         stats = engine.get_stats()
 
         return StatsResponse(
-            bm25_documents=stats["bm25_documents"],
+            keyword_documents=stats["keyword_documents"],
             vector_chunks=stats["vector_chunks"],
             is_indexing=indexing_state["is_indexing"],
             last_index_time=indexing_state["last_index_time"],
@@ -314,7 +314,7 @@ async def search_hybrid(request: SearchRequest):
                 repository=r.repository,
                 relative_path=r.relative_path,
                 score=r.rrf_score,
-                bm25_score=r.keyword_score,
+                keyword_score=r.keyword_score,
                 vector_score=1.0 / (1.0 + r.semantic_distance) if r.semantic_distance is not None else None,
                 snippet=r.snippet,
                 file_type=r.file_name.split('.')[-1] if '.' in r.file_name else ''
@@ -369,7 +369,7 @@ async def search_keyword(request: SearchRequest):
                 repository=r.repository,
                 relative_path=r.relative_path,
                 score=r.score,
-                bm25_score=r.score,  # Keep for backward compatibility with UI
+                keyword_score=r.score,
                 vector_score=None,
                 snippet=r.snippet,
                 file_type=r.file_type
@@ -429,7 +429,7 @@ async def search_semantic(request: SearchRequest):
                 repository=r.repository,
                 relative_path=r.relative_path,
                 score=r.score,
-                bm25_score=None,
+                keyword_score=None,
                 vector_score=r.score,
                 snippet=r.snippet,
                 file_type=r.file_type

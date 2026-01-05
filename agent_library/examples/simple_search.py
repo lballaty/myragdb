@@ -89,7 +89,7 @@ def main():
     print("\n\n=== Index Statistics ===")
     print("-" * 50)
     stats = client.get_stats()
-    print(f"BM25 Documents: {stats.get('bm25_documents', 0)}")
+    print(f"Keyword Documents: {stats.get('keyword_documents', 0)}")
     print(f"Vector Chunks: {stats.get('vector_chunks', 0)}")
 
     client.close()

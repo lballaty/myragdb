@@ -255,7 +255,7 @@ async function loadStatistics() {
         const response = await fetch(`${API_BASE_URL}/stats`);
         const data = await response.json();
 
-        document.getElementById('stat-bm25').textContent = data.bm25_documents.toLocaleString();
+        document.getElementById('stat-bm25').textContent = data.keyword_documents.toLocaleString();
         document.getElementById('stat-vector').textContent = data.vector_chunks.toLocaleString();
         document.getElementById('stat-searches').textContent = state.stats.totalSearches.toLocaleString();
 
@@ -307,7 +307,7 @@ async function loadStatistics() {
             document.getElementById('stat-last-index').textContent = 'Never';
         }
 
-        addActivityLog('info', `Statistics loaded: ${data.bm25_documents} docs, ${data.vector_chunks} chunks`);
+        addActivityLog('info', `Statistics loaded: ${data.keyword_documents} docs, ${data.vector_chunks} chunks`);
     } catch (error) {
         addActivityLog('error', `Failed to load statistics: ${error.message}`);
     }
@@ -606,8 +606,8 @@ async function updateIndexingProgress() {
             }
 
             // Show progress using actual indexed document counts
-            if (data.current_phase === 'BM25') {
-                details.push(`BM25: ${data.bm25_documents.toLocaleString()} docs`);
+            if (data.current_phase === 'Keyword') {
+                details.push(`Keyword: ${data.keyword_documents.toLocaleString()} docs`);
             } else if (data.current_phase === 'Vector') {
                 details.push(`Vector: ${data.vector_chunks.toLocaleString()} chunks`);
             }
@@ -625,8 +625,8 @@ async function updateIndexingProgress() {
             if (data.files_total > 0) {
                 // Use actual indexed counts for progress estimation
                 let indexedCount = 0;
-                if (data.current_phase === 'BM25') {
-                    indexedCount = data.bm25_documents;
+                if (data.current_phase === 'Keyword') {
+                    indexedCount = data.keyword_documents;
                 } else if (data.current_phase === 'Vector') {
                     // Vector chunks can exceed file count, so cap at files_total
                     indexedCount = Math.min(data.vector_chunks, data.files_total);

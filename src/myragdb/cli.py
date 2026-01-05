@@ -182,7 +182,7 @@ def stats():
         table.add_column("Metric", style="cyan")
         table.add_column("Value", style="magenta")
 
-        table.add_row("BM25 Documents", str(stats_data['bm25_documents']))
+        table.add_row("Keyword Documents", str(stats_data['keyword_documents']))
         table.add_row("Vector Chunks", str(stats_data['vector_chunks']))
 
         console.print()

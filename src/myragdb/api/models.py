@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 class SearchType(str, Enum):
     """Type of search to perform."""
     HYBRID = "hybrid"
-    BM25 = "bm25"
+    KEYWORD = "keyword"
     SEMANTIC = "semantic"
 
 
@@ -32,7 +32,7 @@ class SearchRequest(BaseModel):
     query: str = Field(..., min_length=1, description="Search query string")
     search_type: SearchType = Field(
         default=SearchType.HYBRID,
-        description="Type of search: hybrid, bm25, or semantic"
+        description="Type of search: hybrid, keyword, or semantic"
     )
     repositories: Optional[List[str]] = Field(
         default=None,
@@ -88,7 +88,7 @@ class SearchResultItem(BaseModel):
     repository: str = Field(..., description="Repository name")
     relative_path: str = Field(..., description="Path relative to repository")
     score: float = Field(..., description="Relevance score (0-1)")
-    bm25_score: Optional[float] = Field(None, description="BM25 component score")
+    keyword_score: Optional[float] = Field(None, description="Keyword component score")
     vector_score: Optional[float] = Field(None, description="Vector component score")
     snippet: str = Field(..., description="Content preview/snippet")
     file_type: str = Field(..., description="File extension")
@@ -100,7 +100,7 @@ class SearchResultItem(BaseModel):
                 "repository": "MyProject",
                 "relative_path": "src/auth.py",
                 "score": 0.89,
-                "bm25_score": 0.85,
+                "keyword_score": 0.85,
                 "vector_score": 0.92,
                 "snippet": "def authenticate_user(token: str)...",
                 "file_type": ".py"
@@ -163,13 +163,160 @@ class StatsResponse(BaseModel):
 
     Business Purpose: Provides visibility into index size and health.
     """
-    bm25_documents: int = Field(..., description="Number of documents in BM25 index")
+    keyword_documents: int = Field(..., description="Number of documents in keyword index")
     vector_chunks: int = Field(..., description="Number of chunks in vector index")
+    is_indexing: bool = Field(default=False, description="Whether indexing is currently in progress")
+    last_index_time: Optional[str] = Field(None, description="ISO timestamp of last index completion")
+    current_repository: Optional[str] = Field(None, description="Repository currently being indexed")
+    repositories_total: int = Field(default=0, description="Total number of repositories to index")
+    repositories_completed: int = Field(default=0, description="Number of repositories completed")
+    index_types: List[str] = Field(default_factory=list, description="Index types being processed (Keyword, Vector)")
+    current_phase: Optional[str] = Field(None, description="Current indexing phase (Keyword or Vector)")
+    files_processed: int = Field(default=0, description="Number of files processed so far")
+    files_total: int = Field(default=0, description="Total number of files to process")
+    mode: Optional[str] = Field(None, description="Indexing mode (incremental or full_rebuild)")
 
     class Config:
         json_schema_extra = {
             "example": {
-                "bm25_documents": 4521,
-                "vector_chunks": 8932
+                "keyword_documents": 4521,
+                "vector_chunks": 8932,
+                "is_indexing": True,
+                "last_index_time": "2026-01-04T19:00:00Z",
+                "current_repository": "xLLMArionComply",
+                "repositories_total": 1,
+                "repositories_completed": 0,
+                "index_types": ["Keyword", "Vector"],
+                "current_phase": "Vector",
+                "files_processed": 150,
+                "files_total": 500,
+                "mode": "incremental"
+            }
+        }
+
+
+class RepositoryInfo(BaseModel):
+    """
+    Repository information.
+
+    Business Purpose: Provides details about configured repositories.
+    """
+    name: str = Field(..., description="Repository name")
+    path: str = Field(..., description="Repository path")
+    enabled: bool = Field(..., description="Whether repository is enabled")
+    priority: str = Field(..., description="Repository priority (high, medium, low)")
+    file_count: Optional[int] = Field(None, description="Number of files that would be indexed (None if not yet scanned)")
+    total_size_bytes: Optional[int] = Field(None, description="Total size of all files to be indexed in bytes (None if not yet scanned)")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "xLLMArionComply",
+                "path": "/Users/user/projects/xLLMArionComply",
+                "enabled": True,
+                "priority": "high"
+            }
+        }
+
+
+class ReindexRequest(BaseModel):
+    """
+    Re-indexing request.
+
+    Business Purpose: Allows selective re-indexing of specific repositories
+    with control over which indexes to rebuild and how.
+    """
+    repositories: Optional[List[str]] = Field(
+        default=None,
+        description="List of repository names to re-index (None = all enabled)"
+    )
+    index_bm25: bool = Field(
+        default=True,
+        description="Whether to re-index keyword index"
+    )
+    index_vector: bool = Field(
+        default=True,
+        description="Whether to re-index Vector (semantic) index"
+    )
+    full_rebuild: bool = Field(
+        default=False,
+        description="If True, clears and rebuilds indexes from scratch. If False, incrementally updates existing indexes."
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "repositories": ["xLLMArionComply"],
+                "index_bm25": True,
+                "index_vector": True,
+                "full_rebuild": False
+            }
+        }
+
+
+class ReindexResponse(BaseModel):
+    """
+    Re-indexing response.
+
+    Business Purpose: Confirms re-indexing operation was triggered.
+    """
+    status: str = Field(..., description="Operation status")
+    message: str = Field(..., description="Status message")
+    started_at: str = Field(..., description="ISO timestamp when indexing started")
+    repositories: List[str] = Field(..., description="List of repositories being indexed")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "started",
+                "message": "Re-indexing started in background",
+                "started_at": "2026-01-04T19:30:00Z",
+                "repositories": ["xLLMArionComply"]
+            }
+        }
+
+
+class StopIndexingRequest(BaseModel):
+    """
+    Stop indexing request.
+
+    Business Purpose: Allows graceful stopping of running indexing operations
+    to free up resources or make corrections.
+    """
+    stop_bm25: bool = Field(
+        default=True,
+        description="Whether to stop keyword indexing if running"
+    )
+    stop_vector: bool = Field(
+        default=True,
+        description="Whether to stop Vector indexing if running"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "stop_bm25": True,
+                "stop_vector": True
+            }
+        }
+
+
+class StopIndexingResponse(BaseModel):
+    """
+    Stop indexing response.
+
+    Business Purpose: Confirms stop request was registered and indicates
+    which indexing operations were requested to stop.
+    """
+    status: str = Field(..., description="Operation status")
+    message: str = Field(..., description="Status message")
+    stopped: List[str] = Field(..., description="List of index types that were requested to stop")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "stopping",
+                "message": "Stop request registered, indexing will halt at next safe checkpoint",
+                "stopped": ["Keyword", "Vector"]
             }
         }

@@ -323,6 +323,6 @@ class HybridSearchEngine:
             Dictionary with stats from both indexers
         """
         return {
-            "bm25_documents": self.meilisearch.get_document_count(),
+            "keyword_documents": self.meilisearch.get_document_count(),
             "vector_chunks": self.vector.get_document_count()
         }

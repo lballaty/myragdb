@@ -167,7 +167,7 @@ class SearchClient:
 
         Example:
             stats = client.get_stats()
-            print(f"Indexed documents: {stats['bm25_documents']}")
+            print(f"Indexed documents: {stats['keyword_documents']}")
         """
         try:
             response = self.client.get(f"{self.base_url}/stats")
