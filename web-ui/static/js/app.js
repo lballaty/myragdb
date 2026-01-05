@@ -290,9 +290,52 @@ function getScoreClass(score) {
 }
 
 // Activity Monitor
+let currentActivityView = 'ui'; // 'ui' or 'server'
+
 function initializeActivityMonitor() {
-    document.getElementById('refresh-activity').addEventListener('click', renderActivityLog);
+    document.getElementById('refresh-activity').addEventListener('click', () => {
+        if (currentActivityView === 'ui') {
+            renderActivityLog();
+        } else {
+            loadServerLogs();
+        }
+    });
     document.getElementById('clear-activity').addEventListener('click', clearActivityLog);
+
+    // Tab switching
+    document.getElementById('tab-ui-logs').addEventListener('click', () => switchActivityView('ui'));
+    document.getElementById('tab-server-logs').addEventListener('click', () => switchActivityView('server'));
+
+    // Server logs filters
+    document.getElementById('log-level-select').addEventListener('change', loadServerLogs);
+    document.getElementById('log-lines-select').addEventListener('change', loadServerLogs);
+}
+
+function switchActivityView(view) {
+    currentActivityView = view;
+
+    // Update tab buttons
+    document.getElementById('tab-ui-logs').classList.toggle('active', view === 'ui');
+    document.getElementById('tab-server-logs').classList.toggle('active', view === 'server');
+
+    // Show/hide appropriate content
+    document.getElementById('activity-log').style.display = view === 'ui' ? 'block' : 'none';
+    document.getElementById('server-logs').style.display = view === 'server' ? 'block' : 'none';
+
+    // Show/hide filter controls
+    document.getElementById('log-level-filter').style.display = view === 'server' ? 'inline-block' : 'none';
+    document.getElementById('log-lines-filter').style.display = view === 'server' ? 'inline-block' : 'none';
+
+    // Update clear button behavior
+    const clearButton = document.getElementById('clear-activity');
+    clearButton.style.display = view === 'ui' ? 'inline-block' : 'none';
+
+    // Load appropriate content
+    if (view === 'ui') {
+        renderActivityLog();
+    } else {
+        loadServerLogs();
+    }
 }
 
 function addActivityLog(type, message) {
@@ -337,6 +380,54 @@ function clearActivityLog() {
         renderActivityLog();
         saveToLocalStorage();
         addActivityLog('info', 'Activity log cleared');
+    }
+}
+
+async function loadServerLogs() {
+    const logsDiv = document.getElementById('server-logs');
+    const level = document.getElementById('log-level-select').value;
+    const lines = document.getElementById('log-lines-select').value;
+
+    try {
+        logsDiv.innerHTML = '<div style="color: #94a3b8;">Loading server logs...</div>';
+
+        const params = new URLSearchParams({ lines });
+        if (level) {
+            params.append('level', level);
+        }
+
+        const response = await fetch(`${API_BASE_URL}/logs?${params}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.logs && data.logs.length > 0) {
+            const logsHtml = data.logs.map(logLine => {
+                // Colorize log levels
+                const coloredLine = logLine
+                    .replace(/(ERROR)/g, '<span style="color: #ef4444; font-weight: bold;">$1</span>')
+                    .replace(/(WARNING)/g, '<span style="color: #f59e0b; font-weight: bold;">$1</span>')
+                    .replace(/(INFO)/g, '<span style="color: #10b981;">$1</span>');
+                return `<div style="padding: 0.25rem 0; border-bottom: 1px solid #334155;">${coloredLine}</div>`;
+            }).join('');
+
+            const filterInfo = data.filtered_by ? ` (filtered by ${data.filtered_by})` : '';
+            logsDiv.innerHTML = `
+                <div style="color: #94a3b8; margin-bottom: 1rem; font-size: 0.9rem;">
+                    Showing ${data.total} lines${filterInfo}
+                </div>
+                ${logsHtml}
+            `;
+        } else if (data.message) {
+            logsDiv.innerHTML = `<div style="color: #94a3b8;">${escapeHtml(data.message)}</div>`;
+        } else {
+            logsDiv.innerHTML = '<div style="color: #94a3b8;">No logs available.</div>';
+        }
+    } catch (error) {
+        logsDiv.innerHTML = `<div style="color: #ef4444;">Failed to load server logs: ${escapeHtml(error.message)}</div>`;
+        console.error('Failed to load server logs:', error);
     }
 }
 

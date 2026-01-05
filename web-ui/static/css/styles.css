@@ -430,8 +430,44 @@ body {
 
 .activity-controls {
     display: flex;
+    justify-content: space-between;
+    align-items: center;
     gap: 1rem;
     margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.activity-tabs {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.activity-tab-button {
+    padding: 0.5rem 1rem;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+
+.activity-tab-button:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-color);
+}
+
+.activity-tab-button.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.activity-controls-group {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
 }
 
 .activity-log {

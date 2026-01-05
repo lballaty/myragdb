@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.05.2.2.0">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.05.2.3.0">
 </head>
 <body>
     <div class="container">
@@ -87,10 +87,35 @@
         <div id="activity-tab" class="tab-content">
             <div class="activity-section">
                 <div class="activity-controls">
-                    <button id="refresh-activity" class="secondary-button">🔄 Refresh</button>
-                    <button id="clear-activity" class="secondary-button">🗑️ Clear</button>
+                    <div class="activity-tabs">
+                        <button id="tab-ui-logs" class="activity-tab-button active">UI Activity</button>
+                        <button id="tab-server-logs" class="activity-tab-button">Server Logs</button>
+                    </div>
+                    <div class="activity-controls-group">
+                        <label id="log-level-filter" style="display: none;">
+                            <span>Level:</span>
+                            <select id="log-level-select">
+                                <option value="">All</option>
+                                <option value="ERROR">ERROR</option>
+                                <option value="WARNING">WARNING</option>
+                                <option value="INFO">INFO</option>
+                            </select>
+                        </label>
+                        <label id="log-lines-filter" style="display: none;">
+                            <span>Lines:</span>
+                            <select id="log-lines-select">
+                                <option value="50">50</option>
+                                <option value="100" selected>100</option>
+                                <option value="200">200</option>
+                                <option value="500">500</option>
+                            </select>
+                        </label>
+                        <button id="refresh-activity" class="secondary-button">🔄 Refresh</button>
+                        <button id="clear-activity" class="secondary-button">🗑️ Clear</button>
+                    </div>
                 </div>
                 <div id="activity-log" class="activity-log"></div>
+                <div id="server-logs" class="activity-log" style="display: none;"></div>
             </div>
         </div>
 
@@ -193,6 +218,6 @@
         </div>
     </div>
 
-    <script src="static/js/app.js?v=2026.01.05.2.2.0"></script>
+    <script src="static/js/app.js?v=2026.01.05.2.3.0"></script>
 </body>
 </html>
