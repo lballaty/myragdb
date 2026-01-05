@@ -1,0 +1,135 @@
+{
+  "openai_format": {
+    "description": "OpenAI function calling format - compatible with OpenAI, Ollama, LM Studio, and most local LLMs",
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "search_codebase",
+          "description": "Search across all indexed codebases using hybrid keyword + semantic search. Finds relevant code, documentation, and files based on natural language queries. Best for discovering implementation patterns, finding where features are implemented, locating documentation, understanding how things work across projects.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "Natural language search query (e.g., 'how is authentication implemented', 'JWT token validation')"
+              },
+              "search_type": {
+                "type": "string",
+                "enum": ["hybrid", "semantic", "keyword"],
+                "default": "hybrid",
+                "description": "Type of search: hybrid (keyword+semantic), semantic (meaning-based), or keyword (exact matches)"
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 10,
+                "description": "Maximum number of results to return"
+              },
+              "repositories": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Optional: Filter to specific repositories by name"
+              },
+              "file_types": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Optional: Filter by file extensions (e.g., ['.py', '.ts', '.md'])"
+              }
+            },
+            "required": ["query"]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "list_repositories",
+          "description": "List all available indexed repositories. Shows repository names, paths, and enabled status.",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "get_index_stats",
+          "description": "Get statistics about the indexed data including total files, total repositories, and per-repository counts.",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      }
+    ]
+  },
+  "anthropic_format": {
+    "description": "Anthropic Claude tool format",
+    "tools": [
+      {
+        "name": "search_codebase",
+        "description": "Search across all indexed codebases using hybrid keyword + semantic search.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Search query"
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Max results (default: 10)"
+            }
+          },
+          "required": ["query"]
+        }
+      }
+    ]
+  },
+  "implementation": {
+    "description": "How to implement these tools in your LLM client",
+    "base_url": "http://localhost:8080",
+    "endpoints": {
+      "search_codebase": {
+        "url": "http://localhost:8080/search",
+        "method": "POST",
+        "example_request": {
+          "query": "authentication flow",
+          "search_type": "hybrid",
+          "limit": 10
+        },
+        "example_response": {
+          "query": "authentication flow",
+          "search_type": "hybrid",
+          "total_results": 5,
+          "search_time_ms": 245.3,
+          "results": [
+            {
+              "file_path": "/path/to/file.py",
+              "repository": "MyProject",
+              "relative_path": "src/auth/login.py",
+              "score": 0.85,
+              "snippet": "def authenticate_user()...",
+              "file_type": "py"
+            }
+          ]
+        }
+      },
+      "list_repositories": {
+        "url": "http://localhost:8080/repositories",
+        "method": "GET"
+      },
+      "get_index_stats": {
+        "url": "http://localhost:8080/stats",
+        "method": "GET"
+      }
+    }
+  }
+}
