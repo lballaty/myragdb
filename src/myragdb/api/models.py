@@ -217,6 +217,7 @@ class RepositoryInfo(BaseModel):
     path: str = Field(..., description="Repository path")
     enabled: bool = Field(..., description="Whether repository is enabled")
     priority: str = Field(..., description="Repository priority (high, medium, low)")
+    excluded: bool = Field(False, description="Whether repository is excluded from indexing (locked)")
     file_count: Optional[int] = Field(None, description="Number of files that would be indexed (None if not yet scanned)")
     total_size_bytes: Optional[int] = Field(None, description="Total size of all files to be indexed in bytes (None if not yet scanned)")
 

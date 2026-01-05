@@ -623,7 +623,15 @@ function renderRepositories() {
         return;
     }
 
-    const reposHtml = state.repositories.map(repo => {
+    // Filter out excluded repos from re-index section
+    const availableRepos = state.repositories.filter(repo => !repo.excluded);
+
+    if (availableRepos.length === 0) {
+        repositoryList.innerHTML = '<div style="color: var(--text-muted);">All repositories are excluded from indexing</div>';
+        return;
+    }
+
+    const reposHtml = availableRepos.map(repo => {
         const enabledClass = repo.enabled ? 'enabled' : 'disabled';
         const priorityClass = `priority-${repo.priority}`;
 
@@ -1124,6 +1132,7 @@ function applyDiscoveryFilters() {
         // Status filter
         if (status === 'new' && repo.is_already_indexed) return false;
         if (status === 'indexed' && !repo.is_already_indexed) return false;
+        if (status === 'excluded' && !repo.excluded) return false;
 
         // Priority filter (for repos that have priority set)
         if (priority !== 'all' && repo.priority && repo.priority !== priority) {
@@ -1185,8 +1194,16 @@ function renderDiscoveredRepos() {
 
     const reposHtml = pageRepos.map(repo => {
         const isNew = !repo.is_already_indexed;
-        const badgeClass = isNew ? 'new' : 'indexed';
-        const badgeText = isNew ? 'NEW' : 'INDEXED';
+        const isExcluded = repo.excluded || false;
+
+        // Badge logic
+        let badgeClass = isNew ? 'new' : 'indexed';
+        let badgeText = isNew ? 'NEW' : 'INDEXED';
+        let excludedBadge = '';
+
+        if (isExcluded) {
+            excludedBadge = '<span class="badge excluded">🔒 EXCLUDED</span>';
+        }
 
         const checkboxHtml = `<input type="checkbox" class="repo-discovery-checkbox" ${isNew ? '' : 'disabled'} data-repo-path="${escapeHtml(repo.path)}">`;
 
@@ -1205,15 +1222,18 @@ function renderDiscoveredRepos() {
                 <button class="btn-small btn-preview" onclick="previewRepository('${escapeHtml(repo.path)}')">👁️ Preview</button>
             `;
         } else {
+            // For indexed repos: show lock/unlock toggle and remove button
+            const lockButtonText = isExcluded ? '🔓 Unlock' : '🔒 Lock';
+            const lockButtonClass = isExcluded ? 'btn-unlock' : 'btn-lock';
             actionsHtml = `
-                <button class="btn-small btn-reindex" onclick="triggerSingleReindex('${escapeHtml(repo.name)}')">🔄 Re-index</button>
+                <button class="btn-small ${lockButtonClass}" onclick="toggleRepositoryExcluded('${escapeHtml(repo.name)}', ${!isExcluded})">${lockButtonText}</button>
                 <button class="btn-small btn-remove" onclick="removeRepository('${escapeHtml(repo.name)}')">🗑️ Remove</button>
                 <button class="btn-small btn-configure" onclick="configureRepository('${escapeHtml(repo.name)}')">⚙️ Configure</button>
             `;
         }
 
         return `
-            <div class="repo-card ${isNew ? '' : 'indexed'}">
+            <div class="repo-card ${isNew ? '' : 'indexed'} ${isExcluded ? 'excluded' : ''}">
                 <div class="repo-card-header">
                     ${checkboxHtml}
                     <div class="repo-card-info">
@@ -1221,6 +1241,7 @@ function renderDiscoveredRepos() {
                         <div class="repo-card-path">${escapeHtml(repo.path)}</div>
                         <div class="repo-card-badges">
                             <span class="badge ${badgeClass}">${badgeText}</span>
+                            ${excludedBadge}
                             ${priorityHtml}
                         </div>
                         <div class="repo-card-actions">
@@ -1400,6 +1421,36 @@ function removeRepository(repoName) {
 
 function configureRepository(repoName) {
     alert(`Configure functionality for: ${repoName}\n\nThis would open a modal to edit:\n- Priority (high/medium/low)\n- Enabled status\n- Excluded patterns`);
+}
+
+async function toggleRepositoryExcluded(repoName, excludedValue) {
+    try {
+        const response = await fetch(`/repositories/${encodeURIComponent(repoName)}?excluded=${excludedValue}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            logActivity(`Repository "${repoName}" ${excludedValue ? 'locked (excluded)' : 'unlocked'}`);
+
+            // Refresh discovery results to show updated status
+            const scanButton = document.getElementById('scan-repositories-button');
+            if (scanButton) {
+                scanButton.click();
+            }
+
+            // Also refresh repositories list
+            loadRepositories();
+        } else {
+            const error = await response.json();
+            alert(`Failed to update repository: ${error.detail || 'Unknown error'}`);
+        }
+    } catch (error) {
+        alert(`Failed to update repository: ${error.message}`);
+    }
 }
 
 // Auto-refresh health status and indexing progress every 2 seconds

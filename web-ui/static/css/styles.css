@@ -1038,6 +1038,11 @@ body {
     color: #1e40af;
 }
 
+.badge.excluded {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
 .repo-card-priority {
     padding: 0.25rem 0.5rem;
     border: 1px solid var(--border-color);

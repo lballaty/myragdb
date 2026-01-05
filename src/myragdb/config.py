@@ -47,6 +47,7 @@ class RepositoryConfig(BaseModel):
     path: str
     enabled: bool = True
     priority: str = "medium"
+    excluded: bool = False
     file_patterns: FilePatterns = Field(default_factory=FilePatterns)
 
     @validator('path')

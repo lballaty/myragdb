@@ -437,6 +437,7 @@ async def get_repositories():
                 path=repo.path,
                 enabled=repo.enabled,
                 priority=repo.priority,
+                excluded=getattr(repo, 'excluded', False),
                 file_count=file_count,
                 total_size_bytes=total_size
             ))
@@ -565,6 +566,80 @@ async def add_repositories_batch(request: AddRepositoriesRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error adding repositories: {str(e)}")
+
+
+@app.patch("/repositories/{repo_name}")
+async def update_repository_settings(repo_name: str, excluded: Optional[bool] = None, priority: Optional[str] = None, enabled: Optional[bool] = None):
+    """
+    Update repository settings (excluded status, priority, enabled).
+
+    Business Purpose: Allows locking/excluding repositories from indexing and updating
+    other repository settings without removing them from configuration.
+
+    Args:
+        repo_name: Name of the repository to update
+        excluded: Whether to exclude repository from indexing (lock)
+        priority: Repository priority (high, medium, low)
+        enabled: Whether repository is enabled
+
+    Returns:
+        Updated repository information
+
+    Example:
+        PATCH /repositories/myragdb?excluded=true
+    """
+    try:
+        import yaml
+        config_path = "config/repositories.yaml"
+
+        # Load current configuration
+        with open(config_path, 'r') as f:
+            config_data = yaml.safe_load(f)
+
+        # Find and update repository
+        repo_found = False
+        for repo in config_data.get('repositories', []):
+            if repo['name'] == repo_name:
+                repo_found = True
+                if excluded is not None:
+                    repo['excluded'] = excluded
+                if priority is not None:
+                    repo['priority'] = priority
+                if enabled is not None:
+                    repo['enabled'] = enabled
+                break
+
+        if not repo_found:
+            raise HTTPException(status_code=404, detail=f"Repository '{repo_name}' not found")
+
+        # Save updated configuration
+        with open(config_path, 'w') as f:
+            yaml.safe_dump(config_data, f, default_flow_style=False, sort_keys=False)
+
+        # Reload configuration
+        repos_config = load_repositories_config(config_path)
+
+        # Return updated repository info
+        updated_repo = repos_config.get_repository_by_name(repo_name)
+        if updated_repo:
+            return {
+                "status": "success",
+                "message": f"Repository '{repo_name}' updated successfully",
+                "repository": {
+                    "name": updated_repo.name,
+                    "path": updated_repo.path,
+                    "enabled": updated_repo.enabled,
+                    "priority": updated_repo.priority,
+                    "excluded": getattr(updated_repo, 'excluded', False)
+                }
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to reload updated configuration")
+
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Configuration file not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating repository: {str(e)}")
 
 
 @app.post("/search/hybrid", response_model=SearchResponse)
