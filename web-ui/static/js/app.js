@@ -13,7 +13,18 @@ const state = {
         totalSearches: 0,
         responseTimes: []
     },
-    repositories: []
+    repositories: [],
+    discoveredRepos: [],
+    discoveryFilters: {
+        search: '',
+        status: 'all',
+        priority: 'all'
+    },
+    discoveryPagination: {
+        currentPage: 1,
+        pageSize: 20,
+        totalPages: 1
+    }
 };
 
 // Initialize application
@@ -22,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeSearch();
     initializeActivityMonitor();
     initializeReindex();
+    initializeDiscovery();
     checkHealthStatus();
     updateIndexingProgress();
     loadStatistics();
@@ -47,7 +59,7 @@ function initializeTabs() {
             document.getElementById(`${tabName}-tab`).classList.add('active');
 
             // Load tab-specific data
-            if (tabName === 'stats') {
+            if (tabName === 'repositories') {
                 loadStatistics();
             } else if (tabName === 'activity') {
                 renderActivityLog();
@@ -926,6 +938,407 @@ async function loadVersion() {
             versionBadge.textContent = 'v?.?.?';
         }
     }
+}
+
+// Repository Discovery Functions
+function initializeDiscovery() {
+    const scanButton = document.getElementById('scan-repositories-button');
+    const addSelectedButton = document.getElementById('add-selected-button');
+    const selectAllNewButton = document.getElementById('select-all-new-button');
+    const selectAllVisibleButton = document.getElementById('select-all-visible-button');
+    const filterSearch = document.getElementById('filter-repo-search');
+    const filterStatus = document.getElementById('filter-repo-status');
+    const filterPriority = document.getElementById('filter-repo-priority');
+    const paginationPrev = document.getElementById('pagination-prev');
+    const paginationNext = document.getElementById('pagination-next');
+
+    if (scanButton) {
+        scanButton.addEventListener('click', scanForRepositories);
+    }
+
+    if (addSelectedButton) {
+        addSelectedButton.addEventListener('click', addSelectedRepositories);
+    }
+
+    if (selectAllNewButton) {
+        selectAllNewButton.addEventListener('click', () => selectAllNew());
+    }
+
+    if (selectAllVisibleButton) {
+        selectAllVisibleButton.addEventListener('click', () => selectAllVisible());
+    }
+
+    if (filterSearch) {
+        filterSearch.addEventListener('input', () => {
+            state.discoveryFilters.search = filterSearch.value;
+            applyDiscoveryFilters();
+        });
+    }
+
+    if (filterStatus) {
+        filterStatus.addEventListener('change', () => {
+            state.discoveryFilters.status = filterStatus.value;
+            applyDiscoveryFilters();
+        });
+    }
+
+    if (filterPriority) {
+        filterPriority.addEventListener('change', () => {
+            state.discoveryFilters.priority = filterPriority.value;
+            applyDiscoveryFilters();
+        });
+    }
+
+    if (paginationPrev) {
+        paginationPrev.addEventListener('click', () => {
+            if (state.discoveryPagination.currentPage > 1) {
+                state.discoveryPagination.currentPage--;
+                renderDiscoveredRepos();
+            }
+        });
+    }
+
+    if (paginationNext) {
+        paginationNext.addEventListener('click', () => {
+            if (state.discoveryPagination.currentPage < state.discoveryPagination.totalPages) {
+                state.discoveryPagination.currentPage++;
+                renderDiscoveredRepos();
+            }
+        });
+    }
+}
+
+async function scanForRepositories() {
+    const pathInput = document.getElementById('discovery-path');
+    const depthSelect = document.getElementById('discovery-depth');
+    const scanButton = document.getElementById('scan-repositories-button');
+    const container = document.getElementById('discovered-repos-container');
+
+    const rootPath = pathInput.value.trim();
+    const maxDepth = parseInt(depthSelect.value);
+
+    if (!rootPath) {
+        container.innerHTML = '<div class="error">Please enter a root path to scan</div>';
+        return;
+    }
+
+    try {
+        scanButton.disabled = true;
+        scanButton.textContent = '🔍 Scanning...';
+        container.innerHTML = '<div class="loading">Scanning for repositories...</div>';
+
+        const response = await fetch(`${API_BASE_URL}/repositories/discover`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                root_path: rootPath,
+                max_depth: maxDepth
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        state.discoveredRepos = data.repositories || [];
+
+        // Show filters and bulk actions
+        document.getElementById('discovery-filters').style.display = 'grid';
+        document.getElementById('discovery-bulk-actions').style.display = 'flex';
+        document.getElementById('discovery-pagination').style.display = 'flex';
+
+        // Update filter status options with counts
+        const filterStatus = document.getElementById('filter-repo-status');
+        filterStatus.innerHTML = `
+            <option value="all">All Repositories (${data.total_found})</option>
+            <option value="new">New Only (${data.new_repositories})</option>
+            <option value="indexed">Already Indexed (${data.already_indexed})</option>
+        `;
+
+        // Reset pagination
+        state.discoveryPagination.currentPage = 1;
+
+        // Render results
+        applyDiscoveryFilters();
+
+        addActivityLog('info', `Discovered ${data.total_found} repositories (${data.new_repositories} new, ${data.already_indexed} already indexed)`);
+
+    } catch (error) {
+        container.innerHTML = `<div class="error">❌ Discovery failed: ${error.message}</div>`;
+        addActivityLog('error', `Repository discovery failed: ${error.message}`);
+    } finally {
+        scanButton.disabled = false;
+        scanButton.textContent = '🔍 Scan for Repositories';
+    }
+}
+
+function applyDiscoveryFilters() {
+    const { search, status, priority } = state.discoveryFilters;
+
+    let filtered = state.discoveredRepos.filter(repo => {
+        // Search filter
+        if (search && !repo.name.toLowerCase().includes(search.toLowerCase()) &&
+            !repo.path.toLowerCase().includes(search.toLowerCase())) {
+            return false;
+        }
+
+        // Status filter
+        if (status === 'new' && repo.is_already_indexed) return false;
+        if (status === 'indexed' && !repo.is_already_indexed) return false;
+
+        // Priority filter (for repos that have priority set)
+        if (priority !== 'all' && repo.priority && repo.priority !== priority) {
+            return false;
+        }
+
+        return true;
+    });
+
+    // Calculate pagination
+    state.discoveryPagination.totalPages = Math.ceil(filtered.length / state.discoveryPagination.pageSize);
+
+    // Store filtered repos in state
+    state.filteredDiscoveredRepos = filtered;
+
+    renderDiscoveredRepos();
+}
+
+function renderDiscoveredRepos() {
+    const container = document.getElementById('discovered-repos-container');
+    const filtered = state.filteredDiscoveredRepos || state.discoveredRepos;
+    const { currentPage, pageSize } = state.discoveryPagination;
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<div style="color: var(--text-muted); padding: 2rem; text-align: center;">No repositories match the current filters.</div>';
+        updatePaginationInfo(0, 0, 0);
+        return;
+    }
+
+    // Paginate
+    const startIdx = (currentPage - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, filtered.length);
+    const pageRepos = filtered.slice(startIdx, endIdx);
+
+    const reposHtml = pageRepos.map(repo => {
+        const isNew = !repo.is_already_indexed;
+        const badgeClass = isNew ? 'new' : 'indexed';
+        const badgeText = isNew ? 'NEW' : 'INDEXED';
+
+        const checkboxHtml = `<input type="checkbox" class="repo-discovery-checkbox" ${isNew ? '' : 'disabled'} data-repo-path="${escapeHtml(repo.path)}">`;
+
+        const priorityHtml = `
+            <select class="repo-card-priority" data-repo-path="${escapeHtml(repo.path)}" ${isNew ? '' : ''}>
+                <option value="high">High</option>
+                <option value="medium" selected>Medium</option>
+                <option value="low">Low</option>
+            </select>
+        `;
+
+        let actionsHtml = '';
+        if (isNew) {
+            actionsHtml = `
+                <button class="btn-small btn-add" onclick="addSingleRepository('${escapeHtml(repo.path)}')">➕ Add</button>
+                <button class="btn-small btn-preview" onclick="previewRepository('${escapeHtml(repo.path)}')">👁️ Preview</button>
+            `;
+        } else {
+            actionsHtml = `
+                <button class="btn-small btn-reindex" onclick="triggerSingleReindex('${escapeHtml(repo.name)}')">🔄 Re-index</button>
+                <button class="btn-small btn-remove" onclick="removeRepository('${escapeHtml(repo.name)}')">🗑️ Remove</button>
+                <button class="btn-small btn-configure" onclick="configureRepository('${escapeHtml(repo.name)}')">⚙️ Configure</button>
+            `;
+        }
+
+        return `
+            <div class="repo-card ${isNew ? '' : 'indexed'}">
+                <div class="repo-card-header">
+                    ${checkboxHtml}
+                    <div class="repo-card-info">
+                        <div class="repo-card-name">${escapeHtml(repo.name)}</div>
+                        <div class="repo-card-path">${escapeHtml(repo.path)}</div>
+                        <div class="repo-card-badges">
+                            <span class="badge ${badgeClass}">${badgeText}</span>
+                            ${priorityHtml}
+                        </div>
+                        <div class="repo-card-actions">
+                            ${actionsHtml}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = reposHtml;
+    updatePaginationInfo(startIdx + 1, endIdx, filtered.length);
+    updateAddSelectedButton();
+}
+
+function updatePaginationInfo(start, end, total) {
+    const paginationInfo = document.getElementById('pagination-info');
+    const prevButton = document.getElementById('pagination-prev');
+    const nextButton = document.getElementById('pagination-next');
+
+    if (paginationInfo) {
+        paginationInfo.textContent = `Showing ${start}-${end} of ${total} repositories`;
+    }
+
+    if (prevButton) {
+        prevButton.disabled = state.discoveryPagination.currentPage === 1;
+    }
+
+    if (nextButton) {
+        nextButton.disabled = state.discoveryPagination.currentPage === state.discoveryPagination.totalPages;
+    }
+}
+
+function selectAllNew() {
+    const checkboxes = document.querySelectorAll('.repo-discovery-checkbox:not(:disabled)');
+    checkboxes.forEach(cb => cb.checked = true);
+    updateAddSelectedButton();
+}
+
+function selectAllVisible() {
+    const checkboxes = document.querySelectorAll('.repo-discovery-checkbox');
+    checkboxes.forEach(cb => {
+        if (!cb.disabled) cb.checked = true;
+    });
+    updateAddSelectedButton();
+}
+
+function updateAddSelectedButton() {
+    const addButton = document.getElementById('add-selected-button');
+    const checkboxes = document.querySelectorAll('.repo-discovery-checkbox:checked:not(:disabled)');
+    const count = checkboxes.length;
+
+    if (addButton) {
+        addButton.textContent = count > 0
+            ? `➕ Add Selected to Config (${count} selected)`
+            : `➕ Add Selected to Config`;
+        addButton.disabled = count === 0;
+    }
+
+    // Add event listener for checkbox changes
+    document.querySelectorAll('.repo-discovery-checkbox').forEach(checkbox => {
+        checkbox.removeEventListener('change', updateAddSelectedButton);
+        checkbox.addEventListener('change', updateAddSelectedButton);
+    });
+}
+
+async function addSelectedRepositories() {
+    const checkboxes = document.querySelectorAll('.repo-discovery-checkbox:checked:not(:disabled)');
+    const repoPaths = Array.from(checkboxes).map(cb => cb.getAttribute('data-repo-path'));
+
+    if (repoPaths.length === 0) {
+        alert('Please select at least one repository to add.');
+        return;
+    }
+
+    // Get priorities for each selected repo
+    const reposWithPriority = repoPaths.map(path => {
+        const prioritySelect = document.querySelector(`.repo-card-priority[data-repo-path="${path}"]`);
+        return {
+            path: path,
+            priority: prioritySelect ? prioritySelect.value : 'medium'
+        };
+    });
+
+    const defaultPriority = document.getElementById('default-priority-select').value;
+
+    try {
+        const addButton = document.getElementById('add-selected-button');
+        addButton.disabled = true;
+        addButton.textContent = '⏳ Adding...';
+
+        const response = await fetch(`${API_BASE_URL}/repositories/add-batch`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                repositories: repoPaths,
+                priority: defaultPriority,
+                enabled: true
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || `HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        addActivityLog('success', `${data.message}: ${data.added_count} added, ${data.skipped_count} skipped`);
+        alert(`Successfully added ${data.added_count} repositories to configuration.\n${data.skipped_count} repositories were skipped (already exist).`);
+
+        // Refresh the discovery scan to update "INDEXED" status
+        await scanForRepositories();
+
+        // Reload repositories list
+        await loadRepositories();
+
+    } catch (error) {
+        addActivityLog('error', `Failed to add repositories: ${error.message}`);
+        alert(`Failed to add repositories: ${error.message}`);
+    }
+}
+
+async function addSingleRepository(path) {
+    const prioritySelect = document.querySelector(`.repo-card-priority[data-repo-path="${path}"]`);
+    const priority = prioritySelect ? prioritySelect.value : 'medium';
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/repositories/add-batch`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                repositories: [path],
+                priority: priority,
+                enabled: true
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || `HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        addActivityLog('success', `Repository added: ${path}`);
+        alert('Repository successfully added to configuration!');
+
+        // Refresh
+        await scanForRepositories();
+        await loadRepositories();
+
+    } catch (error) {
+        addActivityLog('error', `Failed to add repository: ${error.message}`);
+        alert(`Failed to add repository: ${error.message}`);
+    }
+}
+
+function previewRepository(path) {
+    alert(`Preview functionality for: ${path}\n\nThis would show:\n- Number of files\n- File types distribution\n- Estimated index size`);
+}
+
+function triggerSingleReindex(repoName) {
+    alert(`Re-index functionality for: ${repoName}\n\nThis would trigger re-indexing for this specific repository.`);
+}
+
+function removeRepository(repoName) {
+    if (confirm(`Are you sure you want to remove "${repoName}" from configuration?`)) {
+        alert(`Remove functionality for: ${repoName}\n\nThis would remove the repository from config/repositories.yaml.`);
+    }
+}
+
+function configureRepository(repoName) {
+    alert(`Configure functionality for: ${repoName}\n\nThis would open a modal to edit:\n- Priority (high/medium/low)\n- Enabled status\n- Excluded patterns`);
 }
 
 // Auto-refresh health status and indexing progress every 2 seconds

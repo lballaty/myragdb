@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.05.2.7.0">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.05.3.0.0">
 </head>
 <body>
     <div class="container">
@@ -47,7 +47,7 @@
         <div class="tabs">
             <button class="tab-button active" data-tab="search">Search</button>
             <button class="tab-button" data-tab="activity">Activity Monitor</button>
-            <button class="tab-button" data-tab="stats">Statistics</button>
+            <button class="tab-button" data-tab="repositories">Repositories</button>
         </div>
 
         <!-- Search Tab -->
@@ -146,11 +146,80 @@
             </div>
         </div>
 
-        <!-- Statistics Tab -->
-        <div id="stats-tab" class="tab-content">
-            <div class="stats-section">
+        <!-- Repositories Tab -->
+        <div id="repositories-tab" class="tab-content">
+            <div class="repositories-section">
+                <!-- Discovery Section -->
+                <div class="discovery-section">
+                    <h3>📂 Repository Discovery</h3>
+
+                    <div class="discovery-controls">
+                        <input type="text" id="discovery-path" placeholder="Root path to scan (e.g., /Users/user/projects)" value="/Users/liborballaty/LocalProjects">
+                        <select id="discovery-depth">
+                            <option value="1">Depth: 1</option>
+                            <option value="2" selected>Depth: 2</option>
+                            <option value="3">Depth: 3</option>
+                            <option value="4">Depth: 4</option>
+                            <option value="5">Depth: 5</option>
+                        </select>
+                        <button id="scan-repositories-button" class="primary-button">🔍 Scan for Repositories</button>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="discovery-filters" id="discovery-filters" style="display: none;">
+                        <label>
+                            <span>Search Repositories</span>
+                            <input type="text" id="filter-repo-search" placeholder="Search by name or path...">
+                        </label>
+                        <label>
+                            <span>Status Filter</span>
+                            <select id="filter-repo-status">
+                                <option value="all">All Repositories</option>
+                                <option value="new">New Only</option>
+                                <option value="indexed">Already Indexed</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>Priority Filter</span>
+                            <select id="filter-repo-priority">
+                                <option value="all">All Priorities</option>
+                                <option value="high">High Priority</option>
+                                <option value="medium">Medium Priority</option>
+                                <option value="low">Low Priority</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <!-- Bulk Actions -->
+                    <div class="discovery-bulk-actions" id="discovery-bulk-actions" style="display: none;">
+                        <button id="select-all-new-button" class="secondary-button">Select All New</button>
+                        <button id="select-all-visible-button" class="secondary-button">Select All Visible</button>
+                        <label>
+                            <span>Default Priority:</span>
+                            <select id="default-priority-select" class="priority-dropdown">
+                                <option value="high">High</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </label>
+                        <button id="add-selected-button" class="primary-button">➕ Add Selected to Config</button>
+                    </div>
+
+                    <!-- Discovered Repository Cards -->
+                    <div id="discovered-repos-container" class="discovered-repos-container"></div>
+
+                    <!-- Pagination -->
+                    <div class="discovery-pagination" id="discovery-pagination" style="display: none;">
+                        <div class="pagination-info" id="pagination-info"></div>
+                        <div class="pagination-controls">
+                            <button id="pagination-prev" class="secondary-button">← Previous</button>
+                            <button id="pagination-next" class="secondary-button">Next →</button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="reindex-section">
-                    <h3>Re-index Repositories</h3>
+                    <h3>🔄 Re-index Repositories</h3>
                     <div class="repository-selection">
                         <div class="repository-header">
                             <label>
@@ -203,6 +272,11 @@
                     </div>
                 </div>
 
+                <!-- Statistics Section -->
+                <div class="stats-section-header">
+                    <h3>📊 System Statistics</h3>
+                </div>
+
                 <div class="stats-grid" id="stats-grid">
                     <div class="stat-card">
                         <div class="stat-label">Keyword Documents</div>
@@ -245,6 +319,6 @@
         </div>
     </div>
 
-    <script src="static/js/app.js?v=2026.01.05.2.7.0"></script>
+    <script src="static/js/app.js?v=2026.01.05.3.0.0"></script>
 </body>
 </html>
