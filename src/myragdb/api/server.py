@@ -34,17 +34,19 @@ from myragdb.search.hybrid_search import HybridSearchEngine, HybridSearchResult
 from myragdb.indexers.meilisearch_indexer import MeilisearchIndexer
 from myragdb.indexers.vector_indexer import VectorIndexer
 from myragdb.llm.query_rewriter import QueryRewriter
+from myragdb.db.metadata import MetadataStore
 from myragdb.config import settings, load_repositories_config
 import structlog
 
 # Configure structured logging
 logger = structlog.get_logger()
 
-# Initialize search engines (singleton pattern)
+# Initialize search engines and metadata store (singleton pattern)
 meilisearch_indexer = None
 vector_indexer = None
 query_rewriter = None
 hybrid_engine = None
+metadata_store = None
 
 # Indexing state - supports independent Keyword (Meilisearch) and Vector indexing
 indexing_state = {
@@ -85,15 +87,26 @@ indexing_state = {
 
 def get_search_engines():
     """
-    Get or initialize search engines.
+    Get or initialize search engines and metadata store.
 
     Business Purpose: Lazy initialization of search engines to avoid
     loading models at import time. Engines are created on first use.
+    Also loads persistent metadata on first initialization.
 
     Returns:
         Tuple of (meilisearch_indexer, vector_indexer, hybrid_engine)
     """
-    global meilisearch_indexer, vector_indexer, query_rewriter, hybrid_engine
+    global meilisearch_indexer, vector_indexer, query_rewriter, hybrid_engine, metadata_store
+
+    if metadata_store is None:
+        logger.info("Initializing metadata store")
+        metadata_store = MetadataStore()
+
+        # Load last index time from persistent storage
+        last_index_time = metadata_store.get_last_index_time()
+        if last_index_time:
+            indexing_state["last_index_time"] = last_index_time
+            logger.info("Loaded last index time from metadata", last_index_time=last_index_time)
 
     if meilisearch_indexer is None:
         logger.info("Initializing Meilisearch indexer", host=settings.meilisearch_host)
@@ -733,10 +746,16 @@ def run_keyword_index(
         if not indexing_state["vector"]["is_indexing"]:
             indexing_state["is_indexing"] = False
             indexing_state["stop_requested"] = False
-            indexing_state["last_index_time"] = datetime.utcnow().isoformat() + "Z"
+            current_time = datetime.utcnow()
+            indexing_state["last_index_time"] = current_time.isoformat() + "Z"
             indexing_state["current_repository"] = None
             indexing_state["current_phase"] = None
             indexing_state["index_types"] = []
+
+            # Persist last index time to disk
+            if metadata_store:
+                metadata_store.set_last_index_time(current_time)
+
             print(f"[Keyword] State change: global is_indexing=False, stop_requested=False, reason=no active indexing")
         else:
             # Remove BM25 from active types
@@ -888,10 +907,16 @@ def run_vector_index(
         if not indexing_state["keyword"]["is_indexing"]:
             indexing_state["is_indexing"] = False
             indexing_state["stop_requested"] = False
-            indexing_state["last_index_time"] = datetime.utcnow().isoformat() + "Z"
+            current_time = datetime.utcnow()
+            indexing_state["last_index_time"] = current_time.isoformat() + "Z"
             indexing_state["current_repository"] = None
             indexing_state["current_phase"] = None
             indexing_state["index_types"] = []
+
+            # Persist last index time to disk
+            if metadata_store:
+                metadata_store.set_last_index_time(current_time)
+
             print(f"[Vector] State change: global is_indexing=False, stop_requested=False, reason=no active indexing")
         else:
             # Remove Vector from active types
