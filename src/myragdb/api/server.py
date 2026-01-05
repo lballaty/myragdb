@@ -359,8 +359,7 @@ async def search_keyword(request: SearchRequest):
         # Execute Meilisearch keyword search
         results = meili.search(
             query=request.query,
-            limit=request.limit,
-            repository=request.repositories[0] if request.repositories else None
+            limit=request.limit
         )
 
         # Convert to API response format
