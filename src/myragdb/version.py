@@ -16,7 +16,7 @@ from datetime import datetime
 _BUILD_DATE = datetime(2026, 1, 5)  # Update this when creating new releases
 _MAJOR_VERSION = 1  # Increment for breaking changes
 _MINOR_VERSION = 0  # Increment for new features (backward compatible)
-_PATCH_VERSION = 2  # Increment for bug fixes only
+_PATCH_VERSION = 3  # Increment for bug fixes only
 
 __version__ = f"{_BUILD_DATE.year}.{_BUILD_DATE.month:02d}.{_BUILD_DATE.day:02d}.{_MAJOR_VERSION}.{_MINOR_VERSION}.{_PATCH_VERSION}"
 __version_info__ = (_BUILD_DATE.year, _BUILD_DATE.month, _BUILD_DATE.day, _MAJOR_VERSION, _MINOR_VERSION, _PATCH_VERSION)
@@ -24,9 +24,14 @@ __build_date__ = _BUILD_DATE.strftime("%Y-%m-%d")
 
 # Release notes for current version
 RELEASE_NOTES = f"""
-MyRAGDB v{__version__} - Meilisearch Migration + Bug Fixes ({__build_date__})
+MyRAGDB v{__version__} - UI Bug Fixes + Cache Busting ({__build_date__})
 
-Changes in v2026.01.05.1.0.2:
+Changes in v2026.01.05.1.0.3:
+- Fixed keyword search 404 error (HTML dropdown value mismatch)
+- Added cache busting to CSS/JS assets (prevents stale browser cache)
+- HTML dropdown now correctly calls /search/keyword endpoint
+
+Previous changes (v2026.01.05.1.0.2):
 - Fixed Meilisearch get_document_count() error (IndexStats attribute access)
 - Updated versioning format to YYYY.MM.DD.MAJOR.MINOR.PATCH for better granularity
 - Replaced Whoosh with Meilisearch 1.31.0 for keyword search
