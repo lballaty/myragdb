@@ -14,6 +14,7 @@ from sentence_transformers import SentenceTransformer
 from myragdb.indexers.file_scanner import ScannedFile
 from myragdb.utils.id_generator import generate_document_id
 from myragdb.config import settings
+from myragdb.db.file_metadata import FileMetadataDatabase
 
 
 @dataclass
@@ -73,6 +74,9 @@ class VectorIndexer:
 
         # Initialize embedding model
         self.model = self._load_embedding_model()
+
+        # Track last indexed time for incremental updates (persistent across restarts)
+        self.metadata_db = FileMetadataDatabase()
 
     def _init_chromadb(self) -> chromadb.Client:
         """
@@ -217,41 +221,65 @@ class VectorIndexer:
                 documents=documents
             )
 
+            # Update metadata database
+            self.metadata_db.update_file_metadata(
+                scanned_file.file_path,
+                scanned_file.repository_name,
+                'vector'
+            )
+
         except Exception as e:
             print(f"Error indexing file {scanned_file.file_path}: {e}")
             raise
 
-    def index_files(self, files: List[ScannedFile]) -> int:
+    def index_files(self, files: List[ScannedFile], incremental: bool = True) -> int:
         """
-        Index multiple files.
+        Index multiple files with optional incremental indexing.
 
-        Business Purpose: Batch indexes files for better efficiency.
+        Business Purpose: Batch indexes files for better efficiency. With incremental
+        mode enabled, skips files that haven't changed since last indexing.
 
         Args:
             files: List of files to index
+            incremental: If True, skip unchanged files (default: True)
 
         Returns:
             Number of files successfully indexed
 
         Example:
             files = scan_repository(repo_config)
-            count = indexer.index_files(files)
+            count = indexer.index_files(files, incremental=True)
             print(f"Indexed {count} files")
         """
         indexed = 0
+        skipped_unchanged = 0
 
         for i, scanned_file in enumerate(files):
             try:
+                # Incremental indexing: skip if file hasn't changed
+                if incremental:
+                    try:
+                        stat = os.stat(scanned_file.file_path)
+                        file_mtime = stat.st_mtime
+                        last_indexed = self.metadata_db.get_last_indexed_time(scanned_file.file_path)
+
+                        if file_mtime <= last_indexed:
+                            skipped_unchanged += 1
+                            continue
+                    except OSError:
+                        pass  # File doesn't exist, skip mtime check
+
                 self.index_file(scanned_file)
                 indexed += 1
 
                 if (i + 1) % 10 == 0:
-                    print(f"Indexed {i + 1} files...")
+                    print(f"[Vector] Indexed {i + 1} files...")
 
             except Exception as e:
-                print(f"Error indexing {scanned_file.file_path}: {e}")
+                print(f"[Vector] Error indexing {scanned_file.file_path}: {e}")
                 continue
 
+        print(f"[Vector] Indexing complete: {indexed} indexed, {skipped_unchanged} skipped (unchanged)")
         return indexed
 
     def search(

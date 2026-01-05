@@ -16,6 +16,7 @@ from meilisearch.index import Index
 from myragdb.indexers.file_scanner import ScannedFile
 from myragdb.utils.id_generator import generate_document_id
 from myragdb.config import settings as app_settings
+from myragdb.db.file_metadata import FileMetadataDatabase
 
 
 @dataclass
@@ -96,8 +97,8 @@ class MeilisearchIndexer:
         self.index: Index = self.client.index(index_name)
         self._configure_index()
 
-        # Track last indexed time for incremental updates
-        self.last_indexed_time: Dict[str, float] = {}
+        # Track last indexed time for incremental updates (persistent across restarts)
+        self.metadata_db = FileMetadataDatabase()
 
     def _configure_index(self) -> None:
         """
@@ -280,7 +281,7 @@ class MeilisearchIndexer:
                     try:
                         stat = os.stat(scanned_file.file_path)
                         file_mtime = stat.st_mtime
-                        last_indexed = self.last_indexed_time.get(scanned_file.file_path, 0)
+                        last_indexed = self.metadata_db.get_last_indexed_time(scanned_file.file_path)
 
                         if file_mtime <= last_indexed:
                             skipped_unchanged += 1
@@ -291,7 +292,13 @@ class MeilisearchIndexer:
                 # Create document
                 doc = self._create_document(scanned_file)
                 batch_docs.append(doc)
-                self.last_indexed_time[scanned_file.file_path] = time.time()
+
+                # Update metadata database
+                self.metadata_db.update_file_metadata(
+                    scanned_file.file_path,
+                    scanned_file.repository_name,
+                    'keyword'
+                )
 
                 # Send batch when full
                 if len(batch_docs) >= batch_size:
@@ -454,7 +461,7 @@ class MeilisearchIndexer:
         try:
             task = self.index.delete_all_documents()
             print(f"[Meilisearch] Cleared index (task_uid={task.task_uid})")
-            self.last_indexed_time.clear()
+            # Note: We don't clear metadata_db here as it persists across clears
         except Exception as e:
             print(f"[Meilisearch] Error clearing index: {e}")
 
@@ -475,7 +482,7 @@ class MeilisearchIndexer:
             doc_id = generate_document_id(file_path)
             task = self.index.delete_document(doc_id)
             print(f"[Meilisearch] Deleted document {doc_id} (task_uid={task.task_uid})")
-            self.last_indexed_time.pop(file_path, None)
+            self.metadata_db.remove_file(file_path)
         except Exception as e:
             print(f"[Meilisearch] Error deleting document: {e}")
 
