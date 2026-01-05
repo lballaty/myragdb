@@ -132,29 +132,35 @@
 - [x] Commit: "feat: add multi-repository support"
 
 ### 2.2 Metadata Management
-- [ ] Create SQLite schema (src/myragdb/db/schema.sql)
-- [ ] Implement metadata database (src/myragdb/db/metadata.py)
-- [ ] Track file_path, repository, last_modified, content_hash
-- [ ] Implement incremental indexing logic
-- [ ] Add deduplication
-- [ ] Commit: "feat: implement SQLite metadata tracking"
+- [x] Create SQLite schema (src/myragdb/db/schema.sql)
+- [x] Implement metadata database (src/myragdb/db/file_metadata.py)
+- [x] Track file_path, repository, last_indexed, last_modified, content_hash, file_size
+- [x] Implement incremental indexing logic (both indexers now use SQLite)
+- [x] Add deduplication support via content_hash
+- [x] Commit: "feat: implement SQLite metadata tracking"
 
 ### 2.3 Additional API Endpoints
-- [ ] Implement POST /search/keyword
-- [ ] Implement POST /search/semantic
-- [ ] Implement GET /stats
-- [ ] Implement POST /index/repository
-- [ ] Implement GET /repositories
+- [x] Implement POST /search/keyword (server.py:781)
+- [x] Implement POST /search/semantic (server.py:845)
+- [x] Implement GET /stats (server.py:370)
+- [x] Implement POST /reindex (server.py:1224)
+- [x] Implement GET /repositories (server.py:401)
+- [x] Implement PATCH /repositories/{repo_name} (server.py:581)
+- [x] Implement DELETE /repositories/{repo_name} (server.py:655)
+- [x] Implement POST /repositories/discover (server.py:451)
+- [x] Implement POST /repositories/add-batch (server.py:525)
 - [ ] Update API documentation
-- [ ] Commit: "feat: add complete API endpoint suite"
+- [x] Commit: "feat: add complete API endpoint suite"
 
 ### 2.4 Advanced Search Features
-- [ ] Add file type filtering to search
+- [x] Add file type filtering to search (SearchRequest.file_types)
+- [x] Add extension filtering (SearchRequest.extension_filter)
+- [x] Add folder filtering (SearchRequest.folder_filter)
 - [ ] Add date range filtering
-- [ ] Implement min score threshold
-- [ ] Add configurable result limits
-- [ ] Enhance snippet extraction with context
-- [ ] Commit: "feat: implement advanced search filters"
+- [x] Implement min score threshold (SearchRequest.min_score)
+- [x] Add configurable result limits (SearchRequest.limit, 1-100)
+- [x] Enhance snippet extraction with context (hybrid_search.py)
+- [x] Commit: "feat: implement advanced search filters"
 
 ### 2.5 Production Quality Improvements
 - [ ] Set up structured logging (structlog)
