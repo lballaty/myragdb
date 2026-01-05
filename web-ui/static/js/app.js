@@ -584,11 +584,12 @@ async function loadRepositories() {
         renderRepositories();
         populateRepositoryFilter();
 
-        // Update badge with success state
-        if (repositories.length === 0) {
+        // Update badge with success state (count only non-excluded repositories)
+        const activeRepos = repositories.filter(r => !r.excluded);
+        if (activeRepos.length === 0) {
             updateRepositoryBadge('error');
         } else {
-            updateRepositoryBadge('loaded', repositories.length);
+            updateRepositoryBadge('loaded', activeRepos.length);
         }
 
         // Log repository names explicitly
