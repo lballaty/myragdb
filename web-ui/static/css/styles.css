@@ -673,6 +673,25 @@ body {
     background: #f8fafc;
 }
 
+.repository-item.excluded-repo {
+    opacity: 0.6;
+    background: #f3f4f6;
+    border: 1px dashed #d1d5db;
+}
+
+.repository-item.excluded-repo:hover {
+    opacity: 0.75;
+    border-color: #9ca3af;
+}
+
+.repository-item.excluded-repo input[type="checkbox"] {
+    cursor: not-allowed;
+}
+
+.repository-item.excluded-repo .repository-name {
+    color: #6b7280;
+}
+
 .repository-item input[type="checkbox"] {
     margin-top: 0.25rem;
     cursor: pointer;
@@ -741,6 +760,11 @@ body {
 .repository-badge.file-count.large {
     background: #fecaca;
     color: #991b1b;
+}
+
+.repository-badge.excluded {
+    background: var(--warning-color);
+    color: white;
 }
 
 /* Index Options */
@@ -1121,6 +1145,24 @@ body {
 
 .btn-configure:hover {
     background: var(--primary-hover);
+}
+
+.btn-lock {
+    background: var(--warning-color);
+    color: white;
+}
+
+.btn-lock:hover {
+    background: #d97706;
+}
+
+.btn-unlock {
+    background: var(--success-color);
+    color: white;
+}
+
+.btn-unlock:hover {
+    background: #059669;
 }
 
 .discovery-pagination {

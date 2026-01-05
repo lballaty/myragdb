@@ -635,17 +635,12 @@ function renderRepositories() {
         return;
     }
 
-    // Filter out excluded repos from re-index section
-    const availableRepos = state.repositories.filter(repo => !repo.excluded);
-
-    if (availableRepos.length === 0) {
-        repositoryList.innerHTML = '<div style="color: var(--text-muted);">All repositories are excluded from indexing</div>';
-        return;
-    }
-
-    const reposHtml = availableRepos.map(repo => {
+    // Show ALL repos including excluded ones (but disabled)
+    const reposHtml = state.repositories.map(repo => {
+        const isExcluded = repo.excluded || false;
         const enabledClass = repo.enabled ? 'enabled' : 'disabled';
         const priorityClass = `priority-${repo.priority}`;
+        const excludedClass = isExcluded ? 'excluded-repo' : '';
 
         // Format file count and size
         let fileCountBadge = '';
@@ -655,17 +650,26 @@ function renderRepositories() {
             fileCountBadge = `<span class="repository-badge file-count ${sizeClass}">${repo.file_count.toLocaleString()} files (${formattedSize})</span>`;
         }
 
+        // Excluded badge
+        let excludedBadge = '';
+        if (isExcluded) {
+            excludedBadge = '<span class="repository-badge excluded" style="background-color: var(--status-warning); color: white;">🔒 LOCKED</span>';
+        }
+
         return `
-            <div class="repository-item">
+            <div class="repository-item ${excludedClass}">
                 <input type="checkbox"
                        class="repo-checkbox"
                        value="${escapeHtml(repo.name)}"
                        id="repo-${escapeHtml(repo.name)}"
-                       ${repo.enabled ? 'checked' : ''}>
+                       ${repo.enabled && !isExcluded ? 'checked' : ''}
+                       ${isExcluded ? 'disabled' : ''}
+                       title="${isExcluded ? 'This repository is locked. Click the lock button to unlock it before reindexing.' : ''}">
                 <label for="repo-${escapeHtml(repo.name)}" class="repository-info">
                     <div class="repository-name">${escapeHtml(repo.name)}</div>
                     <div class="repository-path">${escapeHtml(repo.path)}</div>
                     <div>
+                        ${excludedBadge}
                         <span class="repository-badge ${enabledClass}">
                             ${repo.enabled ? 'Enabled' : 'Disabled'}
                         </span>
