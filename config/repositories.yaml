@@ -10,20 +10,52 @@ repositories:
     priority: high
     file_patterns:
       include:
+        # Documentation
         - "**/*.md"
+        - "**/*.txt"
+        # Code files
         - "**/*.py"
+        - "**/*.js"
+        - "**/*.jsx"
         - "**/*.ts"
         - "**/*.tsx"
         - "**/*.dart"
+        # Configuration/Data files
+        - "**/*.json"
+        - "**/*.yaml"
+        - "**/*.yml"
+        - "**/*.toml"
+        # Scripts
+        - "**/*.sh"
+        - "**/*.sql"
       exclude:
+        # Dependencies and libraries
         - "**/node_modules/**"
+        - "**/vendor/**"
+        - "**/ios/Pods/**"
+        # Version control
         - "**/.git/**"
+        # Python artifacts
         - "**/venv/**"
-        - "**/archive-*/**"
-        - "**/*.lock"
         - "**/__pycache__/**"
+        - "**/.pytest_cache/**"
+        - "**/.mypy_cache/**"
+        # Build outputs
         - "**/dist/**"
         - "**/build/**"
+        - "**/target/**"
+        - "**/.next/**"
+        - "**/.nuxt/**"
+        # Dart/Flutter artifacts
+        - "**/.dart_tool/**"
+        # Android/Gradle artifacts
+        - "**/android/.gradle/**"
+        - "**/.gradle/**"
+        # Archives and backups
+        - "**/archive-*/**"
+        # Lock files and coverage
+        - "**/*.lock"
+        - "**/coverage/**"
 
 # Disabled repositories (commented out):
 # - name: RepoDot

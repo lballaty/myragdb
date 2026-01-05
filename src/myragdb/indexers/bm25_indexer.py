@@ -9,10 +9,12 @@ from typing import List, Optional
 from dataclasses import dataclass
 
 from whoosh import index
-from whoosh.fields import Schema, TEXT, ID, KEYWORD, NUMERIC
-from whoosh.qparser import QueryParser, MultifieldParser
+from whoosh.fields import Schema, TEXT, ID, KEYWORD, NUMERIC, NGRAM
+from whoosh.qparser import QueryParser, MultifieldParser, OrGroup
 from whoosh.scoring import BM25F
 from whoosh.writing import AsyncWriter
+from whoosh.analysis import SimpleAnalyzer, NgramTokenizer
+from whoosh.query import Or, And, Wildcard, Phrase
 
 from myragdb.indexers.file_scanner import ScannedFile
 from myragdb.config import settings
@@ -76,16 +78,24 @@ class BM25Indexer:
 
         Business Purpose: Defines the structure of indexed documents,
         specifying what fields are searchable and how they're stored.
+        Enhanced with directory-specific fields for better path matching.
 
         Returns:
             Whoosh Schema object
         """
         return Schema(
-            file_path=ID(stored=True, unique=True),
+            # Use TEXT with SimpleAnalyzer for case-insensitive path matching
+            # Store original path separately for exact retrieval
+            file_path=TEXT(stored=True, analyzer=SimpleAnalyzer()),
+            file_path_original=ID(stored=True, unique=True),  # For exact lookups
             repository=ID(stored=True),
             content=TEXT(stored=False),  # Searchable but not stored (saves space)
             file_type=KEYWORD(stored=True),
-            relative_path=ID(stored=True),
+            relative_path=TEXT(stored=True, analyzer=SimpleAnalyzer()),
+            # NEW: Directory path (without filename) for directory-specific searches
+            directory_path=TEXT(stored=True, analyzer=SimpleAnalyzer()),
+            # NEW: N-gram field for partial/wildcard directory matching
+            directory_ngram=NGRAM(minsize=3, maxsize=10, stored=False),
             # Store snippet separately for retrieval
             content_preview=TEXT(stored=True)
         )
@@ -128,13 +138,19 @@ class BM25Indexer:
             # Create preview (first 500 chars for snippet generation)
             preview = scanned_file.content[:500] if len(scanned_file.content) > 500 else scanned_file.content
 
+            # Extract directory path (without filename)
+            dir_path = str(Path(scanned_file.file_path).parent)
+
             writer = AsyncWriter(self.ix)
             writer.update_document(
                 file_path=scanned_file.file_path,
+                file_path_original=scanned_file.file_path,  # Store original for unique lookups
                 repository=scanned_file.repository_name,
                 content=scanned_file.content,
                 file_type=scanned_file.file_type,
                 relative_path=scanned_file.relative_path,
+                directory_path=dir_path,  # NEW: Directory path for directory searches
+                directory_ngram=dir_path,  # NEW: N-gram indexed for partial matching
                 content_preview=preview
             )
             writer.commit()
@@ -171,12 +187,18 @@ class BM25Indexer:
                     # Create preview
                     preview = scanned_file.content[:500] if len(scanned_file.content) > 500 else scanned_file.content
 
+                    # Extract directory path (without filename)
+                    dir_path = str(Path(scanned_file.file_path).parent)
+
                     writer.update_document(
                         file_path=scanned_file.file_path,
+                        file_path_original=scanned_file.file_path,  # Store original for unique lookups
                         repository=scanned_file.repository_name,
                         content=scanned_file.content,
                         file_type=scanned_file.file_type,
                         relative_path=scanned_file.relative_path,
+                        directory_path=dir_path,  # NEW: Directory path for directory searches
+                        directory_ngram=dir_path,  # NEW: N-gram indexed for partial matching
                         content_preview=preview
                     )
                     indexed += 1
@@ -208,13 +230,14 @@ class BM25Indexer:
         repository: Optional[str] = None
     ) -> List[BM25SearchResult]:
         """
-        Search indexed files using BM25 keyword search.
+        Search indexed files using BM25 keyword search with enhanced path matching.
 
         Business Purpose: Finds files matching keyword query using
-        probabilistic ranking. Good for exact term matching.
+        probabilistic ranking. Supports wildcards (*), phrase search ("exact phrase"),
+        and directory-specific searches for better path matching.
 
         Args:
-            query: Search query string
+            query: Search query string (supports *, "phrases", directory names)
             limit: Maximum number of results to return
             repository: Optional repository filter
 
@@ -223,23 +246,32 @@ class BM25Indexer:
 
         Example:
             results = indexer.search("JWT authentication", limit=5)
-            for result in results:
-                print(f"{result.relative_path}: {result.score:.2f}")
-                print(f"  {result.snippet}")
+            results = indexer.search("*config*", limit=5)  # Wildcard
+            results = indexer.search('"api routes"', limit=5)  # Phrase search
+            results = indexer.search("src/components", limit=5)  # Directory search
         """
         results = []
 
         try:
             with self.ix.searcher(weighting=BM25F()) as searcher:
-                # Parse query for content field
+                # Parse query for multiple fields with boosting
+                # Include new directory fields for better path matching
                 parser = MultifieldParser(
-                    ["content", "file_path", "relative_path"],
-                    schema=self.ix.schema
+                    ["content", "file_path", "relative_path", "directory_path", "directory_ngram"],
+                    schema=self.ix.schema,
+                    fieldboosts={
+                        "file_path": 10.0,          # Heavily boost exact file path matches
+                        "relative_path": 10.0,      # Heavily boost relative path matches
+                        "directory_path": 8.0,      # NEW: Boost directory path matches
+                        "directory_ngram": 5.0,     # NEW: Boost partial directory matches
+                        "content": 1.0              # Normal weight for content
+                    },
+                    group=OrGroup  # Use OR logic for multi-field matching
                 )
                 q = parser.parse(query)
 
                 # Execute search
-                search_results = searcher.search(q, limit=limit)
+                search_results = searcher.search(q, limit=limit * 2)  # Get more results to filter
 
                 for hit in search_results:
                     # Check repository filter
@@ -258,6 +290,10 @@ class BM25Indexer:
                         relative_path=hit['relative_path']
                     )
                     results.append(result)
+
+                    # Stop if we have enough results
+                    if len(results) >= limit:
+                        break
 
         except Exception as e:
             print(f"Error during search: {e}")
@@ -309,5 +345,5 @@ class BM25Indexer:
             indexer.delete_document("/path/to/deleted/file.py")
         """
         writer = self.ix.writer()
-        writer.delete_by_term('file_path', file_path)
+        writer.delete_by_term('file_path_original', file_path)
         writer.commit()

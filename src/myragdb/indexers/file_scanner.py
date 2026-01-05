@@ -124,19 +124,48 @@ class FileScanner:
             True if file should be included, False otherwise
         """
         relative_path = file_path.relative_to(self.repo_path)
-        relative_str = str(relative_path)
 
         # Check exclude patterns first (more efficient)
         for pattern in self.config.file_patterns.exclude:
-            if fnmatch.fnmatch(relative_str, pattern):
+            if self._matches_pattern(relative_path, pattern):
                 return False
 
         # Check include patterns
         for pattern in self.config.file_patterns.include:
-            if fnmatch.fnmatch(relative_str, pattern):
+            if self._matches_pattern(relative_path, pattern):
                 return True
 
         return False
+
+    def _matches_pattern(self, path: Path, pattern: str) -> bool:
+        """
+        Check if path matches pattern, with proper ** glob support.
+
+        Business Purpose: Provides correct glob pattern matching that handles
+        ** wildcards for both root and nested files.
+
+        Args:
+            path: Path to check
+            pattern: Glob pattern (e.g., "**/*.md", "*.py")
+
+        Returns:
+            True if path matches pattern
+        """
+        # Convert path to string for matching
+        path_str = str(path)
+
+        # Handle ** patterns by trying both with and without directory prefix
+        if pattern.startswith('**/'):
+            # Pattern like **/*.md should match both "file.md" and "dir/file.md"
+            suffix_pattern = pattern[3:]  # Remove **/ prefix
+            if fnmatch.fnmatch(path_str, suffix_pattern) or fnmatch.fnmatch(path_str, pattern):
+                return True
+            # Also try matching just the filename
+            if fnmatch.fnmatch(path.name, suffix_pattern):
+                return True
+
+        # Standard fnmatch for other patterns
+        return fnmatch.fnmatch(path_str, pattern)
 
     def _should_exclude_dir(self, dir_path: Path) -> bool:
         """

@@ -3,6 +3,8 @@
 # Author: Libor Ballaty <libor@arionetworks.com>
 # Created: 2026-01-04
 
+import os
+import signal
 import time
 import asyncio
 import threading
@@ -165,14 +167,55 @@ async def root():
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """
-    Health check endpoint.
+    Health check endpoint with dependency checks.
 
-    Business Purpose: Allows monitoring systems to verify service health.
+    Business Purpose: Allows monitoring systems to verify service health
+    and detect if critical dependencies (Meilisearch, ChromaDB) are unavailable.
     """
-    return HealthResponse(
-        status="healthy",
-        message="MyRAGDB service is healthy"
-    )
+    try:
+        # Check if search engines can be initialized
+        keyword_indexer, vector_indexer, hybrid_engine = get_search_engines()
+
+        # Try to verify Meilisearch is responding
+        try:
+            keyword_indexer.get_document_count()
+            meilisearch_ok = True
+        except Exception:
+            meilisearch_ok = False
+
+        # Try to verify ChromaDB is responding
+        try:
+            vector_indexer.get_document_count()
+            chromadb_ok = True
+        except Exception:
+            chromadb_ok = False
+
+        # Determine overall health
+        if meilisearch_ok and chromadb_ok:
+            return HealthResponse(
+                status="healthy",
+                message="MyRAGDB service is healthy (Meilisearch + ChromaDB OK)"
+            )
+        elif meilisearch_ok or chromadb_ok:
+            issues = []
+            if not meilisearch_ok:
+                issues.append("Meilisearch unavailable")
+            if not chromadb_ok:
+                issues.append("ChromaDB unavailable")
+            return HealthResponse(
+                status="degraded",
+                message=f"MyRAGDB service degraded: {', '.join(issues)}"
+            )
+        else:
+            return HealthResponse(
+                status="unhealthy",
+                message="MyRAGDB service unhealthy: Meilisearch and ChromaDB unavailable"
+            )
+    except Exception as e:
+        return HealthResponse(
+            status="unhealthy",
+            message=f"MyRAGDB service unhealthy: {str(e)}"
+        )
 
 
 @app.get("/version")
@@ -192,6 +235,43 @@ async def get_version():
     return {
         "version": __version__,
         "api_version": "v1"
+    }
+
+
+@app.post("/admin/restart")
+async def restart_server(background_tasks: BackgroundTasks):
+    """
+    Restart the MyRAGDB server process.
+
+    Business Purpose: Allows UI-triggered server restart for dependency issues
+    (e.g., Meilisearch unavailable) without SSH access.
+
+    NOTE: This triggers a graceful shutdown that requires start.sh or similar
+    script to automatically restart the server.
+
+    Returns:
+        Confirmation message that restart is initiated
+
+    Example:
+        POST /admin/restart
+        {"status": "restarting", "message": "Server restart initiated", "pid": 12345}
+    """
+    current_pid = os.getpid()
+    logger.info(f"Server restart requested via API (PID: {current_pid})")
+
+    def trigger_restart():
+        """Schedule server shutdown in 1 second to allow response to be sent."""
+        time.sleep(1)
+        logger.info("Sending SIGTERM to trigger restart...")
+        os.kill(current_pid, signal.SIGTERM)
+
+    # Schedule restart in background so we can return response first
+    background_tasks.add_task(trigger_restart)
+
+    return {
+        "status": "restarting",
+        "message": "Server restart initiated. Server will shutdown in 1 second.",
+        "pid": current_pid
     }
 
 

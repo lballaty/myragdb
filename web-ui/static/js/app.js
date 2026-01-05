@@ -65,14 +65,31 @@ async function checkHealthStatus() {
         const response = await fetch(`${API_BASE_URL}/health`);
         const data = await response.json();
 
+        // Remove all status classes
+        indicator.classList.remove('healthy', 'degraded', 'unhealthy', 'offline');
+
         if (data.status === 'healthy') {
             indicator.classList.add('healthy');
             statusText.textContent = 'Service Healthy';
-        } else {
+            statusText.title = data.message || '';
+        } else if (data.status === 'degraded') {
+            indicator.classList.add('degraded');
             statusText.textContent = 'Service Degraded';
+            statusText.title = data.message || 'Some dependencies unavailable';
+            addActivityLog('warning', `Health degraded: ${data.message}`);
+        } else if (data.status === 'unhealthy') {
+            indicator.classList.add('unhealthy');
+            statusText.textContent = 'Service Unhealthy';
+            statusText.title = data.message || 'Critical dependencies unavailable';
+            addActivityLog('error', `Health unhealthy: ${data.message}`);
+        } else {
+            statusText.textContent = 'Service Unknown';
         }
     } catch (error) {
+        indicator.classList.remove('healthy', 'degraded', 'unhealthy');
+        indicator.classList.add('offline');
         statusText.textContent = 'Service Offline';
+        statusText.title = 'Cannot connect to server';
         addActivityLog('error', `Health check failed: ${error.message}`);
     }
 }
