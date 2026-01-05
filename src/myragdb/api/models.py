@@ -362,13 +362,17 @@ class DiscoveredRepositoryItem(BaseModel):
     name: str = Field(..., description="Repository name (directory name)")
     path: str = Field(..., description="Absolute path to repository")
     is_already_indexed: bool = Field(..., description="Whether repository is already in configuration")
+    created_date: Optional[str] = Field(None, description="ISO timestamp when repository was created")
+    modified_date: Optional[str] = Field(None, description="ISO timestamp when repository was last modified")
 
     class Config:
         json_schema_extra = {
             "example": {
                 "name": "MyProject",
                 "path": "/Users/user/projects/MyProject",
-                "is_already_indexed": False
+                "is_already_indexed": False,
+                "created_date": "2024-01-15T10:30:00",
+                "modified_date": "2026-01-05T12:00:00"
             }
         }
 

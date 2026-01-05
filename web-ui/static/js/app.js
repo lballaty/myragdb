@@ -18,7 +18,11 @@ const state = {
     discoveryFilters: {
         search: '',
         status: 'all',
-        priority: 'all'
+        priority: 'all',
+        createdAfter: '',
+        createdBefore: '',
+        modifiedAfter: '',
+        modifiedBefore: ''
     },
     discoveryPagination: {
         currentPage: 1,
@@ -949,6 +953,10 @@ function initializeDiscovery() {
     const filterSearch = document.getElementById('filter-repo-search');
     const filterStatus = document.getElementById('filter-repo-status');
     const filterPriority = document.getElementById('filter-repo-priority');
+    const filterCreatedAfter = document.getElementById('filter-created-after');
+    const filterCreatedBefore = document.getElementById('filter-created-before');
+    const filterModifiedAfter = document.getElementById('filter-modified-after');
+    const filterModifiedBefore = document.getElementById('filter-modified-before');
     const paginationPrev = document.getElementById('pagination-prev');
     const paginationNext = document.getElementById('pagination-next');
 
@@ -985,6 +993,34 @@ function initializeDiscovery() {
     if (filterPriority) {
         filterPriority.addEventListener('change', () => {
             state.discoveryFilters.priority = filterPriority.value;
+            applyDiscoveryFilters();
+        });
+    }
+
+    if (filterCreatedAfter) {
+        filterCreatedAfter.addEventListener('change', () => {
+            state.discoveryFilters.createdAfter = filterCreatedAfter.value;
+            applyDiscoveryFilters();
+        });
+    }
+
+    if (filterCreatedBefore) {
+        filterCreatedBefore.addEventListener('change', () => {
+            state.discoveryFilters.createdBefore = filterCreatedBefore.value;
+            applyDiscoveryFilters();
+        });
+    }
+
+    if (filterModifiedAfter) {
+        filterModifiedAfter.addEventListener('change', () => {
+            state.discoveryFilters.modifiedAfter = filterModifiedAfter.value;
+            applyDiscoveryFilters();
+        });
+    }
+
+    if (filterModifiedBefore) {
+        filterModifiedBefore.addEventListener('change', () => {
+            state.discoveryFilters.modifiedBefore = filterModifiedBefore.value;
             applyDiscoveryFilters();
         });
     }
@@ -1076,7 +1112,7 @@ async function scanForRepositories() {
 }
 
 function applyDiscoveryFilters() {
-    const { search, status, priority } = state.discoveryFilters;
+    const { search, status, priority, createdAfter, createdBefore, modifiedAfter, modifiedBefore } = state.discoveryFilters;
 
     let filtered = state.discoveredRepos.filter(repo => {
         // Search filter
@@ -1092,6 +1128,31 @@ function applyDiscoveryFilters() {
         // Priority filter (for repos that have priority set)
         if (priority !== 'all' && repo.priority && repo.priority !== priority) {
             return false;
+        }
+
+        // Date filters
+        if (repo.created_date) {
+            const repoCreatedDate = new Date(repo.created_date).toISOString().split('T')[0];
+
+            if (createdAfter && repoCreatedDate < createdAfter) {
+                return false;
+            }
+
+            if (createdBefore && repoCreatedDate > createdBefore) {
+                return false;
+            }
+        }
+
+        if (repo.modified_date) {
+            const repoModifiedDate = new Date(repo.modified_date).toISOString().split('T')[0];
+
+            if (modifiedAfter && repoModifiedDate < modifiedAfter) {
+                return false;
+            }
+
+            if (modifiedBefore && repoModifiedDate > modifiedBefore) {
+                return false;
+            }
         }
 
         return true;

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.05.2.10.0">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.05.2.10.1">
 </head>
 <body>
     <div class="container">
@@ -188,6 +188,22 @@
                                 <option value="low">Low Priority</option>
                             </select>
                         </label>
+                        <label>
+                            <span>Created After</span>
+                            <input type="date" id="filter-created-after" placeholder="YYYY-MM-DD">
+                        </label>
+                        <label>
+                            <span>Created Before</span>
+                            <input type="date" id="filter-created-before" placeholder="YYYY-MM-DD">
+                        </label>
+                        <label>
+                            <span>Modified After</span>
+                            <input type="date" id="filter-modified-after" placeholder="YYYY-MM-DD">
+                        </label>
+                        <label>
+                            <span>Modified Before</span>
+                            <input type="date" id="filter-modified-before" placeholder="YYYY-MM-DD">
+                        </label>
                     </div>
 
                     <!-- Bulk Actions -->
@@ -319,6 +335,6 @@
         </div>
     </div>
 
-    <script src="static/js/app.js?v=2026.01.05.2.10.0"></script>
+    <script src="static/js/app.js?v=2026.01.05.2.10.1"></script>
 </body>
 </html>

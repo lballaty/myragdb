@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 from typing import List, Optional, Dict
 from dataclasses import dataclass
+from datetime import datetime
 import yaml
 
 
@@ -22,13 +23,17 @@ class DiscoveredRepository:
         repo = DiscoveredRepository(
             name="MyProject",
             path="/Users/user/projects/MyProject",
-            git_dir="/Users/user/projects/MyProject/.git"
+            git_dir="/Users/user/projects/MyProject/.git",
+            created_date="2024-01-15T10:30:00",
+            modified_date="2026-01-05T12:00:00"
         )
     """
     name: str
     path: str
     git_dir: str
     is_git_repo: bool = True
+    created_date: Optional[str] = None
+    modified_date: Optional[str] = None
 
 
 class RepositoryDiscovery:
@@ -144,11 +149,27 @@ class RepositoryDiscovery:
             # Check if current directory is a git repo
             if self.is_git_repository(current_path):
                 repo_name = current_path.name
+
+                # Get creation and modification dates
+                try:
+                    stat_info = current_path.stat()
+                    # Use .git directory creation time as repository creation date
+                    git_dir_path = current_path / ".git"
+                    git_stat = git_dir_path.stat() if git_dir_path.exists() else stat_info
+                    created_timestamp = git_stat.st_birthtime if hasattr(git_stat, 'st_birthtime') else git_stat.st_ctime
+                    created_date = datetime.fromtimestamp(created_timestamp).isoformat()
+                    modified_date = datetime.fromtimestamp(stat_info.st_mtime).isoformat()
+                except Exception:
+                    created_date = None
+                    modified_date = None
+
                 discovered.append(DiscoveredRepository(
                     name=repo_name,
                     path=str(current_path),
                     git_dir=str(current_path / ".git"),
-                    is_git_repo=True
+                    is_git_repo=True,
+                    created_date=created_date,
+                    modified_date=modified_date
                 ))
                 # Don't recurse into git repositories
                 dirnames.clear()

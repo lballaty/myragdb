@@ -495,7 +495,9 @@ async def discover_repositories(request: DiscoverRequest):
             repository_items.append(DiscoveredRepositoryItem(
                 name=repo.name,
                 path=repo.path,
-                is_already_indexed=is_already_indexed
+                is_already_indexed=is_already_indexed,
+                created_date=repo.created_date,
+                modified_date=repo.modified_date
             ))
 
         return DiscoverResponse(
