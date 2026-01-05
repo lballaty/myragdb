@@ -18,7 +18,25 @@ fi
 
 case "$COMMAND" in
     start)
-        exec "$SCRIPT_DIR/start.sh"
+        # Run start.sh but in background to avoid blocking infrastructure.py
+        # The health check endpoint will verify readiness, so this exits immediately
+        # Note: start.sh loads databases and repositories which can take significant time
+        # Infrastructure monitoring will auto-retry if service isn't healthy yet
+
+        if [ -f ".server.pid" ]; then
+            OLD_PID=$(cat .server.pid)
+            if ps -p $OLD_PID > /dev/null 2>&1; then
+                echo "MyRAGDB already running (PID: $OLD_PID)"
+                exit 0
+            fi
+        fi
+
+        # Start in background, redirect output to log to avoid browser/terminal issues
+        "$SCRIPT_DIR/start.sh" >/tmp/myragdb_startup.log 2>&1 &
+        STARTUP_PID=$!
+        echo "MyRAGDB startup initiated (background PID: $STARTUP_PID)"
+        echo "Note: Database loading can take several minutes depending on repository size"
+        exit 0
         ;;
     stop)
         exec "$SCRIPT_DIR/stop.sh"

@@ -67,7 +67,7 @@ def search(query: str, limit: int, repos: tuple, min_score: float, search_type: 
                 results = indexer.search(
                     query=query,
                     limit=limit,
-                    repository=repos[0] if repos else None
+                    repository_filter=repos[0] if repos else None
                 )
                 # Convert to common format
                 formatted_results = [
@@ -88,7 +88,7 @@ def search(query: str, limit: int, repos: tuple, min_score: float, search_type: 
                 results = indexer.search(
                     query=query,
                     limit=limit,
-                    repository=repos[0] if repos else None
+                    repository_filter=repos[0] if repos else None
                 )
                 # Convert to common format
                 formatted_results = [
@@ -109,7 +109,7 @@ def search(query: str, limit: int, repos: tuple, min_score: float, search_type: 
                 results = engine.search(
                     query=query,
                     limit=limit,
-                    repository=repos[0] if repos else None,
+                    repository_filter=repos[0] if repos else None,
                     min_score=min_score
                 )
                 formatted_results = [

@@ -15,7 +15,7 @@ from meilisearch.index import Index
 
 from myragdb.indexers.file_scanner import ScannedFile
 from myragdb.utils.id_generator import generate_document_id
-from myragdb.config import settings
+from myragdb.config import settings as app_settings
 
 
 @dataclass
@@ -73,18 +73,24 @@ class MeilisearchIndexer:
 
     def __init__(
         self,
-        host: str = "http://localhost:7700",
+        host: Optional[str] = None,
         api_key: Optional[str] = None,
-        index_name: str = "files"
+        index_name: Optional[str] = None
     ):
         """
         Initialize Meilisearch indexer.
 
         Args:
-            host: Meilisearch server URL
-            api_key: Master API key for Meilisearch
-            index_name: Name of the Meilisearch index
+            host: Meilisearch server URL (defaults to config setting)
+            api_key: Master API key for Meilisearch (defaults to config setting)
+            index_name: Name of the Meilisearch index (defaults to config setting)
         """
+        # Use config defaults if not provided
+        host = host or app_settings.meilisearch_host
+        api_key = api_key or app_settings.meilisearch_api_key
+        index_name = index_name or app_settings.meilisearch_index
+
+        # Initialize client with API key
         self.client = meilisearch.Client(host, api_key)
         self.index_name = index_name
         self.index: Index = self.client.index(index_name)
