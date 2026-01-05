@@ -332,3 +332,110 @@ class StopIndexingResponse(BaseModel):
                 "stopped": ["Keyword", "Vector"]
             }
         }
+
+
+class DiscoverRequest(BaseModel):
+    """
+    Repository discovery request.
+
+    Business Purpose: Allows scanning directories for git repositories
+    that can be added to the indexing configuration.
+    """
+    root_path: str = Field(..., description="Root directory to scan for repositories")
+    max_depth: int = Field(default=3, ge=1, le=10, description="Maximum directory depth to scan")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "root_path": "/Users/user/projects",
+                "max_depth": 2
+            }
+        }
+
+
+class DiscoveredRepositoryItem(BaseModel):
+    """
+    Individual discovered repository.
+
+    Business Purpose: Represents a git repository found during directory scanning.
+    """
+    name: str = Field(..., description="Repository name (directory name)")
+    path: str = Field(..., description="Absolute path to repository")
+    is_already_indexed: bool = Field(..., description="Whether repository is already in configuration")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "MyProject",
+                "path": "/Users/user/projects/MyProject",
+                "is_already_indexed": False
+            }
+        }
+
+
+class DiscoverResponse(BaseModel):
+    """
+    Repository discovery response.
+
+    Business Purpose: Returns list of discovered repositories with status information.
+    """
+    total_found: int = Field(..., description="Total number of repositories found")
+    new_repositories: int = Field(..., description="Number of repositories not yet indexed")
+    already_indexed: int = Field(..., description="Number of repositories already in configuration")
+    repositories: List[DiscoveredRepositoryItem] = Field(..., description="List of discovered repositories")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "total_found": 15,
+                "new_repositories": 10,
+                "already_indexed": 5,
+                "repositories": []
+            }
+        }
+
+
+class AddRepositoriesRequest(BaseModel):
+    """
+    Request to add multiple repositories to configuration.
+
+    Business Purpose: Allows bulk addition of discovered repositories
+    to the indexing configuration.
+    """
+    repositories: List[str] = Field(..., description="List of repository paths to add")
+    priority: str = Field(default="medium", description="Priority for added repositories (high, medium, low)")
+    enabled: bool = Field(default=True, description="Whether to enable repositories immediately")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "repositories": [
+                    "/Users/user/projects/Project1",
+                    "/Users/user/projects/Project2"
+                ],
+                "priority": "high",
+                "enabled": True
+            }
+        }
+
+
+class AddRepositoriesResponse(BaseModel):
+    """
+    Response for adding repositories.
+
+    Business Purpose: Confirms how many repositories were added to configuration.
+    """
+    status: str = Field(..., description="Operation status")
+    added_count: int = Field(..., description="Number of repositories added")
+    skipped_count: int = Field(..., description="Number of repositories skipped (already exist)")
+    message: str = Field(..., description="Status message")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "success",
+                "added_count": 8,
+                "skipped_count": 2,
+                "message": "Added 8 repositories to configuration"
+            }
+        }

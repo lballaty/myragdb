@@ -13,6 +13,8 @@ from rich.text import Text
 from myragdb.search.hybrid_search import HybridSearchEngine
 from myragdb.indexers.meilisearch_indexer import MeilisearchIndexer
 from myragdb.indexers.vector_indexer import VectorIndexer
+from myragdb.utils.repo_discovery import RepositoryDiscovery
+from myragdb.config import load_repositories_config
 
 
 console = Console()
@@ -203,6 +205,91 @@ def stats():
         console.print()
         console.print(table)
         console.print()
+
+    except Exception as e:
+        console.print(f"[bold red]Error:[/bold red] {str(e)}", style="red")
+        raise click.Abort()
+
+
+@cli.command()
+@click.argument('root_path')
+@click.option('--depth', '-d', default=3, help='Maximum directory depth to scan')
+@click.option('--add', '-a', is_flag=True, help='Automatically add discovered repos to config')
+@click.option('--priority', '-p', default='medium',
+              type=click.Choice(['high', 'medium', 'low']),
+              help='Priority for added repositories')
+@click.option('--config', '-c', default='config/repositories.yaml', help='Path to repositories config')
+def discover(root_path: str, depth: int, add: bool, priority: str, config: str):
+    """
+    Discover git repositories in a directory tree.
+
+    Business Purpose: Automatically finds git repositories for indexing,
+    avoiding manual configuration of each repo.
+
+    Examples:
+        myragdb discover /Users/user/projects
+        myragdb discover /Users/user/projects --depth 2
+        myragdb discover /Users/user/projects --add --priority high
+    """
+    try:
+        with console.status(f"[bold green]Scanning {root_path} (depth={depth})..."):
+            discovery = RepositoryDiscovery()
+            repos = discovery.scan_directory(root_path, max_depth=depth)
+
+        if not repos:
+            console.print("[yellow]No git repositories found.[/yellow]")
+            return
+
+        # Load existing configuration to check for duplicates
+        try:
+            existing_config = load_repositories_config()
+            existing_paths = {repo.path for repo in existing_config.repositories}
+        except Exception:
+            existing_paths = set()
+
+        # Create results table
+        table = Table(title=f"Discovered Repositories ({len(repos)} found)")
+        table.add_column("#", style="dim", width=4)
+        table.add_column("Repository", style="cyan")
+        table.add_column("Path", style="white")
+        table.add_column("Status", style="magenta")
+
+        new_repos = []
+        for idx, repo in enumerate(repos, 1):
+            status = "[dim]Already indexed[/dim]" if repo.path in existing_paths else "[green]New[/green]"
+            table.add_row(str(idx), repo.name, repo.path, status)
+            if repo.path not in existing_paths:
+                new_repos.append(repo)
+
+        console.print()
+        console.print(table)
+        console.print()
+
+        # Summary
+        summary_text = Text()
+        summary_text.append(f"Total: {len(repos)} repositories found\n", style="bold")
+        summary_text.append(f"New: {len(new_repos)} repositories\n", style="green")
+        summary_text.append(f"Already indexed: {len(repos) - len(new_repos)} repositories", style="dim")
+        console.print(Panel(summary_text, title="Summary", border_style="blue"))
+        console.print()
+
+        # Add to config if requested
+        if add:
+            if new_repos:
+                with console.status("[bold green]Adding repositories to config..."):
+                    added = discovery.add_repositories_to_config(
+                        new_repos,
+                        config,
+                        enabled=True,
+                        priority=priority
+                    )
+                console.print(f"[bold green]✓[/bold green] Added {added} repositories to {config}")
+                console.print(f"[dim]Run indexing to include these repositories in search.[/dim]")
+            else:
+                console.print("[yellow]No new repositories to add.[/yellow]")
+        else:
+            if new_repos:
+                console.print(f"[dim]Tip: Run with --add to automatically add {len(new_repos)} new repositories[/dim]")
 
     except Exception as e:
         console.print(f"[bold red]Error:[/bold red] {str(e)}", style="red")

@@ -28,7 +28,12 @@ from myragdb.api.models import (
     ReindexRequest,
     ReindexResponse,
     StopIndexingRequest,
-    StopIndexingResponse
+    StopIndexingResponse,
+    DiscoverRequest,
+    DiscoverResponse,
+    DiscoveredRepositoryItem,
+    AddRepositoriesRequest,
+    AddRepositoriesResponse
 )
 from myragdb.search.hybrid_search import HybridSearchEngine, HybridSearchResult
 from myragdb.indexers.meilisearch_indexer import MeilisearchIndexer
@@ -36,6 +41,7 @@ from myragdb.indexers.vector_indexer import VectorIndexer
 from myragdb.llm.query_rewriter import QueryRewriter
 from myragdb.db.metadata import MetadataStore
 from myragdb.config import settings, load_repositories_config
+from myragdb.utils.repo_discovery import RepositoryDiscovery, DiscoveredRepository
 import structlog
 
 # Configure structured logging
@@ -439,6 +445,124 @@ async def get_repositories():
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error loading repositories: {str(e)}")
+
+
+@app.post("/repositories/discover", response_model=DiscoverResponse)
+async def discover_repositories(request: DiscoverRequest):
+    """
+    Discover git repositories in a directory tree.
+
+    Business Purpose: Allows automatic discovery of repositories that can be
+    added to the indexing configuration, avoiding manual YAML editing.
+
+    Args:
+        request: DiscoverRequest with root_path and max_depth
+
+    Returns:
+        DiscoverResponse with list of discovered repositories and status
+
+    Example:
+        POST /repositories/discover
+        {
+            "root_path": "/Users/user/projects",
+            "max_depth": 2
+        }
+    """
+    try:
+        # Scan for repositories
+        discovery = RepositoryDiscovery()
+        discovered_repos = discovery.scan_directory(
+            request.root_path,
+            max_depth=request.max_depth
+        )
+
+        # Load existing configuration to check for duplicates
+        try:
+            existing_config = load_repositories_config()
+            existing_paths = {repo.path for repo in existing_config.repositories}
+        except Exception:
+            existing_paths = set()
+
+        # Build response
+        repository_items = []
+        new_count = 0
+
+        for repo in discovered_repos:
+            is_already_indexed = repo.path in existing_paths
+            if not is_already_indexed:
+                new_count += 1
+
+            repository_items.append(DiscoveredRepositoryItem(
+                name=repo.name,
+                path=repo.path,
+                is_already_indexed=is_already_indexed
+            ))
+
+        return DiscoverResponse(
+            total_found=len(discovered_repos),
+            new_repositories=new_count,
+            already_indexed=len(discovered_repos) - new_count,
+            repositories=repository_items
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error discovering repositories: {str(e)}")
+
+
+@app.post("/repositories/add-batch", response_model=AddRepositoriesResponse)
+async def add_repositories_batch(request: AddRepositoriesRequest):
+    """
+    Add multiple repositories to configuration.
+
+    Business Purpose: Enables bulk addition of discovered repositories to the
+    indexing configuration, streamlining setup for large numbers of repos.
+
+    Args:
+        request: AddRepositoriesRequest with repository paths, priority, and enabled status
+
+    Returns:
+        AddRepositoriesResponse with count of added/skipped repositories
+
+    Example:
+        POST /repositories/add-batch
+        {
+            "repositories": ["/path/to/repo1", "/path/to/repo2"],
+            "priority": "high",
+            "enabled": true
+        }
+    """
+    try:
+        # Convert paths to DiscoveredRepository objects
+        discovered_repos = [
+            DiscoveredRepository(
+                name=Path(path).name,
+                path=path,
+                git_dir=str(Path(path) / ".git"),
+                is_git_repo=True
+            )
+            for path in request.repositories
+        ]
+
+        # Add to configuration
+        discovery = RepositoryDiscovery()
+        added_count = discovery.add_repositories_to_config(
+            discovered_repos,
+            config_path="config/repositories.yaml",
+            enabled=request.enabled,
+            priority=request.priority
+        )
+
+        skipped_count = len(request.repositories) - added_count
+
+        return AddRepositoriesResponse(
+            status="success",
+            added_count=added_count,
+            skipped_count=skipped_count,
+            message=f"Added {added_count} repositories to configuration"
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error adding repositories: {str(e)}")
 
 
 @app.post("/search/hybrid", response_model=SearchResponse)
