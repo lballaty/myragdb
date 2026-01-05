@@ -1,0 +1,13 @@
+{
+  "myragdb": {
+    "command": "python",
+    "args": [
+      "-m",
+      "mcp_server.server"
+    ],
+    "cwd": "/Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb",
+    "env": {
+      "PYTHONPATH": "/Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb"
+    }
+  }
+}
