@@ -368,6 +368,7 @@ class DiscoveredRepositoryItem(BaseModel):
     modified_date: Optional[str] = Field(None, description="ISO timestamp when repository was last modified")
     git_remote_url: Optional[str] = Field(None, description="Git remote origin URL")
     clone_group: Optional[str] = Field(None, description="Normalized clone identifier (e.g., 'github.com/user/repo')")
+    excluded: bool = Field(False, description="Whether repository is excluded from indexing (locked)")
 
     class Config:
         json_schema_extra = {

@@ -1245,9 +1245,10 @@ function renderDiscoveredRepos() {
             // For indexed repos: show lock/unlock toggle and remove button
             const lockButtonText = isExcluded ? '🔓 Unlock' : '🔒 Lock';
             const lockButtonClass = isExcluded ? 'btn-unlock' : 'btn-lock';
+            const lockButtonTitle = isExcluded ? 'Unlock repository to allow re-indexing' : 'Lock repository to prevent re-indexing';
             actionsHtml = `
-                <button class="btn-small ${lockButtonClass}" onclick="toggleRepositoryExcluded('${escapeHtml(repo.name)}', ${!isExcluded})">${lockButtonText}</button>
-                <button class="btn-small btn-remove" onclick="removeRepository('${escapeHtml(repo.name)}')">🗑️ Remove</button>
+                <button class="btn-small ${lockButtonClass}" onclick="toggleRepositoryExcluded('${escapeHtml(repo.name)}', ${!isExcluded})" title="${lockButtonTitle}">${lockButtonText}</button>
+                <button class="btn-small btn-remove" onclick="removeRepository('${escapeHtml(repo.name)}')'" title="Remove from configuration (does not delete files)">🗑️ Remove from Config</button>
                 <button class="btn-small btn-configure" onclick="configureRepository('${escapeHtml(repo.name)}')">⚙️ Configure</button>
             `;
         }

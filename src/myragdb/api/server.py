@@ -477,12 +477,14 @@ async def discover_repositories(request: DiscoverRequest):
             max_depth=request.max_depth
         )
 
-        # Load existing configuration to check for duplicates
+        # Load existing configuration to check for duplicates and get excluded status
         try:
             existing_config = load_repositories_config()
             existing_paths = {repo.path for repo in existing_config.repositories}
+            existing_repos_map = {repo.path: repo for repo in existing_config.repositories}
         except Exception:
             existing_paths = set()
+            existing_repos_map = {}
 
         # Build response
         repository_items = []
@@ -493,6 +495,11 @@ async def discover_repositories(request: DiscoverRequest):
             if not is_already_indexed:
                 new_count += 1
 
+            # Get excluded status from existing config if repo is already indexed
+            excluded = False
+            if is_already_indexed and repo.path in existing_repos_map:
+                excluded = getattr(existing_repos_map[repo.path], 'excluded', False)
+
             repository_items.append(DiscoveredRepositoryItem(
                 name=repo.name,
                 path=repo.path,
@@ -500,7 +507,8 @@ async def discover_repositories(request: DiscoverRequest):
                 created_date=repo.created_date,
                 modified_date=repo.modified_date,
                 git_remote_url=repo.git_remote_url,
-                clone_group=repo.clone_group
+                clone_group=repo.clone_group,
+                excluded=excluded
             ))
 
         return DiscoverResponse(
