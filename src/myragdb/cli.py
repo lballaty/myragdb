@@ -11,7 +11,7 @@ from rich.panel import Panel
 from rich.text import Text
 
 from myragdb.search.hybrid_search import HybridSearchEngine
-from myragdb.indexers.bm25_indexer import MeilisearchIndexer
+from myragdb.indexers.meilisearch_indexer import MeilisearchIndexer
 from myragdb.indexers.vector_indexer import VectorIndexer
 
 

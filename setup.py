@@ -33,7 +33,6 @@ setup(
         "uvicorn[standard]>=0.27.0",
         "pydantic>=2.5.3",
         "pydantic-settings>=2.1.0",
-        "Whoosh>=2.7.4",
         "chromadb>=0.4.22",
         "sentence-transformers>=2.3.1",
         "torch>=2.1.2",

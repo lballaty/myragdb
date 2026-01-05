@@ -244,7 +244,7 @@ def index_chunk(self, file_path, chunk_text):
 
 **Replace:**
 ```python
-from myragdb.indexers.bm25_indexer import MeilisearchIndexer
+from myragdb.indexers.meilisearch_indexer import MeilisearchIndexer
 keyword_indexer = MeilisearchIndexer()
 ```
 

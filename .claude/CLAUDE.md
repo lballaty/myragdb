@@ -23,7 +23,7 @@
 
 **Project:** MyRAGDB - Hybrid search system combining Meilisearch keyword search and vector embeddings
 **Purpose:** Enable AI agents to discover code/documentation semantically across all projects
-**Technology:** Python (FastAPI), React/TypeScript, Whoosh, ChromaDB, sentence-transformers
+**Technology:** Python (FastAPI), React/TypeScript, Meilisearch, ChromaDB, sentence-transformers
 
 ---
 
