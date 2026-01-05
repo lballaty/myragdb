@@ -498,7 +498,9 @@ async def discover_repositories(request: DiscoverRequest):
                 path=repo.path,
                 is_already_indexed=is_already_indexed,
                 created_date=repo.created_date,
-                modified_date=repo.modified_date
+                modified_date=repo.modified_date,
+                git_remote_url=repo.git_remote_url,
+                clone_group=repo.clone_group
             ))
 
         return DiscoverResponse(

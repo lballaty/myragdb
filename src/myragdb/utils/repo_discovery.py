@@ -18,6 +18,7 @@ class DiscoveredRepository:
 
     Business Purpose: Contains information about a git repository found during
     directory scanning, ready to be added to the repositories configuration.
+    Also detects clones by analyzing git remote URLs.
 
     Example:
         repo = DiscoveredRepository(
@@ -25,7 +26,9 @@ class DiscoveredRepository:
             path="/Users/user/projects/MyProject",
             git_dir="/Users/user/projects/MyProject/.git",
             created_date="2024-01-15T10:30:00",
-            modified_date="2026-01-05T12:00:00"
+            modified_date="2026-01-05T12:00:00",
+            git_remote_url="https://github.com/user/MyProject.git",
+            clone_group="github.com/user/MyProject"
         )
     """
     name: str
@@ -34,6 +37,8 @@ class DiscoveredRepository:
     is_git_repo: bool = True
     created_date: Optional[str] = None
     modified_date: Optional[str] = None
+    git_remote_url: Optional[str] = None
+    clone_group: Optional[str] = None
 
 
 class RepositoryDiscovery:
@@ -75,6 +80,77 @@ class RepositoryDiscovery:
         """
         git_dir = directory / ".git"
         return git_dir.exists() and git_dir.is_dir()
+
+    def get_git_remote_info(self, directory: Path) -> tuple[Optional[str], Optional[str]]:
+        """
+        Get git remote URL and generate clone group identifier.
+
+        Business Purpose: Identifies repository clones by extracting the remote
+        URL and normalizing it into a clone group. This allows the system to
+        detect when multiple local copies of the same repository exist.
+
+        Args:
+            directory: Path to git repository
+
+        Returns:
+            Tuple of (remote_url, clone_group)
+            remote_url: The git remote origin URL (None if not found)
+            clone_group: Normalized identifier (e.g., "github.com/user/repo")
+
+        Example:
+            discovery = RepositoryDiscovery()
+            url, group = discovery.get_git_remote_info(Path("/path/to/repo"))
+            # url: "https://github.com/user/myproject.git"
+            # group: "github.com/user/myproject"
+        """
+        import subprocess
+        import re
+
+        try:
+            # Get remote URL using git config
+            result = subprocess.run(
+                ["git", "config", "--get", "remote.origin.url"],
+                cwd=directory,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+
+            if result.returncode != 0:
+                return None, None
+
+            remote_url = result.stdout.strip()
+            if not remote_url:
+                return None, None
+
+            # Normalize URL to create clone group
+            # Handle various git URL formats:
+            # https://github.com/user/repo.git
+            # git@github.com:user/repo.git
+            # ssh://git@github.com/user/repo.git
+
+            clone_group = remote_url
+
+            # Remove protocol
+            clone_group = re.sub(r'^(https?|git|ssh)://', '', clone_group)
+
+            # Convert SSH format (git@host:path) to standard format (host/path)
+            clone_group = re.sub(r'^git@([^:]+):', r'\1/', clone_group)
+
+            # Remove .git suffix
+            clone_group = re.sub(r'\.git$', '', clone_group)
+
+            # Remove trailing slashes
+            clone_group = clone_group.rstrip('/')
+
+            # Convert to lowercase for consistent matching
+            clone_group = clone_group.lower()
+
+            return remote_url, clone_group
+
+        except Exception:
+            # If git command fails or any error occurs, return None
+            return None, None
 
     def scan_directory(
         self,
@@ -163,13 +239,18 @@ class RepositoryDiscovery:
                     created_date = None
                     modified_date = None
 
+                # Get git remote URL and clone group
+                git_remote_url, clone_group = self.get_git_remote_info(current_path)
+
                 discovered.append(DiscoveredRepository(
                     name=repo_name,
                     path=str(current_path),
                     git_dir=str(current_path / ".git"),
                     is_git_repo=True,
                     created_date=created_date,
-                    modified_date=modified_date
+                    modified_date=modified_date,
+                    git_remote_url=git_remote_url,
+                    clone_group=clone_group
                 ))
                 # Don't recurse into git repositories
                 dirnames.clear()

@@ -1187,6 +1187,17 @@ function renderDiscoveredRepos() {
         return;
     }
 
+    // Build clone group map to count clones
+    const cloneGroups = {};
+    filtered.forEach(repo => {
+        if (repo.clone_group) {
+            if (!cloneGroups[repo.clone_group]) {
+                cloneGroups[repo.clone_group] = [];
+            }
+            cloneGroups[repo.clone_group].push(repo);
+        }
+    });
+
     // Paginate
     const startIdx = (currentPage - 1) * pageSize;
     const endIdx = Math.min(startIdx + pageSize, filtered.length);
@@ -1200,9 +1211,18 @@ function renderDiscoveredRepos() {
         let badgeClass = isNew ? 'new' : 'indexed';
         let badgeText = isNew ? 'NEW' : 'INDEXED';
         let excludedBadge = '';
+        let cloneBadge = '';
 
         if (isExcluded) {
             excludedBadge = '<span class="badge excluded">🔒 EXCLUDED</span>';
+        }
+
+        // Clone detection
+        if (repo.clone_group && cloneGroups[repo.clone_group]) {
+            const cloneCount = cloneGroups[repo.clone_group].length;
+            if (cloneCount > 1) {
+                cloneBadge = `<span class="badge clone" title="${cloneCount} clones detected for ${repo.clone_group}">📋 ${cloneCount} CLONES</span>`;
+            }
         }
 
         const checkboxHtml = `<input type="checkbox" class="repo-discovery-checkbox" ${isNew ? '' : 'disabled'} data-repo-path="${escapeHtml(repo.path)}">`;
@@ -1242,6 +1262,7 @@ function renderDiscoveredRepos() {
                         <div class="repo-card-badges">
                             <span class="badge ${badgeClass}">${badgeText}</span>
                             ${excludedBadge}
+                            ${cloneBadge}
                             ${priorityHtml}
                         </div>
                         <div class="repo-card-actions">

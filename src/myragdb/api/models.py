@@ -359,12 +359,15 @@ class DiscoveredRepositoryItem(BaseModel):
     Individual discovered repository.
 
     Business Purpose: Represents a git repository found during directory scanning.
+    Includes clone detection to identify multiple copies of the same repository.
     """
     name: str = Field(..., description="Repository name (directory name)")
     path: str = Field(..., description="Absolute path to repository")
     is_already_indexed: bool = Field(..., description="Whether repository is already in configuration")
     created_date: Optional[str] = Field(None, description="ISO timestamp when repository was created")
     modified_date: Optional[str] = Field(None, description="ISO timestamp when repository was last modified")
+    git_remote_url: Optional[str] = Field(None, description="Git remote origin URL")
+    clone_group: Optional[str] = Field(None, description="Normalized clone identifier (e.g., 'github.com/user/repo')")
 
     class Config:
         json_schema_extra = {

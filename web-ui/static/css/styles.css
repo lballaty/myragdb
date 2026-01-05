@@ -1043,6 +1043,11 @@ body {
     color: #991b1b;
 }
 
+.badge.clone {
+    background: #fef3c7;
+    color: #92400e;
+}
+
 .repo-card-priority {
     padding: 0.25rem 0.5rem;
     border: 1px solid var(--border-color);
