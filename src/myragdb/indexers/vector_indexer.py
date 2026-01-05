@@ -12,6 +12,7 @@ import chromadb
 from sentence_transformers import SentenceTransformer
 
 from myragdb.indexers.file_scanner import ScannedFile
+from myragdb.utils.id_generator import generate_document_id
 from myragdb.config import settings
 
 
@@ -168,7 +169,8 @@ class VectorIndexer:
         Index a single file by creating embeddings.
 
         Business Purpose: Converts file content to vector embeddings and
-        stores in ChromaDB for semantic search.
+        stores in ChromaDB for semantic search. Uses Base64 hash IDs that
+        match Meilisearch for perfect document parity.
 
         Args:
             scanned_file: File to index
@@ -189,8 +191,11 @@ class VectorIndexer:
             metadatas = []
             documents = []
 
+            # Generate base document ID (same as Meilisearch for parity)
+            base_doc_id = generate_document_id(scanned_file.file_path)
+
             for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-                chunk_id = f"{scanned_file.file_path}::chunk_{i}"
+                chunk_id = f"{base_doc_id}::chunk_{i}"
                 ids.append(chunk_id)
 
                 metadata = {

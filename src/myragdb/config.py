@@ -108,8 +108,11 @@ class Settings(BaseSettings):
     # Search Configuration
     default_limit: int = Field(default=10, alias="MYRAGDB_DEFAULT_LIMIT")
     max_limit: int = Field(default=100, alias="MYRAGDB_MAX_LIMIT")
-    bm25_weight: float = Field(default=0.4, alias="MYRAGDB_BM25_WEIGHT")
-    vector_weight: float = Field(default=0.6, alias="MYRAGDB_VECTOR_WEIGHT")
+
+    # Meilisearch Configuration (replaces Whoosh/BM25)
+    meilisearch_host: str = Field(default="http://localhost:7700", alias="MEILISEARCH_HOST")
+    meilisearch_api_key: str = Field(default="myragdb_dev_key_2026", alias="MEILISEARCH_API_KEY")
+    meilisearch_index: str = Field(default="files", alias="MEILISEARCH_INDEX")
 
     # Embedding Model
     embedding_model: str = Field(

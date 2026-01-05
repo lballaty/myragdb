@@ -1,0 +1,44 @@
+{
+  "services": {
+    "myragdb_api": {
+      "port": 3003,
+      "protocol": "http",
+      "host": "localhost",
+      "description": "MyRAGDB FastAPI server - Hybrid search API endpoints",
+      "health_endpoint": "/health",
+      "docs_endpoint": "/docs"
+    },
+    "meilisearch": {
+      "port": 7700,
+      "protocol": "http",
+      "host": "127.0.0.1",
+      "description": "Meilisearch - Keyword search engine (BM25 replacement)",
+      "health_endpoint": "/health",
+      "master_key": "myragdb_dev_key_2026",
+      "max_indexing_memory": "34359738368",
+      "max_indexing_threads": 10,
+      "startup_script": "scripts/start_meilisearch.sh"
+    }
+  },
+  "future_services": {
+    "phi3_model": {
+      "port": 8081,
+      "protocol": "http",
+      "description": "Phi-3 LLM model server (planned for MCP integration)"
+    },
+    "model_zoo": {
+      "port_range": "8081-8092",
+      "protocol": "http",
+      "description": "Multi-LLM model zoo (planned for MCP integration)"
+    }
+  },
+  "metadata": {
+    "last_updated": "2026-01-05",
+    "updated_by": "Libor Ballaty <libor@arionetworks.com>",
+    "notes": [
+      "Port 3003: MyRAGDB main API server",
+      "Port 7700: Meilisearch keyword search (replaces Whoosh)",
+      "Ports 8081-8092: Reserved for future multi-LLM deployment"
+    ]
+  }
+}
