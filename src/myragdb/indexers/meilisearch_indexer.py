@@ -424,7 +424,8 @@ class MeilisearchIndexer:
         """
         try:
             stats = self.index.get_stats()
-            return stats.get('numberOfDocuments', 0)
+            # stats is an IndexStats object, not a dict - access attribute directly
+            return stats.number_of_documents if hasattr(stats, 'number_of_documents') else 0
         except Exception as e:
             print(f"[Meilisearch] Error getting document count: {e}")
             return 0

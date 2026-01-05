@@ -1,24 +1,34 @@
 # File: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb/src/myragdb/version.py
-# Description: CalVer version information for MyRAGDB (YYYY.MM.PATCH format)
+# Description: CalVer version information for MyRAGDB (YYYY.MM.DD.MAJOR.MINOR.PATCH format)
 # Author: Libor Ballaty <libor@arionetworks.com>
 # Created: 2026-01-04
 
 from datetime import datetime
 
-# CalVer: YYYY.MM.PATCH (Year.Month.Patch)
-# Example: 2026.01.0 = January 2026, patch 0
+# CalVer: YYYY.MM.DD.MAJOR.MINOR.PATCH
+# - YYYY: Release year
+# - MM: Release month (zero-padded)
+# - DD: Release day (zero-padded)
+# - MAJOR: Major version (breaking changes)
+# - MINOR: Minor version (new features, backward compatible)
+# - PATCH: Patch version (bug fixes only)
+# Example: 2026.01.05.1.0.0 = January 5, 2026, major version 1.0.0
 _BUILD_DATE = datetime(2026, 1, 5)  # Update this when creating new releases
-_PATCH_VERSION = 1  # Increment for bug fixes within the same month
+_MAJOR_VERSION = 1  # Increment for breaking changes
+_MINOR_VERSION = 0  # Increment for new features (backward compatible)
+_PATCH_VERSION = 2  # Increment for bug fixes only
 
-__version__ = f"{_BUILD_DATE.year}.{_BUILD_DATE.month:02d}.{_PATCH_VERSION}"
-__version_info__ = (_BUILD_DATE.year, _BUILD_DATE.month, _PATCH_VERSION)
+__version__ = f"{_BUILD_DATE.year}.{_BUILD_DATE.month:02d}.{_BUILD_DATE.day:02d}.{_MAJOR_VERSION}.{_MINOR_VERSION}.{_PATCH_VERSION}"
+__version_info__ = (_BUILD_DATE.year, _BUILD_DATE.month, _BUILD_DATE.day, _MAJOR_VERSION, _MINOR_VERSION, _PATCH_VERSION)
 __build_date__ = _BUILD_DATE.strftime("%Y-%m-%d")
 
 # Release notes for current version
 RELEASE_NOTES = f"""
-MyRAGDB v{__version__} - Meilisearch Migration ({__build_date__})
+MyRAGDB v{__version__} - Meilisearch Migration + Bug Fixes ({__build_date__})
 
-Changes in v2026.01.1:
+Changes in v2026.01.05.1.0.2:
+- Fixed Meilisearch get_document_count() error (IndexStats attribute access)
+- Updated versioning format to YYYY.MM.DD.MAJOR.MINOR.PATCH for better granularity
 - Replaced Whoosh with Meilisearch 1.31.0 for keyword search
 - Fixed MeilisearchIndexer.index_files_batch method call in server.py
 - Added HybridSearchEngine.get_stats() method for statistics endpoint
