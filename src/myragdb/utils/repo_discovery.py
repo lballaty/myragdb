@@ -136,8 +136,8 @@ class RepositoryDiscovery:
             except ValueError:
                 continue
 
-            # Stop if we've reached max depth
-            if depth >= max_depth:
+            # Stop if we've exceeded max depth
+            if depth > max_depth:
                 dirnames.clear()  # Don't recurse deeper
                 continue
 
