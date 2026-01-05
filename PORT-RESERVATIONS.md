@@ -21,7 +21,7 @@ MyRAGDB Services:
 - **Service**: MyRAGDB Hybrid Search System
 - **Technology**: FastAPI (Python)
 - **Purpose**:
-  - REST API for search operations (hybrid, BM25, semantic)
+  - REST API for search operations (hybrid, keyword, semantic)
   - Web UI for search interface and activity monitoring
   - Health check and statistics endpoints
 - **Endpoints**:

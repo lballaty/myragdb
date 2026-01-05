@@ -266,7 +266,7 @@ from enum import Enum
 
 class SearchType(str, Enum):
     HYBRID = "hybrid"
-    BM25 = "bm25"
+    KEYWORD = "keyword"
     SEMANTIC = "semantic"
 
 class SearchRequest(BaseModel):
@@ -323,7 +323,7 @@ class FileMetadata(BaseModel):
 ### Search Endpoints
 
 #### `POST /search/hybrid`
-Combines BM25 and vector search for best results.
+Combines Meilisearch keyword and vector search for best results.
 
 **Request:**
 ```json
@@ -905,10 +905,10 @@ class CompletenessCheckerAgent:
 ### Unit Tests
 
 ```python
-# tests/test_bm25.py
-def test_bm25_exact_match():
-    """BM25 should find exact keyword matches"""
-    indexer = BM25Indexer()
+# tests/test_keyword.py
+def test_keyword_exact_match():
+    """Keyword search should find exact keyword matches"""
+    indexer = MeilisearchIndexer()
     indexer.index_document("test.md", "supabase authentication flow")
     
     results = indexer.search("supabase authentication")
@@ -928,7 +928,7 @@ def test_vector_semantic_match():
 
 # tests/test_hybrid.py
 def test_hybrid_combines_results():
-    """Hybrid search should merge BM25 and vector results"""
+    """Hybrid search should merge keyword and vector results"""
     searcher = HybridSearcher()
     
     # Index documents

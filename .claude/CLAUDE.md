@@ -21,7 +21,7 @@
 
 ## Project Context
 
-**Project:** MyRAGDB - Hybrid search system combining BM25 and vector embeddings
+**Project:** MyRAGDB - Hybrid search system combining Meilisearch keyword search and vector embeddings
 **Purpose:** Enable AI agents to discover code/documentation semantically across all projects
 **Technology:** Python (FastAPI), React/TypeScript, Whoosh, ChromaDB, sentence-transformers
 
@@ -107,7 +107,7 @@ Default repositories to index:
 ### Configuration
 - Port: 3002 (FastAPI backend)
 - Embedding model: `sentence-transformers/all-MiniLM-L6-v2`
-- BM25 weights: 0.4
+- Keyword weights: 0.4
 - Vector weights: 0.6
 - Default result limit: 10
 
@@ -192,7 +192,7 @@ If you add new dependencies:
 myragdb/
 ├── src/myragdb/          # Main package
 │   ├── api/              # FastAPI server
-│   ├── indexers/         # BM25 and vector indexing
+│   ├── indexers/         # Meilisearch and vector indexing
 │   ├── search/           # Search logic
 │   └── db/               # Metadata database
 ├── agent_library/        # Client for agents
@@ -226,7 +226,7 @@ myragdb/
 ## Performance Targets
 
 ### Search Performance
-- BM25 search: < 50ms
+- Keyword search: < 50ms
 - Vector search: < 200ms
 - Hybrid search: < 300ms
 - Index update: < 100ms per file
@@ -289,15 +289,15 @@ Each phase should deliver working functionality:
 cd /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb
 source venv/bin/activate
 
-# Work on feature (e.g., BM25 indexer)
-# Write code in src/myragdb/indexers/bm25_indexer.py
+# Work on feature (e.g., keyword indexer)
+# Write code in src/myragdb/indexers/meilisearch_indexer.py
 # Test manually
-python -c "from myragdb.indexers.bm25_indexer import BM25Indexer; ..."
+python -c "from myragdb.indexers.meilisearch_indexer import MeilisearchIndexer; ..."
 
 # Update TODO.md - mark task complete
 # Commit
-git add src/myragdb/indexers/bm25_indexer.py TODO.md
-git commit -m "feat: implement BM25 indexer with Whoosh
+git add src/myragdb/indexers/meilisearch_indexer.py TODO.md
+git commit -m "feat: implement keyword indexer with Meilisearch
 ..."
 
 # Continue with next task
