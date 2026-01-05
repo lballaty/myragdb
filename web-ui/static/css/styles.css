@@ -112,6 +112,33 @@ body {
     opacity: 1;
 }
 
+.restart-button {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.restart-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-1px);
+}
+
+.restart-button:active {
+    transform: translateY(0);
+}
+
+.restart-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .indexing-progress {
     display: inline-flex;
     flex-direction: column;

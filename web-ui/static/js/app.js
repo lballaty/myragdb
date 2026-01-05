@@ -60,6 +60,7 @@ function initializeTabs() {
 async function checkHealthStatus() {
     const indicator = document.getElementById('status-indicator');
     const statusText = indicator.querySelector('.status-text');
+    const restartButton = document.getElementById('restart-server-button');
 
     try {
         const response = await fetch(`${API_BASE_URL}/health`);
@@ -72,27 +73,100 @@ async function checkHealthStatus() {
             indicator.classList.add('healthy');
             statusText.textContent = 'Service Healthy';
             statusText.title = data.message || '';
+            restartButton.style.display = 'none';
         } else if (data.status === 'degraded') {
             indicator.classList.add('degraded');
             statusText.textContent = 'Service Degraded';
             statusText.title = data.message || 'Some dependencies unavailable';
+            restartButton.style.display = 'inline-block';
             addActivityLog('warning', `Health degraded: ${data.message}`);
         } else if (data.status === 'unhealthy') {
             indicator.classList.add('unhealthy');
             statusText.textContent = 'Service Unhealthy';
             statusText.title = data.message || 'Critical dependencies unavailable';
+            restartButton.style.display = 'inline-block';
             addActivityLog('error', `Health unhealthy: ${data.message}`);
         } else {
             statusText.textContent = 'Service Unknown';
+            restartButton.style.display = 'inline-block';
         }
     } catch (error) {
         indicator.classList.remove('healthy', 'degraded', 'unhealthy');
         indicator.classList.add('offline');
         statusText.textContent = 'Service Offline';
         statusText.title = 'Cannot connect to server';
+        restartButton.style.display = 'none';
         addActivityLog('error', `Health check failed: ${error.message}`);
     }
 }
+
+// Server restart functionality
+async function restartServer() {
+    const restartButton = document.getElementById('restart-server-button');
+    const originalText = restartButton.textContent;
+
+    if (!confirm('Are you sure you want to restart the MyRAGDB server?')) {
+        return;
+    }
+
+    try {
+        restartButton.disabled = true;
+        restartButton.textContent = '⏳ Restarting...';
+        addActivityLog('info', 'Server restart initiated...');
+
+        const response = await fetch(`${API_BASE_URL}/admin/restart`, {
+            method: 'POST'
+        });
+
+        if (!response.ok) {
+            throw new Error(`Restart failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+        addActivityLog('success', `${data.message} (PID: ${data.pid})`);
+
+        // Wait a bit for server to restart, then check health
+        setTimeout(() => {
+            addActivityLog('info', 'Waiting for server to come back online...');
+            let attempts = 0;
+            const maxAttempts = 15;
+
+            const checkInterval = setInterval(async () => {
+                attempts++;
+                try {
+                    const healthResponse = await fetch(`${API_BASE_URL}/health`);
+                    if (healthResponse.ok) {
+                        clearInterval(checkInterval);
+                        addActivityLog('success', 'Server restart completed successfully');
+                        restartButton.textContent = originalText;
+                        restartButton.disabled = false;
+                        await checkHealthStatus();
+                    }
+                } catch (e) {
+                    if (attempts >= maxAttempts) {
+                        clearInterval(checkInterval);
+                        addActivityLog('error', 'Server did not come back online after restart');
+                        restartButton.textContent = originalText;
+                        restartButton.disabled = false;
+                    }
+                }
+            }, 2000); // Check every 2 seconds
+        }, 3000); // Wait 3 seconds before starting checks
+
+    } catch (error) {
+        addActivityLog('error', `Restart failed: ${error.message}`);
+        restartButton.textContent = originalText;
+        restartButton.disabled = false;
+    }
+}
+
+// Initialize restart button
+document.addEventListener('DOMContentLoaded', () => {
+    const restartButton = document.getElementById('restart-server-button');
+    if (restartButton) {
+        restartButton.addEventListener('click', restartServer);
+    }
+});
 
 // Search functionality
 function initializeSearch() {
@@ -344,7 +418,10 @@ async function loadRepositories() {
         state.repositories = repositories;
 
         renderRepositories();
-        addActivityLog('info', `Loaded ${repositories.length} repositories`);
+
+        // Log repository names explicitly
+        const repoNames = repositories.map(r => r.name).join(', ');
+        addActivityLog('info', `Loaded ${repositories.length} ${repositories.length === 1 ? 'repository' : 'repositories'}: ${repoNames}`);
 
     } catch (error) {
         repositoryList.innerHTML = `<div class="error">Failed to load repositories: ${error.message}</div>`;

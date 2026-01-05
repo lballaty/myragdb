@@ -275,6 +275,79 @@ async def restart_server(background_tasks: BackgroundTasks):
     }
 
 
+@app.get("/logs")
+async def get_logs(lines: int = 100, level: Optional[str] = None):
+    """
+    Get recent server logs from /tmp/myragdb_server.log.
+
+    Business Purpose: Allows UI to display server logs for troubleshooting
+    without SSH access. Includes startup logs, errors, and runtime events.
+
+    Query Parameters:
+        lines: Number of recent lines to return (default: 100, max: 1000)
+        level: Filter by log level (e.g., "ERROR", "WARNING", "INFO")
+
+    Returns:
+        JSON with log lines array and metadata
+
+    Example:
+        GET /logs?lines=50&level=ERROR
+        {"logs": ["2026-01-05 10:30:15 ERROR: Connection failed", ...], "total": 50}
+    """
+    log_file = "/tmp/myragdb_server.log"
+    max_lines = min(lines, 1000)  # Cap at 1000 lines
+
+    try:
+        if not os.path.exists(log_file):
+            return {
+                "logs": [],
+                "total": 0,
+                "message": "Log file not found. Server may not have started yet."
+            }
+
+        # Read last N lines efficiently using tail-like approach
+        with open(log_file, 'r') as f:
+            # Get file size and seek to approximate position
+            f.seek(0, 2)  # Seek to end
+            file_size = f.tell()
+
+            # Estimate bytes per line (rough guess: 150 bytes/line)
+            estimated_bytes = max_lines * 150
+            start_pos = max(0, file_size - estimated_bytes)
+
+            f.seek(start_pos)
+            if start_pos > 0:
+                f.readline()  # Skip partial line
+
+            all_lines = f.readlines()
+
+        # Get last N lines
+        recent_lines = all_lines[-max_lines:] if len(all_lines) > max_lines else all_lines
+
+        # Filter by level if specified
+        if level:
+            level_upper = level.upper()
+            filtered_lines = [line for line in recent_lines if level_upper in line]
+            return {
+                "logs": [line.rstrip('\n') for line in filtered_lines],
+                "total": len(filtered_lines),
+                "filtered_by": level_upper
+            }
+
+        return {
+            "logs": [line.rstrip('\n') for line in recent_lines],
+            "total": len(recent_lines)
+        }
+
+    except Exception as e:
+        logger.error(f"Error reading logs: {str(e)}")
+        return {
+            "logs": [],
+            "total": 0,
+            "error": f"Error reading logs: {str(e)}"
+        }
+
+
 @app.get("/stats", response_model=StatsResponse)
 async def get_stats():
     """
