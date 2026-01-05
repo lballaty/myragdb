@@ -515,9 +515,40 @@ async function loadStatistics() {
     }
 }
 
+// Repository Status Badge
+function updateRepositoryBadge(status, count = 0) {
+    const badge = document.getElementById('repo-status-badge');
+    const icon = badge.querySelector('.repo-badge-icon');
+    const text = badge.querySelector('.repo-badge-text');
+
+    // Remove all status classes
+    badge.classList.remove('repo-loading', 'repo-error', 'repo-loaded');
+
+    switch(status) {
+        case 'loading':
+            badge.classList.add('repo-loading');
+            icon.textContent = '⏳';
+            text.textContent = 'Loading repositories...';
+            break;
+        case 'error':
+            badge.classList.add('repo-error');
+            icon.textContent = '❌';
+            text.textContent = 'No repositories found';
+            break;
+        case 'loaded':
+            badge.classList.add('repo-loaded');
+            icon.textContent = '✅';
+            text.textContent = `${count} ${count === 1 ? 'repository' : 'repositories'} available`;
+            break;
+    }
+}
+
 // Repository Management
 async function loadRepositories() {
     const repositoryList = document.getElementById('repository-list');
+
+    // Set loading state
+    updateRepositoryBadge('loading');
 
     try {
         const response = await fetch(`${API_BASE_URL}/repositories`);
@@ -531,6 +562,13 @@ async function loadRepositories() {
         renderRepositories();
         populateRepositoryFilter();
 
+        // Update badge with success state
+        if (repositories.length === 0) {
+            updateRepositoryBadge('error');
+        } else {
+            updateRepositoryBadge('loaded', repositories.length);
+        }
+
         // Log repository names explicitly
         const repoNames = repositories.map(r => r.name).join(', ');
         addActivityLog('info', `Loaded ${repositories.length} ${repositories.length === 1 ? 'repository' : 'repositories'}: ${repoNames}`);
@@ -538,6 +576,7 @@ async function loadRepositories() {
     } catch (error) {
         repositoryList.innerHTML = `<div class="error">Failed to load repositories: ${error.message}</div>`;
         addActivityLog('error', `Failed to load repositories: ${error.message}`);
+        updateRepositoryBadge('error');
     }
 }
 
