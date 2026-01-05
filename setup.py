@@ -13,7 +13,7 @@ setup(
     version="0.1.0",
     author="Libor Ballaty",
     author_email="libor@arionetworks.com",
-    description="Hybrid search system combining BM25 and vector embeddings for code/documentation discovery",
+    description="Hybrid search system combining Keyword (Meilisearch) and vector embeddings for code/documentation discovery",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/lballaty/myragdb",

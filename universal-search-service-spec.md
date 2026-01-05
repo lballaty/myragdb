@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-Build a laptop-wide search service combining BM25 keyword search with vector embeddings to enable AI agents to intelligently discover, cross-reference, and learn from code and documentation across all development projects.
+Build a laptop-wide search service combining keyword search with vector embeddings to enable AI agents to intelligently discover, cross-reference, and learn from code and documentation across all development projects.
 
 **Key Innovation:** Agents can query conceptually ("find authentication patterns") and get semantically relevant results across all repositories, enabling cross-project learning and pattern reuse.
 
@@ -44,8 +44,8 @@ Build a laptop-wide search service combining BM25 keyword search with vector emb
 │  ┌──────────────────────────────────────────────────────┐  │
 │  │                                                        │  │
 │  │  FastAPI REST Service                                 │  │
-│  │  ├─ POST /search/hybrid    (BM25 + Vector)           │  │
-│  │  ├─ POST /search/bm25      (Keyword only)            │  │
+│  │  ├─ POST /search/hybrid    (Keyword + Vector)        │  │
+│  │  ├─ POST /search/keyword   (Keyword only)            │  │
 │  │  ├─ POST /search/semantic  (Vector only)             │  │
 │  │  ├─ POST /index/repository (Add/update repo)         │  │
 │  │  └─ GET  /stats           (Index statistics)         │  │
@@ -54,8 +54,8 @@ Build a laptop-wide search service combining BM25 keyword search with vector emb
 │                                                              │
 │  📊 Search Engines                                          │
 │  ┌──────────────────────┐  ┌──────────────────────────┐   │
-│  │  BM25 Index          │  │  Vector Index            │   │
-│  │  (Whoosh/Tantivy)    │  │  (ChromaDB)              │   │
+│  │  Keyword Index       │  │  Vector Index            │   │
+│  │  (Meilisearch)       │  │  (ChromaDB)              │   │
 │  │                       │  │                           │   │
 │  │  • Term frequency    │  │  • SmolLM2-1.7B          │   │
 │  │  • Inverted index    │  │  • Semantic embeddings   │   │
@@ -90,7 +90,7 @@ Build a laptop-wide search service combining BM25 keyword search with vector emb
 | Component | Technology | Rationale |
 |-----------|-----------|-----------|
 | **API Framework** | FastAPI | Async, OpenAPI docs, Python ecosystem |
-| **BM25 Search** | Whoosh or Tantivy | Fast, pure-Python (Whoosh) or Rust-based (Tantivy) |
+| **Keyword Search** | Meilisearch | Fast, production-grade keyword search engine |
 | **Vector Store** | ChromaDB | Already familiar, works well with local embeddings |
 | **Embedding Model** | SmolLM2-1.7B-Instruct | CPU-optimized, runs on M4, 1.7B params |
 | **File Watching** | Watchdog | Auto-reindex on changes |
@@ -104,11 +104,11 @@ Build a laptop-wide search service combining BM25 keyword search with vector emb
 - Type hints for agent integration
 - Python ecosystem (ML/NLP libraries)
 
-**Why Whoosh over Elasticsearch?**
-- Pure Python (no Java dependency)
-- Lightweight (good for laptop)
-- Sufficient for 10K-100K documents
-- Easy to embed in service
+**Why Meilisearch?**
+- Production-grade search engine
+- Fast keyword search performance
+- Powerful filtering and faceting
+- Handles 1M+ documents easily
 
 **Why ChromaDB?**
 - Already using for ArionComply
@@ -155,14 +155,14 @@ universal-search-service/
 │   │
 │   ├── indexers/
 │   │   ├── __init__.py
-│   │   ├── bm25_indexer.py        # Whoosh/Tantivy indexing
+│   │   ├── meilisearch_indexer.py # Meilisearch indexing
 │   │   ├── vector_indexer.py      # ChromaDB + embeddings
 │   │   ├── file_scanner.py        # Repository file discovery
 │   │   └── file_watcher.py        # Auto-reindex on changes
 │   │
 │   ├── search/
 │   │   ├── __init__.py
-│   │   ├── bm25_search.py         # Keyword search
+│   │   ├── keyword_search.py      # Keyword search
 │   │   ├── vector_search.py       # Semantic search
 │   │   ├── hybrid_search.py       # Combined search
 │   │   └── result_merger.py       # Merge + rank results
@@ -181,7 +181,7 @@ universal-search-service/
 │
 ├── data/                          # Gitignored
 │   ├── indexes/
-│   │   ├── bm25/                  # Whoosh indexes
+│   │   ├── keyword/               # Meilisearch indexes
 │   │   └── vectors/               # ChromaDB storage
 │   ├── embeddings_cache/          # Cached embeddings
 │   └── metadata/                  # File metadata, timestamps
@@ -193,7 +193,7 @@ universal-search-service/
 │   └── benchmark.py               # Performance testing
 │
 ├── tests/
-│   ├── test_bm25.py
+│   ├── test_keyword.py
 │   ├── test_vector.py
 │   ├── test_hybrid.py
 │   └── test_api.py
@@ -287,7 +287,7 @@ class SearchResult(BaseModel):
     file_path: str
     repository: str
     score: float
-    bm25_score: Optional[float] = None
+    keyword_score: Optional[float] = None
     vector_score: Optional[float] = None
     snippet: Optional[str] = None
     line_number: Optional[int] = None
@@ -358,7 +358,7 @@ Combines BM25 and vector search for best results.
 }
 ```
 
-#### `POST /search/bm25`
+#### `POST /search/keyword`
 Keyword-only search (faster, exact matching).
 
 #### `POST /search/semantic`
@@ -406,17 +406,17 @@ Get index statistics.
 **Step 1: Execute both searches in parallel**
 ```python
 async def hybrid_search(query: str):
-    # Run BM25 and vector search concurrently
-    bm25_results, vector_results = await asyncio.gather(
-        bm25_search(query),
+    # Run keyword and vector search concurrently
+    keyword_results, vector_results = await asyncio.gather(
+        keyword_search(query),
         vector_search(query)
     )
 ```
 
 **Step 2: Normalize scores**
 ```python
-# Normalize BM25 scores (0-1)
-bm25_normalized = normalize_scores(bm25_results)
+# Normalize keyword scores (0-1)
+keyword_normalized = normalize_scores(keyword_results)
 
 # Vector scores already normalized (cosine similarity 0-1)
 vector_normalized = vector_results
@@ -425,11 +425,11 @@ vector_normalized = vector_results
 **Step 3: Combine with weights**
 ```python
 # Default weights (tunable)
-BM25_WEIGHT = 0.4
+KEYWORD_WEIGHT = 0.4
 VECTOR_WEIGHT = 0.6
 
 combined_score = (
-    BM25_WEIGHT * bm25_score +
+    KEYWORD_WEIGHT * keyword_score +
     VECTOR_WEIGHT * vector_score
 )
 ```
@@ -487,7 +487,7 @@ def chunk_file(content: str, max_chunk_size: int = 1000):
 
 | Operation | Target | Acceptable | Notes |
 |-----------|--------|-----------|-------|
-| BM25 search | <50ms | <100ms | Keyword lookup |
+| Keyword search | <50ms | <100ms | Keyword lookup |
 | Vector search | <200ms | <500ms | Embedding similarity |
 | Hybrid search | <300ms | <600ms | Combined |
 | Index update (per file) | <100ms | <500ms | Incremental |
@@ -517,7 +517,7 @@ def chunk_file(content: str, max_chunk_size: int = 1000):
 
 **Deliverables:**
 1. FastAPI server with basic endpoints
-2. BM25 indexer (Whoosh)
+2. Keyword indexer (Meilisearch)
 3. Vector indexer (ChromaDB + SmolLM2)
 4. Basic search implementation
 5. Configuration system
@@ -525,13 +525,13 @@ def chunk_file(content: str, max_chunk_size: int = 1000):
 **Success Criteria:**
 - Service starts and responds to health checks
 - Can index a single repository
-- BM25 search returns results
+- Keyword search returns results
 - Vector search returns results
 - Hybrid search combines both
 
 **Files to create:**
 - `src/api/server.py`
-- `src/indexers/bm25_indexer.py`
+- `src/indexers/meilisearch_indexer.py`
 - `src/indexers/vector_indexer.py`
 - `src/search/hybrid_search.py`
 - `config/repositories.yaml`
@@ -1175,7 +1175,7 @@ uvicorn[standard]==0.27.0
 pydantic==2.5.3
 
 # Search engines
-whoosh==2.7.4  # BM25 search
+meilisearch==0.35.0  # Keyword search
 chromadb==0.4.22  # Vector store
 
 # ML/Embeddings
@@ -1294,13 +1294,13 @@ python scripts/reindex.py
 
 ## Glossary
 
-**BM25:** Best Matching 25, probabilistic ranking algorithm for keyword search  
-**Vector Embedding:** Numerical representation of text capturing semantic meaning  
-**Hybrid Search:** Combining keyword (BM25) and semantic (vector) search  
-**Chunking:** Splitting large documents into smaller pieces for indexing  
-**Cosine Similarity:** Measure of similarity between two vectors  
-**TF-IDF:** Term Frequency-Inverse Document Frequency, weighting scheme  
-**Incremental Indexing:** Updating index with only changed files  
+**Keyword Search:** Term-based search using Meilisearch for fast retrieval
+**Vector Embedding:** Numerical representation of text capturing semantic meaning
+**Hybrid Search:** Combining keyword and semantic (vector) search
+**Chunking:** Splitting large documents into smaller pieces for indexing
+**Cosine Similarity:** Measure of similarity between two vectors
+**TF-IDF:** Term Frequency-Inverse Document Frequency, weighting scheme
+**Incremental Indexing:** Updating index with only changed files
 **launchd:** macOS system service manager  
 
 ---
@@ -1313,13 +1313,13 @@ python scripts/reindex.py
 
 **Libraries & Tools:**
 - FastAPI Documentation: https://fastapi.tiangolo.com/
-- Whoosh Documentation: https://whoosh.readthedocs.io/
+- Meilisearch Documentation: https://docs.meilisearch.com/
 - ChromaDB Documentation: https://docs.trychroma.com/
 - SmolLM2 Paper: https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct
 
 **Related Projects:**
 - Algolia: Commercial search service (inspiration)
-- MeiliSearch: Open-source search engine
+- Meilisearch: Open-source search engine
 - Vespa: Search and recommendation engine
 
 ---
@@ -1355,7 +1355,7 @@ python scripts/reindex.py
 # Pattern 4: Documentation lookup
 {
     "query": "Supabase Row Level Security configuration",
-    "search_type": "bm25",  # Exact keywords
+    "search_type": "keyword",  # Exact keywords
     "file_types": [".md"],
     "repositories": ["xLLMArionComply"]
 }
@@ -1365,20 +1365,23 @@ python scripts/reindex.py
 
 ## Appendix B: Performance Tuning Guide
 
-### BM25 Parameters
+### Keyword Search Parameters
 
 ```python
-# Whoosh BM25F parameters
-bm25_params = {
-    "k1": 1.2,  # Term saturation (1.2-2.0, default 1.2)
-    "b": 0.75,  # Length normalization (0-1, default 0.75)
+# Meilisearch ranking parameters
+keyword_params = {
+    "ranking_rules": [
+        "words",        # Proximity of search terms
+        "typo",         # Number of typos
+        "proximity",    # Proximity between matched terms
+        "attribute",    # Searchable attribute priority
+        "sort",         # User-specified sort
+        "exactness",    # Exact matches ranked higher
+    ],
 }
 
-# Lower k1 = diminishing returns for term frequency
-# Higher k1 = more importance on term frequency
-
-# Lower b = less normalization for document length
-# Higher b = stronger normalization
+# Results ranked by number of matching terms and proximity
+# Supports fuzzy matching and typo tolerance
 ```
 
 ### Vector Search Parameters
@@ -1411,9 +1414,9 @@ weight_configs = [
 ]
 
 # Run evaluation on test queries
-for bm25_w, vec_w in weight_configs:
-    precision = evaluate_precision(bm25_w, vec_w)
-    print(f"BM25:{bm25_w} Vector:{vec_w} -> P@10: {precision}")
+for keyword_w, vec_w in weight_configs:
+    precision = evaluate_precision(keyword_w, vec_w)
+    print(f"Keyword:{keyword_w} Vector:{vec_w} -> P@10: {precision}")
 ```
 
 ---

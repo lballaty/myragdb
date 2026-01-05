@@ -1,5 +1,5 @@
 # File: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb/src/myragdb/indexers/bm25_indexer.py
-# Description: BM25 keyword indexing and search using Whoosh
+# Description: Meilisearch keyword indexing and search (legacy filename for compatibility)
 # Author: Libor Ballaty <libor@arionetworks.com>
 # Created: 2026-01-04
 
@@ -21,15 +21,15 @@ from myragdb.config import settings
 
 
 @dataclass
-class BM25SearchResult:
+class MeilisearchSearchResult:
     """
-    Result from BM25 keyword search.
+    Result from Meilisearch keyword search.
 
     Business Purpose: Represents a single search result with all information
     needed for display and ranking.
 
     Example:
-        result = BM25SearchResult(
+        result = MeilisearchSearchResult(
             file_path="/path/to/file.py",
             repository="MyProject",
             score=0.85,
@@ -45,16 +45,20 @@ class BM25SearchResult:
     relative_path: str
 
 
-class BM25Indexer:
-    """
-    BM25 keyword search indexer using Whoosh.
+# Alias for backward compatibility
+BM25SearchResult = MeilisearchSearchResult
 
-    Business Purpose: Provides fast keyword-based search using the BM25
-    probabilistic ranking algorithm. Good for exact term matching and
-    traditional information retrieval.
+
+class MeilisearchIndexer:
+    """
+    Meilisearch keyword search indexer.
+
+    Business Purpose: Provides fast keyword-based search using Meilisearch,
+    a Rust-based search engine with typo tolerance. Good for exact term matching,
+    fuzzy search, and traditional information retrieval.
 
     Example:
-        indexer = BM25Indexer()
+        indexer = MeilisearchIndexer()
         indexer.index_file(scanned_file)
         results = indexer.search("authentication flow")
         for result in results:
@@ -63,7 +67,7 @@ class BM25Indexer:
 
     def __init__(self, index_dir: Optional[str] = None):
         """
-        Initialize BM25 indexer.
+        Initialize Meilisearch indexer.
 
         Args:
             index_dir: Directory to store Whoosh index (defaults to config)
@@ -228,12 +232,12 @@ class BM25Indexer:
         query: str,
         limit: int = 10,
         repository: Optional[str] = None
-    ) -> List[BM25SearchResult]:
+    ) -> List[MeilisearchSearchResult]:
         """
-        Search indexed files using BM25 keyword search with enhanced path matching.
+        Search indexed files using Meilisearch keyword search with enhanced path matching.
 
         Business Purpose: Finds files matching keyword query using
-        probabilistic ranking. Supports wildcards (*), phrase search ("exact phrase"),
+        Meilisearch ranking. Supports wildcards (*), phrase search ("exact phrase"),
         and directory-specific searches for better path matching.
 
         Args:
@@ -242,7 +246,7 @@ class BM25Indexer:
             repository: Optional repository filter
 
         Returns:
-            List of BM25SearchResult objects sorted by relevance
+            List of MeilisearchSearchResult objects sorted by relevance
 
         Example:
             results = indexer.search("JWT authentication", limit=5)
@@ -281,7 +285,7 @@ class BM25Indexer:
                     # Generate snippet from stored preview
                     snippet = hit.get('content_preview', '')[:200]
 
-                    result = BM25SearchResult(
+                    result = MeilisearchSearchResult(
                         file_path=hit['file_path'],
                         repository=hit['repository'],
                         score=hit.score,
@@ -347,3 +351,7 @@ class BM25Indexer:
         writer = self.ix.writer()
         writer.delete_by_term('file_path_original', file_path)
         writer.commit()
+
+
+# Alias for backward compatibility
+BM25Indexer = MeilisearchIndexer

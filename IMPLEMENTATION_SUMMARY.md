@@ -20,7 +20,7 @@ doc_id = generate_document_id("/path/to/file.py")
 # Returns: "xK7JmH9vQpL2..." (deterministic, URL-safe Base64 SHA256)
 ```
 
-### 2. Meilisearch Indexer
+### 2. Keyword Indexer (Meilisearch)
 **Location:** `src/myragdb/indexers/meilisearch_indexer.py`
 
 **Features:**
@@ -289,7 +289,7 @@ Context:
 
 ```python
 # File: src/myragdb/search/hybrid_search.py
-# Description: Hybrid search with Reciprocal Rank Fusion and query rewriting
+# Description: Hybrid search with Reciprocal Rank Fusion using keyword + vector search
 # Author: Libor Ballaty <libor@arionetworks.com>
 # Created: 2026-01-04
 
@@ -318,23 +318,23 @@ class HybridSearchResult:
 
 
 def reciprocal_rank_fusion(
-    meili_results: List[MeilisearchResult],
-    chroma_results: List[Dict[str, Any]],
+    keyword_results: List[MeilisearchResult],
+    vector_results: List[Dict[str, Any]],
     k: int = 60
 ) -> List[Tuple[str, float]]:
     """
-    Merge Meilisearch and ChromaDB using Reciprocal Rank Fusion.
+    Merge keyword (Meilisearch) and vector (ChromaDB) results using RRF.
 
-    Formula: Score(d) = Σ(r ∈ {Meili, Chroma}) 1 / (k + rank_r(d))
+    Formula: Score(d) = Σ(r ∈ {Keyword, Vector}) 1 / (k + rank_r(d))
     """
     scores: Dict[str, float] = {}
 
-    # Meilisearch ranks
-    for rank, hit in enumerate(meili_results, start=1):
+    # Keyword search ranks
+    for rank, hit in enumerate(keyword_results, start=1):
         scores[hit.id] = scores.get(hit.id, 0.0) + 1.0 / (k + rank)
 
-    # ChromaDB ranks
-    for rank, hit in enumerate(chroma_results, start=1):
+    # Vector search ranks
+    for rank, hit in enumerate(vector_results, start=1):
         doc_id = hit.get('id', '')
         scores[doc_id] = scores.get(doc_id, 0.0) + 1.0 / (k + rank)
 
@@ -347,17 +347,17 @@ class HybridSearchEngine:
 
     Architecture:
     1. Query Rewriter (phi3) → keyword + semantic queries
-    2. Parallel execution: Meilisearch + ChromaDB
+    2. Parallel execution: Keyword search (Meilisearch) + Vector search (ChromaDB)
     3. RRF fusion → unified ranked results
     """
 
     def __init__(
         self,
-        meili_indexer: MeilisearchIndexer,
+        keyword_indexer: MeilisearchIndexer,
         vector_indexer: VectorIndexer,
         query_rewriter: Optional[QueryRewriter] = None
     ):
-        self.meili = meili_indexer
+        self.keyword = keyword_indexer
         self.vector = vector_indexer
         self.rewriter = query_rewriter or QueryRewriter(port=8081)
 
@@ -398,8 +398,8 @@ class HybridSearchEngine:
         # Step 2: Parallel search execution
         fetch_limit = limit * 3  # Fetch more for RRF
 
-        meili_task = asyncio.to_thread(
-            self.meili.search,
+        keyword_task = asyncio.to_thread(
+            self.keyword.search,
             keyword_query,
             limit=fetch_limit,
             folder_filter=folder_filter,
@@ -414,36 +414,36 @@ class HybridSearchEngine:
             repository_filter=repository_filter
         )
 
-        meili_results, vector_results = await asyncio.gather(meili_task, vector_task)
+        keyword_results, vector_results = await asyncio.gather(keyword_task, vector_task)
 
         # Step 3: RRF fusion
-        merged_scores = reciprocal_rank_fusion(meili_results, vector_results, k=rrf_k)
+        merged_scores = reciprocal_rank_fusion(keyword_results, vector_results, k=rrf_k)
 
         # Step 4: Build final results
-        meili_map = {r.id: r for r in meili_results}
+        keyword_map = {r.id: r for r in keyword_results}
         vector_map = {r.get('id', ''): r for r in vector_results}
 
         final_results: List[HybridSearchResult] = []
 
         for rank, (doc_id, rrf_score) in enumerate(merged_scores[:limit], start=1):
-            meili_hit = meili_map.get(doc_id)
+            keyword_hit = keyword_map.get(doc_id)
             vector_hit = vector_map.get(doc_id)
 
-            if not meili_hit and not vector_hit:
+            if not keyword_hit and not vector_hit:
                 continue
 
             # Prefer Meilisearch metadata (more complete)
-            if meili_hit:
+            if keyword_hit:
                 result = HybridSearchResult(
                     id=doc_id,
-                    file_path=meili_hit.file_path,
-                    repository=meili_hit.repository,
+                    file_path=keyword_hit.file_path,
+                    repository=keyword_hit.repository,
                     rrf_score=rrf_score,
-                    keyword_score=meili_hit.score if meili_hit else None,
+                    keyword_score=keyword_hit.score if keyword_hit else None,
                     semantic_score=vector_hit.get('score') if vector_hit else None,
-                    snippet=meili_hit.snippet,
-                    file_type=meili_hit.file_type,
-                    relative_path=meili_hit.relative_path,
+                    snippet=keyword_hit.snippet,
+                    file_type=keyword_hit.file_type,
+                    relative_path=keyword_hit.relative_path,
                     rank=rank
                 )
             else:
@@ -471,7 +471,7 @@ class HybridSearchEngine:
 
 **Key Changes:**
 
-1. **Replace BM25Indexer with MeilisearchIndexer**
+1. **Replace BM25Indexer with MeilisearchIndexer (keyword search)**
 2. **Add HybridSearchEngine**
 3. **Add LLMRouter**
 4. **Add RAG endpoint**
@@ -483,15 +483,15 @@ from myragdb.search.hybrid_search import HybridSearchEngine
 from myragdb.llm.query_rewriter import QueryRewriter
 from myragdb.llm.llm_router import LLMRouter, TaskType
 
-# Replace BM25 initialization:
-meili_indexer = MeilisearchIndexer(
+# Initialize keyword search indexer:
+keyword_indexer = MeilisearchIndexer(
     host=settings.meilisearch_host or "http://localhost:7700",
     api_key=settings.meilisearch_api_key
 )
 
 # Add hybrid search engine:
 hybrid_engine = HybridSearchEngine(
-    meili_indexer=meili_indexer,
+    keyword_indexer=keyword_indexer,
     vector_indexer=vector_indexer,
     query_rewriter=QueryRewriter(port=8081)
 )
@@ -599,8 +599,8 @@ def index_chunk(self, file_path: str, chunk_text: str, ...):
 |-----------|------|-------|
 | Initial indexing | 2-3 hours | 50k batches, os.scandir |
 | Incremental update | 5-10 min | Only changed files |
-| Keyword search | <50ms | Meilisearch memory-mapped |
-| Semantic search | ~150ms | ChromaDB |
+| Keyword search (Meilisearch) | <50ms | Memory-mapped indexes |
+| Vector search (ChromaDB) | ~150ms | Semantic similarity |
 | Hybrid search (RRF) | ~200ms | Parallel execution |
 | With folder filter | <10ms | Scoped search |
 | Query rewrite (phi3) | ~1-2s | Port 8081 |

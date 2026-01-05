@@ -31,7 +31,7 @@ class SearchResult:
     score: float
     snippet: str
     file_type: str
-    bm25_score: Optional[float] = None
+    keyword_score: Optional[float] = None
     vector_score: Optional[float] = None
 
     def __str__(self) -> str:
@@ -91,7 +91,7 @@ class SearchClient:
         Args:
             query: Search query (natural language or keywords)
             limit: Maximum results to return
-            search_type: "hybrid" (default), "bm25", or "semantic"
+            search_type: "hybrid" (default), "keyword", or "semantic"
             repositories: Optional list of repository names to search
             file_types: Optional list of file extensions (e.g., [".py", ".md"])
             min_score: Minimum relevance score (0.0-1.0)
@@ -145,7 +145,7 @@ class SearchClient:
                     score=item["score"],
                     snippet=item["snippet"],
                     file_type=item["file_type"],
-                    bm25_score=item.get("bm25_score"),
+                    keyword_score=item.get("keyword_score"),
                     vector_score=item.get("vector_score")
                 )
                 results.append(result)

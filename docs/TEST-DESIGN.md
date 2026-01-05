@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-This document defines the testing strategy for MyRAGDB, a hybrid search system combining Meilisearch keyword search and ChromaDB vector embeddings. The test suite ensures reliability across API contracts, UI functionality, search accuracy, and system integration.
+This document defines the testing strategy for MyRAGDB, a hybrid search system combining keyword search (Meilisearch) and ChromaDB vector embeddings. The test suite ensures reliability across API contracts, UI functionality, search accuracy, and system integration.
 
 **Testing Tools:**
 - **Playwright** - End-to-end UI testing and browser automation
@@ -54,8 +54,8 @@ tests/
 │   │   │   └── check-unhealthy.bru
 │   │   ├── search/
 │   │   │   ├── hybrid-search.bru
-│   │   │   ├── keyword-only.bru
-│   │   │   └── semantic-only.bru
+│   │   │   ├── keyword-search.bru
+│   │   │   └── semantic-search.bru
 │   │   ├── indexing/
 │   │   │   ├── trigger-reindex.bru
 │   │   │   ├── check-status.bru
@@ -210,7 +210,7 @@ npm run test:stage-3   # e2e + performance
 - [x] Restart endpoint returns PID and status
 
 #### Stats Endpoint (`GET /stats`)
-- [x] Returns document counts for BM25 and vector
+- [x] Returns document counts for keyword and vector
 - [x] Returns search statistics
 - [x] Returns indexing status and last run time
 
@@ -297,7 +297,7 @@ tags: @api @search @smoke
 - [x] Repository list loads on Statistics tab
 - [x] User can select/deselect repositories
 - [x] "Select All" checkbox works
-- [x] Index type checkboxes work (BM25/Vector)
+- [x] Index type checkboxes work (Keyword/Vector)
 - [x] Index mode radio buttons work (incremental/full)
 - [x] Reindex button triggers confirmation modal
 - [x] Indexing progress displays during reindex
@@ -378,7 +378,7 @@ test.describe('Search Workflow @e2e @ui @search', () => {
 
 #### Hybrid Search Integration
 - [x] Indexing documents makes them searchable
-- [x] Hybrid search combines BM25 and vector scores correctly
+- [x] Hybrid search combines keyword and vector scores correctly
 - [x] Search filters by repository
 - [x] Search respects file type filters
 - [x] Incremental indexing updates existing documents
@@ -413,7 +413,7 @@ def test_indexed_document_is_searchable():
     # Trigger reindex
     reindex_response = requests.post(f"{base_url}/reindex", json={
         "repositories": ["test-repo"],
-        "index_bm25": True,
+        "index_keyword": True,
         "index_vector": True,
         "full_rebuild": True
     })

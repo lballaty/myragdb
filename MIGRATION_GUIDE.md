@@ -71,7 +71,7 @@ MEILISEARCH_INDEX=files
 ### Before (Whoosh)
 ```
 FastAPI Server
-├── Whoosh (BM25) - Pure Python, in-process
+├── Whoosh (Keyword) - Pure Python, in-process
 ├── ChromaDB (Vector) - Separate service
 └── Manual result merging
 ```
@@ -244,8 +244,8 @@ def index_chunk(self, file_path, chunk_text):
 
 **Replace:**
 ```python
-from myragdb.indexers.bm25_indexer import BM25Indexer
-bm25_indexer = BM25Indexer()
+from myragdb.indexers.bm25_indexer import MeilisearchIndexer
+keyword_indexer = MeilisearchIndexer()
 ```
 
 **With:**
@@ -274,7 +274,7 @@ async def search(request: SearchRequest):
             limit=request.limit,
             folder_filter=request.folder_filter
         )
-    elif request.search_type == SearchType.BM25:
+    elif request.search_type == SearchType.KEYWORD:
         results = meili_indexer.search(request.query, limit=request.limit)
     # ...
 ```

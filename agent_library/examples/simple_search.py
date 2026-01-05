@@ -43,8 +43,8 @@ def main():
         for i, result in enumerate(results, 1):
             print(f"\n{i}. {result.relative_path} ({result.repository})")
             print(f"   Score: {result.score:.3f}", end="")
-            if result.bm25_score and result.vector_score:
-                print(f" (BM25: {result.bm25_score:.3f}, Vector: {result.vector_score:.3f})")
+            if result.keyword_score and result.vector_score:
+                print(f" (Keyword: {result.keyword_score:.3f}, Vector: {result.vector_score:.3f})")
             else:
                 print()
             print(f"   {result.snippet[:100]}...")

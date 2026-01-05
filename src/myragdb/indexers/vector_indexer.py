@@ -47,7 +47,7 @@ class VectorIndexer:
 
     Business Purpose: Provides semantic search using vector embeddings.
     Finds conceptually similar documents even if they don't share keywords.
-    Complements BM25 by understanding meaning, not just matching words.
+    Complements Meilisearch keyword search by understanding meaning, not just matching words.
 
     Example:
         indexer = VectorIndexer()

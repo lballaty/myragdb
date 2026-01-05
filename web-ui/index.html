@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.05.2.4.0">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.05.2.5.0">
 </head>
 <body>
     <div class="container">
@@ -141,7 +141,7 @@
                         <div class="index-option-group">
                             <h4>Index Types:</h4>
                             <label>
-                                <input type="checkbox" id="index-bm25" checked>
+                                <input type="checkbox" id="index-keyword" checked>
                                 <strong>Keyword (Meilisearch)</strong>
                                 <span class="option-hint">Fast keyword matching with typo tolerance</span>
                             </label>
@@ -179,7 +179,7 @@
                 <div class="stats-grid" id="stats-grid">
                     <div class="stat-card">
                         <div class="stat-label">Keyword Documents</div>
-                        <div class="stat-value" id="stat-bm25">-</div>
+                        <div class="stat-value" id="stat-keyword">-</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Vector Chunks</div>
@@ -218,6 +218,6 @@
         </div>
     </div>
 
-    <script src="static/js/app.js?v=2026.01.05.2.4.0"></script>
+    <script src="static/js/app.js?v=2026.01.05.2.5.0"></script>
 </body>
 </html>

@@ -4,17 +4,17 @@
 # Created: 2026-01-04
 
 from pathlib import Path
-from myragdb.indexers.bm25_indexer import BM25Indexer
+from myragdb.indexers.keyword_indexer import KeywordIndexer
 from myragdb.indexers.vector_indexer import VectorIndexer
 from myragdb.config import settings
 
-def check_bm25_index():
-    """Check if PORT-RESERVATIONS.md is in BM25 index."""
+def check_keyword_index():
+    """Check if PORT-RESERVATIONS.md is in Keyword index."""
     print("=" * 80)
-    print("CHECKING BM25 INDEX FOR PORT-RESERVATIONS.md")
+    print("CHECKING KEYWORD INDEX FOR PORT-RESERVATIONS.md")
     print("=" * 80)
 
-    indexer = BM25Indexer(str(Path(settings.index_dir) / "bm25"))
+    indexer = KeywordIndexer(str(Path(settings.index_dir) / "meilisearch"))
 
     found = False
     with indexer.ix.searcher() as searcher:
@@ -23,14 +23,14 @@ def check_bm25_index():
             file_path = doc.get('file_path', '')
 
             if 'PORT-RESERVATIONS' in file_path.upper():
-                print(f"\n✓ FOUND in BM25:")
+                print(f"\n✓ FOUND in Keyword index:")
                 print(f"  File Path: {file_path}")
                 print(f"  Repository: {doc.get('repository', 'unknown')}")
                 print(f"  Relative Path: {doc.get('relative_path', 'unknown')}")
                 found = True
 
     if not found:
-        print("\n✗ NOT FOUND in BM25 index")
+        print("\n✗ NOT FOUND in Keyword index")
 
     return found
 
@@ -71,26 +71,26 @@ def test_search():
 
     from myragdb.search.hybrid_search import HybridSearchEngine
 
-    bm25_indexer = BM25Indexer(str(Path(settings.index_dir) / "bm25"))
+    keyword_indexer = KeywordIndexer(str(Path(settings.index_dir) / "meilisearch"))
     vector_indexer = VectorIndexer(str(Path(settings.index_dir) / "chroma"))
-    engine = HybridSearchEngine(bm25_indexer, vector_indexer)
+    engine = HybridSearchEngine(keyword_indexer, vector_indexer)
 
     results = engine.search("port reservation", limit=10)
 
     print(f"\nFound {len(results)} results:")
     for i, result in enumerate(results, 1):
         print(f"\n{i}. {result.relative_path}")
-        print(f"   Score: {result.combined_score:.4f} (BM25: {result.bm25_score:.4f}, Vector: {result.vector_score:.4f})")
+        print(f"   Score: {result.combined_score:.4f} (Keyword: {result.keyword_score:.4f}, Vector: {result.vector_score:.4f})")
         print(f"   Snippet: {result.snippet[:100]}...")
 
 if __name__ == "__main__":
-    bm25_found = check_bm25_index()
+    keyword_found = check_keyword_index()
     vector_found = check_vector_index()
 
     print("\n" + "=" * 80)
     print("SUMMARY")
     print("=" * 80)
-    print(f"BM25 Index:   {'✓ Found' if bm25_found else '✗ NOT Found'}")
-    print(f"Vector Index: {'✓ Found' if vector_found else '✗ NOT Found'}")
+    print(f"Keyword Index: {'✓ Found' if keyword_found else '✗ NOT Found'}")
+    print(f"Vector Index:  {'✓ Found' if vector_found else '✗ NOT Found'}")
 
     test_search()

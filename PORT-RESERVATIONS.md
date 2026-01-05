@@ -29,7 +29,7 @@ MyRAGDB Services:
   - `GET /health` - Health check
   - `GET /stats` - Index statistics
   - `POST /search/hybrid` - Hybrid search
-  - `POST /search/bm25` - BM25 keyword search
+  - `POST /search/keyword` - Keyword search
   - `POST /search/semantic` - Vector semantic search
 - **Start Command**: `python -m myragdb.api.server`
 - **Environment Variable**: `MYRAGDB_PORT=3003`

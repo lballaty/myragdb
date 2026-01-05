@@ -444,7 +444,7 @@ async def get_repositories():
 @app.post("/search/hybrid", response_model=SearchResponse)
 async def search_hybrid(request: SearchRequest):
     """
-    Hybrid search combining BM25 and vector search.
+    Hybrid search combining Meilisearch keyword and vector search.
 
     Business Purpose: Primary search endpoint providing best-of-both-worlds
     search using keyword matching and semantic understanding.
@@ -504,7 +504,7 @@ async def search_hybrid(request: SearchRequest):
 @app.post("/search/keyword", response_model=SearchResponse)
 async def search_keyword(request: SearchRequest):
     """
-    Meilisearch keyword-only search (replaces BM25).
+    Meilisearch keyword-only search.
 
     Business Purpose: Provides fast keyword matching using Meilisearch for queries
     where exact term matching is preferred.
@@ -633,7 +633,7 @@ def run_keyword_index(
     global meilisearch_indexer, vector_indexer, hybrid_engine, indexing_state
 
     try:
-        # Initialize BM25 indexing state
+        # Initialize Keyword indexing state
         indexing_state["keyword"]["is_indexing"] = True
         indexing_state["keyword"]["current_repository"] = None
         indexing_state["keyword"]["repositories_completed"] = 0
@@ -758,10 +758,10 @@ def run_keyword_index(
 
             print(f"[Keyword] State change: global is_indexing=False, stop_requested=False, reason=no active indexing")
         else:
-            # Remove BM25 from active types
+            # Remove Keyword from active types
             if "Keyword" in indexing_state["index_types"]:
                 indexing_state["index_types"].remove("Keyword")
-            print(f"[Keyword] State change: removed BM25 from active index_types, reason=Vector still running")
+            print(f"[Keyword] State change: removed Keyword from active index_types, reason=Vector still running")
 
         print("[Keyword] Indexing completed successfully")
 
@@ -785,16 +785,16 @@ def run_vector_index(
     full_rebuild: bool = False
 ):
     """
-    Run Vector indexing in background thread (independent of BM25 indexing).
+    Run Vector indexing in background thread (independent of Keyword indexing).
 
     Business Purpose: Indexes files using semantic vector embeddings.
-    Runs independently so it can execute in parallel with BM25 indexing.
+    Runs independently so it can execute in parallel with Keyword indexing.
 
     Args:
         repository_names: List of repository names to index (None = all enabled)
         full_rebuild: If True, clears and rebuilds from scratch. If False, incremental update.
     """
-    global bm25_indexer, vector_indexer, hybrid_engine, indexing_state
+    global meilisearch_indexer, vector_indexer, hybrid_engine, indexing_state
 
     try:
         # Initialize Vector indexing state
@@ -922,7 +922,7 @@ def run_vector_index(
             # Remove Vector from active types
             if "Vector" in indexing_state["index_types"]:
                 indexing_state["index_types"].remove("Vector")
-            print(f"[Vector] State change: removed Vector from active index_types, reason=BM25 still running")
+            print(f"[Vector] State change: removed Vector from active index_types, reason=Keyword still running")
 
         print("[Vector] Indexing completed successfully")
 
@@ -948,7 +948,7 @@ async def reindex(request: ReindexRequest):
 
     Business Purpose: Allows users to manually refresh the index to pick up
     new or modified files without restarting the service. Can re-index
-    specific repositories for faster updates. Supports parallel BM25 and
+    specific repositories for faster updates. Supports parallel Keyword and
     Vector indexing - they can run independently and simultaneously.
 
     Args:
@@ -959,13 +959,13 @@ async def reindex(request: ReindexRequest):
 
     Example:
         POST /reindex
-        {"repositories": ["xLLMArionComply"], "index_bm25": true, "index_vector": true}
+        {"repositories": ["xLLMArionComply"], "index_keyword": true, "index_vector": true}
     """
     # Check if requested index types are already indexing
-    if request.index_bm25 and indexing_state["keyword"]["is_indexing"]:
+    if request.index_keyword and indexing_state["keyword"]["is_indexing"]:
         raise HTTPException(
             status_code=409,
-            detail="BM25 indexing already in progress"
+            detail="Keyword indexing already in progress"
         )
 
     if request.index_vector and indexing_state["vector"]["is_indexing"]:
@@ -975,10 +975,10 @@ async def reindex(request: ReindexRequest):
         )
 
     # Validate at least one index type selected
-    if not request.index_bm25 and not request.index_vector:
+    if not request.index_keyword and not request.index_vector:
         raise HTTPException(
             status_code=400,
-            detail="At least one index type (BM25 or Vector) must be selected"
+            detail="At least one index type (Keyword or Vector) must be selected"
         )
 
     started_at = datetime.utcnow().isoformat() + "Z"
@@ -991,7 +991,7 @@ async def reindex(request: ReindexRequest):
         repo_names = [repo.name for repo in repo_config.get_enabled_repositories()]
 
     # Launch independent threads for Keyword (Meilisearch) and Vector indexing (can run in parallel)
-    if request.index_bm25:
+    if request.index_keyword:
         keyword_thread = threading.Thread(
             target=run_keyword_index,
             args=(request.repositories, request.full_rebuild),
@@ -1013,7 +1013,7 @@ async def reindex(request: ReindexRequest):
 
     # Build descriptive message
     index_types = []
-    if request.index_bm25: index_types.append("Keyword")
+    if request.index_keyword: index_types.append("Keyword")
     if request.index_vector: index_types.append("Vector")
     mode = "full rebuild" if request.full_rebuild else "incremental update"
 
@@ -1042,19 +1042,19 @@ async def stop_indexing(request: StopIndexingRequest):
 
     Example:
         POST /stop-indexing
-        {"stop_bm25": true, "stop_vector": true}
+        {"stop_keyword": true, "stop_vector": true}
     """
     stopped = []
 
     # Check what's actually running and set stop flags
-    if request.stop_bm25:
+    if request.stop_keyword:
         if indexing_state["keyword"]["is_indexing"]:
             indexing_state["keyword"]["stop_requested"] = True
             indexing_state["stop_requested"] = True
             stopped.append("Keyword")
-            print(f"[API] State change: bm25.stop_requested=True, reason=user requested stop via API")
+            print(f"[API] State change: keyword.stop_requested=True, reason=user requested stop via API")
         else:
-            print(f"[API] BM25 stop requested but BM25 is not currently indexing")
+            print(f"[API] Keyword stop requested but Keyword indexing is not currently running")
 
     if request.stop_vector:
         if indexing_state["vector"]["is_indexing"]:

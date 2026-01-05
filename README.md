@@ -9,10 +9,10 @@
 
 ## Overview
 
-MyRAGDB is a laptop-wide hybrid search service that combines BM25 keyword search with vector embeddings to enable AI agents to intelligently discover, cross-reference, and learn from code and documentation across all development projects.
+MyRAGDB is a laptop-wide hybrid search service that combines Meilisearch keyword search with vector embeddings to enable AI agents to intelligently discover, cross-reference, and learn from code and documentation across all development projects.
 
 **Key Features:**
-- 🔍 **Hybrid Search** - Combines keyword (BM25) and semantic (vector) search
+- 🔍 **Hybrid Search** - Combines keyword (Meilisearch) and semantic (vector) search
 - 🚀 **Fast** - Sub-300ms search across thousands of files
 - 🤖 **Agent-First** - Built for AI agent integration
 - 🏠 **Local-First** - All data stays on your machine
@@ -86,15 +86,15 @@ python -m myragdb.api.server
 │  FastAPI REST Service (localhost:3003)  │
 ├─────────────────────────────────────────┤
 │  GET  /                 (Web UI)        │
-│  POST /search/hybrid    (BM25 + Vector) │
-│  POST /search/bm25      (Keyword only)  │
+│  POST /search/hybrid    (Keyword+Vector)│
+│  POST /search/keyword   (Keyword only)  │
 │  POST /search/semantic  (Vector only)   │
 │  GET  /stats            (Statistics)    │
 └─────────────────────────────────────────┘
            │                    │
     ┌──────┴────────┐    ┌─────┴──────────┐
-    │  BM25 Index   │    │  Vector Index  │
-    │   (Whoosh)    │    │   (ChromaDB)   │
+    │ Keyword Index │    │  Vector Index  │
+    │ (Meilisearch) │    │   (ChromaDB)   │
     └───────────────┘    └────────────────┘
 ```
 

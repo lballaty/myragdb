@@ -116,14 +116,18 @@ class MeilisearchIndexer:
         try:
             # Searchable attributes (inverted index - ranked priority)
             self.index.update_searchable_attributes([
-                'file_name',     # Highest priority: exact file name matches
-                'folder_name',   # High priority: directory name matches
-                'content'        # Lower priority: content matches
+                'file_name',       # Highest priority: exact file name matches
+                'relative_path',   # High priority: full relative path matches
+                'folder_name',     # Medium priority: immediate parent folder matches
+                'directory_path',  # Medium priority: full directory path matches
+                'content'          # Lower priority: content matches
             ])
 
             # Filterable attributes (lookup table - exact matches)
             self.index.update_filterable_attributes([
                 'file_path',      # Full absolute path
+                'relative_path',  # Relative path from repo root
+                'directory_path', # Full parent directory path
                 'extension',      # File type (.py, .md, .js, etc.)
                 'last_modified',  # Timestamp for incremental indexing
                 'size',           # File size in bytes

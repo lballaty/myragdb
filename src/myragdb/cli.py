@@ -11,7 +11,7 @@ from rich.panel import Panel
 from rich.text import Text
 
 from myragdb.search.hybrid_search import HybridSearchEngine
-from myragdb.indexers.bm25_indexer import BM25Indexer
+from myragdb.indexers.bm25_indexer import MeilisearchIndexer
 from myragdb.indexers.vector_indexer import VectorIndexer
 
 
@@ -35,7 +35,7 @@ def cli():
 @click.option('--repos', '-r', multiple=True, help='Filter by repository')
 @click.option('--min-score', '-s', default=0.0, type=float, help='Minimum score threshold')
 @click.option('--type', '-t', 'search_type',
-              type=click.Choice(['hybrid', 'bm25', 'semantic']),
+              type=click.Choice(['hybrid', 'keyword', 'semantic']),
               default='hybrid',
               help='Search type')
 def search(query: str, limit: int, repos: tuple, min_score: float, search_type: str):
@@ -50,7 +50,7 @@ def search(query: str, limit: int, repos: tuple, min_score: float, search_type: 
         limit: Maximum results
         repos: Repository filter
         min_score: Minimum score threshold
-        search_type: Type of search (hybrid/bm25/semantic)
+        search_type: Type of search (hybrid/keyword/semantic)
 
     Example:
         myragdb search "JWT authentication" --limit 5
@@ -62,8 +62,8 @@ def search(query: str, limit: int, repos: tuple, min_score: float, search_type: 
     try:
         # Initialize search engines
         with console.status("[bold green]Initializing search engines..."):
-            if search_type == 'bm25':
-                indexer = BM25Indexer()
+            if search_type == 'keyword':
+                indexer = MeilisearchIndexer()
                 results = indexer.search(
                     query=query,
                     limit=limit,
@@ -76,7 +76,7 @@ def search(query: str, limit: int, repos: tuple, min_score: float, search_type: 
                         'repository': r.repository,
                         'relative_path': r.relative_path,
                         'score': r.score,
-                        'bm25_score': r.score,
+                        'keyword_score': r.score,
                         'vector_score': None,
                         'snippet': r.snippet,
                         'file_type': r.file_type
@@ -97,7 +97,7 @@ def search(query: str, limit: int, repos: tuple, min_score: float, search_type: 
                         'repository': r.repository,
                         'relative_path': r.relative_path,
                         'score': r.score,
-                        'bm25_score': None,
+                        'keyword_score': None,
                         'vector_score': r.score,
                         'snippet': r.snippet,
                         'file_type': r.file_type
@@ -118,7 +118,7 @@ def search(query: str, limit: int, repos: tuple, min_score: float, search_type: 
                         'repository': r.repository,
                         'relative_path': r.relative_path,
                         'score': r.combined_score,
-                        'bm25_score': r.bm25_score,
+                        'keyword_score': r.keyword_score,
                         'vector_score': r.vector_score,
                         'snippet': r.snippet,
                         'file_type': r.file_type
@@ -138,8 +138,8 @@ def search(query: str, limit: int, repos: tuple, min_score: float, search_type: 
             score_text = Text()
             score_text.append(f"{result['score']:.3f}", style="bold magenta")
 
-            if result.get('bm25_score') is not None and result.get('vector_score') is not None:
-                score_text.append(f" (BM25: {result['bm25_score']:.3f}, Vec: {result['vector_score']:.3f})", style="dim")
+            if result.get('keyword_score') is not None and result.get('vector_score') is not None:
+                score_text.append(f" (Keyword: {result['keyword_score']:.3f}, Vec: {result['vector_score']:.3f})", style="dim")
 
             # Create result panel
             panel_content = f"""[bold]{result['relative_path']}[/bold]

@@ -60,7 +60,7 @@ src/
 │   │
 │   ├── filters/
 │   │   ├── FileTypeFilter.tsx   # File type checkboxes
-│   │   ├── SearchTypeToggle.tsx # Hybrid/BM25/Semantic
+│   │   ├── SearchTypeToggle.tsx # Hybrid/Keyword/Semantic
 │   │   └── DateRangeFilter.tsx  # Date range picker
 │   │
 │   ├── layout/
@@ -439,7 +439,7 @@ interface SearchState {
   toggleRepo: (repo: string) => void;
   selectedFileTypes: string[];
   toggleFileType: (type: string) => void;
-  searchType: 'hybrid' | 'bm25' | 'semantic';
+  searchType: 'hybrid' | 'keyword' | 'semantic';
   setSearchType: (type: SearchType) => void;
   
   // Pagination
@@ -591,8 +591,8 @@ export const searchService = {
     return apiClient.post('/search/hybrid', params);
   },
   
-  async getBM25Results(params: SearchParams): Promise<SearchResponse> {
-    return apiClient.post('/search/bm25', params);
+  async getKeywordResults(params: SearchParams): Promise<SearchResponse> {
+    return apiClient.post('/search/keyword', params);
   },
   
   async getSemanticResults(params: SearchParams): Promise<SearchResponse> {

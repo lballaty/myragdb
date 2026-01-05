@@ -36,7 +36,7 @@ The pre-commit hook automatically detects version bump type from your commit mes
 
 **Examples:**
 ```bash
-git commit -m "feat!: Rename BM25 API fields to keyword"
+git commit -m "feat!: Rename keyword API fields"
 git commit -m "refactor: Redesign search API
 
 BREAKING CHANGE: All /search/bm25 endpoints renamed to /search/keyword"
@@ -66,7 +66,7 @@ git commit -m "feature: Implement query history tracking"
 **Examples:**
 ```bash
 git commit -m "fix: Keyword search 404 error"
-git commit -m "bugfix: Meilisearch IndexStats attribute access"
+git commit -m "bugfix: Meilisearch index attribute access"
 git commit -m "Update documentation for installation"  # Also bumps patch
 ```
 
@@ -150,11 +150,11 @@ Version bumped (minor): 2026.1.5.1.0.4 → 2026.1.5.1.1.0
 ### Example 3: Breaking Change
 
 ```bash
-$ git commit -m "feat!: Rename all BM25 references to keyword
+$ git commit -m "feat!: Rename all keyword references
 
 BREAKING CHANGE: API endpoints changed from /search/bm25 to /search/keyword"
 Version bumped (major): 2026.1.5.1.1.0 → 2026.1.5.2.0.0
-[main ghi9012] feat!: Rename all BM25 references to keyword
+[main ghi9012] feat!: Rename all keyword references
  12 files changed, 85 insertions(+), 78 deletions(-)
 ```
 

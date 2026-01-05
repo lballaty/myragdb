@@ -9,7 +9,7 @@
 
 ## Overview
 
-Build a laptop-wide hybrid search service combining BM25 keyword search with vector embeddings to enable AI agents to intelligently discover and cross-reference code and documentation across all development projects.
+Build a laptop-wide hybrid search service combining Meilisearch keyword search with vector embeddings to enable AI agents to intelligently discover and cross-reference code and documentation across all development projects.
 
 ## Implementation Strategy
 
@@ -31,7 +31,7 @@ Build a laptop-wide hybrid search service combining BM25 keyword search with vec
 |----------|--------|-----------|
 | **Package Name** | `myragdb` | Simple, clear, matches repo name |
 | **Embedding Model** | `sentence-transformers/all-MiniLM-L6-v2` | Fast on CPU (50-100ms), small (80MB), good quality |
-| **BM25 Engine** | Whoosh | Pure Python, easy to embed, sufficient for 10K-100K docs |
+| **Keyword Engine** | Meilisearch | Rust-based, fast typo-tolerant search, production-ready |
 | **Vector Store** | ChromaDB | Local-first, good Python API, works well with embeddings |
 | **API Framework** | FastAPI | Async, auto docs, type hints, Python ecosystem |
 | **Web Framework** | React 18 + TypeScript + Vite | Modern, fast, good DX |
@@ -66,13 +66,13 @@ Build a laptop-wide hybrid search service combining BM25 keyword search with vec
    - Add .gitignore
 
 2. **Core Indexing**
-   - BM25 indexer (Whoosh) - basic implementation
+   - Keyword indexer (Meilisearch) - basic implementation
    - Vector indexer (ChromaDB + all-MiniLM-L6-v2)
    - File scanner to discover documents
    - Index xLLMArionComply repository
 
 3. **Search Implementation**
-   - Hybrid search (combine BM25 + vector)
+   - Hybrid search (combine Keyword + vector)
    - Result merging and ranking
    - Score normalization
 
@@ -127,7 +127,7 @@ results = client.search("JWT tokens")
    - Repository priority weighting
 
 2. **Complete API Surface**
-   - `POST /search/bm25` - Keyword-only search
+   - `POST /search/keyword` - Keyword-only search
    - `POST /search/semantic` - Vector-only search
    - `POST /search/hybrid` - Combined search (already exists)
    - `GET /stats` - Index statistics
@@ -165,7 +165,7 @@ results = client.search("JWT tokens")
 ```bash
 # Test all endpoints
 curl http://localhost:3002/stats
-curl -X POST http://localhost:3002/search/bm25 -H "Content-Type: application/json" -d '{"query": "auth"}'
+curl -X POST http://localhost:3002/search/keyword -H "Content-Type: application/json" -d '{"query": "auth"}'
 
 # Test multi-repo search
 python -m myragdb.cli search "authentication" --repos xLLMArionComply RepoDot
@@ -426,9 +426,9 @@ Questions: libor@arionetworks.com
 ```
 
 ```
-feat: implement BM25 indexer with Whoosh
+feat: implement keyword indexer with Meilisearch
 
-Add Whoosh-based BM25 indexer supporting file scanning,
+Add Meilisearch-based keyword indexer supporting file scanning,
 indexing, and keyword search.
 
 Questions: libor@arionetworks.com
@@ -478,7 +478,7 @@ Questions: libor@arionetworks.com
 |------|------------|
 | Embedding model too slow | Use smaller model or cache embeddings aggressively |
 | Index size too large | Implement compression, exclude large binary files |
-| Search quality poor | Tune BM25 parameters, adjust hybrid weights |
+| Search quality poor | Tune Meilisearch parameters, adjust hybrid weights |
 | Memory usage too high | Implement lazy loading, index streaming |
 | File watching CPU intensive | Debounce aggressively, selective watching |
 

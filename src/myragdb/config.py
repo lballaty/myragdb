@@ -109,7 +109,7 @@ class Settings(BaseSettings):
     default_limit: int = Field(default=10, alias="MYRAGDB_DEFAULT_LIMIT")
     max_limit: int = Field(default=100, alias="MYRAGDB_MAX_LIMIT")
 
-    # Meilisearch Configuration (replaces Whoosh/BM25)
+    # Meilisearch Configuration (keyword search engine)
     meilisearch_host: str = Field(default="http://localhost:7700", alias="MEILISEARCH_HOST")
     meilisearch_api_key: str = Field(default="myragdb_dev_key_2026", alias="MEILISEARCH_API_KEY")
     meilisearch_index: str = Field(default="files", alias="MEILISEARCH_INDEX")

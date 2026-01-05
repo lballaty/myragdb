@@ -7,7 +7,7 @@
 Initial indexing script for MyRAGDB.
 
 Business Purpose: Indexes all configured repositories for the first time,
-populating both BM25 and vector indexes to enable search.
+populating both Keyword (Meilisearch) and vector indexes to enable search.
 
 Usage:
     python scripts/initial_index.py
@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from myragdb.config import load_repositories_config
 from myragdb.indexers.file_scanner import FileScanner
-from myragdb.indexers.bm25_indexer import BM25Indexer
+from myragdb.indexers.keyword_indexer import KeywordIndexer
 from myragdb.indexers.vector_indexer import VectorIndexer
 
 
@@ -60,9 +60,9 @@ def main():
     # Initialize indexers
     print("Initializing indexers...")
     try:
-        bm25_indexer = BM25Indexer()
+        keyword_indexer = KeywordIndexer()
         vector_indexer = VectorIndexer()
-        print("✓ BM25 indexer ready")
+        print("✓ Keyword indexer ready")
         print("✓ Vector indexer ready (model loaded)")
         print()
 
@@ -92,12 +92,12 @@ def main():
             print(f"  Found {len(files)} files")
             total_files += len(files)
 
-            # Index with BM25
-            print(f"  Indexing with BM25...")
-            bm25_start = time.time()
-            bm25_count = bm25_indexer.index_files(files, batch_size=100)
-            bm25_time = time.time() - bm25_start
-            print(f"  ✓ BM25 indexed {bm25_count} files in {bm25_time:.1f}s")
+            # Index with Keyword search
+            print(f"  Indexing with Keyword search...")
+            keyword_start = time.time()
+            keyword_count = keyword_indexer.index_files(files, batch_size=100)
+            keyword_time = time.time() - keyword_start
+            print(f"  ✓ Keyword indexed {keyword_count} files in {keyword_time:.1f}s")
 
             # Index with vectors
             print(f"  Generating embeddings and indexing...")
@@ -124,7 +124,7 @@ def main():
 
     # Show statistics
     print("Index Statistics:")
-    print(f"  BM25 documents: {bm25_indexer.get_document_count()}")
+    print(f"  Keyword documents: {keyword_indexer.get_document_count()}")
     print(f"  Vector chunks: {vector_indexer.get_document_count()}")
     print()
 

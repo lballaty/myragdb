@@ -230,7 +230,7 @@ class ReindexRequest(BaseModel):
         default=None,
         description="List of repository names to re-index (None = all enabled)"
     )
-    index_bm25: bool = Field(
+    index_keyword: bool = Field(
         default=True,
         description="Whether to re-index keyword index"
     )
@@ -247,7 +247,7 @@ class ReindexRequest(BaseModel):
         json_schema_extra = {
             "example": {
                 "repositories": ["xLLMArionComply"],
-                "index_bm25": True,
+                "index_keyword": True,
                 "index_vector": True,
                 "full_rebuild": False
             }
@@ -283,7 +283,7 @@ class StopIndexingRequest(BaseModel):
     Business Purpose: Allows graceful stopping of running indexing operations
     to free up resources or make corrections.
     """
-    stop_bm25: bool = Field(
+    stop_keyword: bool = Field(
         default=True,
         description="Whether to stop keyword indexing if running"
     )
@@ -295,7 +295,7 @@ class StopIndexingRequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "stop_bm25": True,
+                "stop_keyword": True,
                 "stop_vector": True
             }
         }

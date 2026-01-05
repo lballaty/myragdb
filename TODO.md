@@ -40,14 +40,14 @@
 - [x] Handle encoding detection
 - [~] Commit: "feat: implement file scanner and processor"
 
-### 1.4 BM25 Indexer (Whoosh)
-- [x] Install and configure Whoosh
-- [x] Create schema for BM25 index (src/myragdb/indexers/bm25_indexer.py)
+### 1.4 Keyword Indexer (Meilisearch)
+- [x] Install and configure Meilisearch
+- [x] Create schema for keyword index (src/myragdb/indexers/meilisearch_indexer.py)
 - [x] Implement indexing function (add documents)
 - [x] Implement search function (query documents)
-- [x] Add score normalization (BM25F scoring)
+- [x] Add score normalization (Meilisearch ranking)
 - [x] Test with sample documents (to be done after CLI)
-- [~] Commit: "feat: implement BM25 indexer with Whoosh"
+- [~] Commit: "feat: implement keyword indexer with Meilisearch"
 
 ### 1.5 Vector Indexer (ChromaDB)
 - [x] Install and configure ChromaDB
@@ -61,10 +61,10 @@
 
 ### 1.6 Hybrid Search
 - [x] Create hybrid search module (src/myragdb/search/hybrid_search.py)
-- [x] Implement BM25 + vector search (sequential for now)
+- [x] Implement keyword + vector search (sequential for now)
 - [x] Implement score normalization
 - [x] Implement result merging (deduplicate by file path)
-- [x] Implement weighted ranking (0.4 BM25 + 0.6 vector)
+- [x] Implement weighted ranking (0.4 keyword + 0.6 vector)
 - [x] Add snippet extraction
 - [~] Commit: "feat: implement hybrid search with ranking"
 
@@ -73,7 +73,7 @@
 - [x] Add CORS middleware
 - [x] Create Pydantic models (src/myragdb/api/models.py)
 - [x] Implement POST /search/hybrid endpoint
-- [x] Implement POST /search/bm25 endpoint
+- [x] Implement POST /search/keyword endpoint
 - [x] Implement POST /search/semantic endpoint
 - [x] Add basic error handling
 - [x] Add health check endpoint GET /health
@@ -139,7 +139,7 @@
 - [ ] Commit: "feat: implement SQLite metadata tracking"
 
 ### 2.3 Additional API Endpoints
-- [ ] Implement POST /search/bm25
+- [ ] Implement POST /search/keyword
 - [ ] Implement POST /search/semantic
 - [ ] Implement GET /stats
 - [ ] Implement POST /index/repository
@@ -386,7 +386,7 @@
 
 ### Phase 1 Accomplishments:
 - ✅ 26,731 files indexed from xLLMArionComply repository
-- ✅ BM25 keyword search (472MB index)
+- ✅ Keyword search with Meilisearch (472MB index)
 - ✅ Vector semantic search (4.3GB index, 365,232 chunks)
 - ✅ Hybrid search combining both methods
 - ✅ CLI interface working (`myragdb search`, `myragdb stats`)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # File: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb/scripts/verify_indexed_content.py
-# Description: Verify what content was actually indexed in BM25 and Vector databases
+# Description: Verify what content was actually indexed in Keyword and Vector databases
 # Author: Libor Ballaty <libor@arionetworks.com>
 # Created: 2026-01-04
 
@@ -11,18 +11,18 @@ from collections import defaultdict, Counter
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from myragdb.indexers.bm25_indexer import BM25Indexer
+from myragdb.indexers.keyword_indexer import KeywordIndexer
 from myragdb.indexers.vector_indexer import VectorIndexer
 from myragdb.config import settings
 
 
-def analyze_bm25_index():
-    """Analyze BM25 index to show repositories and file types."""
+def analyze_keyword_index():
+    """Analyze Keyword index to show repositories and file types."""
     print("\n" + "="*80)
-    print("BM25 INDEX ANALYSIS")
+    print("KEYWORD INDEX ANALYSIS")
     print("="*80)
 
-    indexer = BM25Indexer(str(Path(settings.index_dir) / "bm25"))
+    indexer = KeywordIndexer(str(Path(settings.index_dir) / "meilisearch"))
 
     # Get all documents
     with indexer.ix.searcher() as searcher:
@@ -155,7 +155,7 @@ if __name__ == "__main__":
     print("MYRAGDB INDEX VERIFICATION")
     print("="*80)
 
-    analyze_bm25_index()
+    analyze_keyword_index()
     analyze_vector_index()
 
     print("\n" + "="*80)

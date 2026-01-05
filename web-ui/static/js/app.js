@@ -263,9 +263,9 @@ function renderSearchResults(data, responseTime) {
                     <div class="result-path">${escapeHtml(result.relative_path)}</div>
                     <div class="result-score">
                         <div class="score-badge ${scoreClass}">${scorePercent}%</div>
-                        ${result.bm25_score !== undefined ? `
+                        ${result.keyword_score !== undefined ? `
                             <div class="score-detail">
-                                BM25: ${(result.bm25_score * 100).toFixed(1)}% |
+                                Keyword: ${(result.keyword_score * 100).toFixed(1)}% |
                                 Vec: ${(result.vector_score * 100).toFixed(1)}%
                             </div>
                         ` : ''}
@@ -437,7 +437,7 @@ async function loadStatistics() {
         const response = await fetch(`${API_BASE_URL}/stats`);
         const data = await response.json();
 
-        document.getElementById('stat-bm25').textContent = data.keyword_documents.toLocaleString();
+        document.getElementById('stat-keyword').textContent = data.keyword_documents.toLocaleString();
         document.getElementById('stat-vector').textContent = data.vector_chunks.toLocaleString();
         document.getElementById('stat-searches').textContent = state.stats.totalSearches.toLocaleString();
 
@@ -453,11 +453,11 @@ async function loadStatistics() {
         const reindexButton = document.getElementById('reindex-button');
         const statusElement = document.getElementById('stat-index-status');
 
-        // Only disable reindex button if BOTH BM25 and Vector are indexing
-        // This allows starting Vector while BM25 is running (and vice versa)
-        const bm25Indexing = data.bm25?.is_indexing || false;
+        // Only disable reindex button if BOTH Keyword and Vector are indexing
+        // This allows starting Vector while Keyword is running (and vice versa)
+        const keywordIndexing = data.keyword?.is_indexing || false;
         const vectorIndexing = data.vector?.is_indexing || false;
-        const bothIndexing = bm25Indexing && vectorIndexing;
+        const bothIndexing = keywordIndexing && vectorIndexing;
 
         if (data.is_indexing) {
             indexingStatus.style.display = 'flex';
@@ -466,7 +466,7 @@ async function loadStatistics() {
             // Update status text based on what's indexing
             if (bothIndexing) {
                 statusElement.textContent = 'Keyword + Vector Indexing...';
-            } else if (bm25Indexing) {
+            } else if (keywordIndexing) {
                 statusElement.textContent = 'Keyword Indexing... (Vector available)';
             } else if (vectorIndexing) {
                 statusElement.textContent = 'Vector Indexing... (Keyword available)';
@@ -596,13 +596,13 @@ function showReindexModal(selectedRepos, repoText) {
     const modalConfirm = document.getElementById('modal-confirm');
 
     // Get selected options
-    const indexBM25 = document.getElementById('index-bm25').checked;
+    const indexKeyword = document.getElementById('index-keyword').checked;
     const indexVector = document.getElementById('index-vector').checked;
     const isFullRebuild = document.getElementById('mode-full').checked;
 
     // Build index type description
     const indexTypes = [];
-    if (indexBM25) indexTypes.push('Keyword (Meilisearch)');
+    if (indexKeyword) indexTypes.push('Keyword (Meilisearch)');
     if (indexVector) indexTypes.push('Vector (semantic)');
     const indexTypeText = indexTypes.length > 0 ? indexTypes.join(' + ') : 'NONE';
 
@@ -661,14 +661,14 @@ async function executeReindex(selectedRepos) {
         indexingStatus.style.display = 'flex';
 
         // Get selected options
-        const indexBM25 = document.getElementById('index-bm25').checked;
+        const indexKeyword = document.getElementById('index-keyword').checked;
         const indexVector = document.getElementById('index-vector').checked;
         const isFullRebuild = document.getElementById('mode-full').checked;
 
         // Build request body
         const requestBody = {
             repositories: selectedRepos.length === state.repositories.length ? null : selectedRepos,
-            index_bm25: indexBM25,
+            index_keyword: indexKeyword,
             index_vector: indexVector,
             full_rebuild: isFullRebuild
         };
