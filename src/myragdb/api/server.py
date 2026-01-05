@@ -730,14 +730,25 @@ async def search_hybrid(request: SearchRequest):
     try:
         _, _, engine = get_search_engines()
 
-        # Execute hybrid search
+        # Determine repository filter: use repositories list if provided, otherwise single repository_filter
+        repo_filter = request.repository_filter
+        multi_repo_filter = request.repositories
+
+        # Execute hybrid search with larger limit if filtering by multiple repos
+        fetch_limit = request.limit * 3 if multi_repo_filter else request.limit
+
         results = await engine.hybrid_search(
             query=request.query,
-            limit=request.limit,
-            repository_filter=request.repository_filter,
+            limit=fetch_limit,
+            repository_filter=repo_filter,
             folder_filter=request.folder_filter,
             extension_filter=request.extension_filter
         )
+
+        # Filter by multiple repositories if specified
+        if multi_repo_filter:
+            results = [r for r in results if r.repository in multi_repo_filter]
+            results = results[:request.limit]  # Trim to requested limit
 
         # Convert to API response format
         result_items = [
