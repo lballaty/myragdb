@@ -21,7 +21,7 @@ Example Usage:
 import asyncio
 import httpx
 from typing import Any, Optional, List, Dict
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import uvicorn
@@ -29,6 +29,50 @@ import uvicorn
 # MyRAGDB API configuration
 MYRAGDB_URL = "http://localhost:3003"
 TIMEOUT = 30.0
+
+# LLM Port to Name mapping
+LLM_PORT_MAP = {
+    8081: "Phi-3",
+    8082: "SmolLM3",
+    8083: "Mistral 7B",
+    8084: "Qwen 2.5 32B",
+    8085: "Qwen Coder 7B",
+    8086: "Hermes 3 Llama 8B",
+    8087: "Llama 3.1 8B",
+    8088: "Llama 4 Scout 17B",
+    8089: "Mistral Small 24B",
+    8092: "DeepSeek R1 Qwen 32B"
+}
+
+
+def detect_llm_source(request: Request) -> str:
+    """
+    Detect which LLM made the request based on headers and origin.
+
+    Returns:
+        LLM name or "Unknown LLM" if can't be determined
+    """
+    # Check Referer header (from browser UI)
+    referer = request.headers.get("referer", "")
+
+    # Check X-Request-Source custom header (if we add it to chat UI)
+    source_header = request.headers.get("x-llm-source", "")
+    if source_header:
+        return source_header
+
+    # Check User-Agent for clues
+    user_agent = request.headers.get("user-agent", "")
+
+    # Check client host/port (won't work for browser requests, but might for direct LLM calls)
+    client_host = request.client.host if request.client else "unknown"
+
+    # For now, return generic identifier with client info
+    if referer:
+        return f"Browser UI ({client_host})"
+    elif "python" in user_agent.lower():
+        return f"Python Client ({client_host})"
+    else:
+        return f"Unknown ({client_host})"
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -149,7 +193,7 @@ async def health_check():
 # ============================================================================
 
 @app.post("/search", response_model=SearchResponse)
-async def search(request: SearchRequest):
+async def search(request_body: SearchRequest, request: Request):
     """
     Search across indexed codebases.
 
@@ -163,6 +207,23 @@ async def search(request: SearchRequest):
             "limit": 10
         }
     """
+    # Detect LLM source
+    llm_source = detect_llm_source(request)
+
+    # Log incoming search request
+    print(f"\n{'='*60}")
+    print(f"🔍 SEARCH REQUEST")
+    print(f"{'='*60}")
+    print(f"LLM Source: {llm_source}")
+    print(f"Query: {request_body.query}")
+    print(f"Type: {request_body.search_type}")
+    print(f"Limit: {request_body.limit}")
+    if request_body.repositories:
+        print(f"Repositories: {', '.join(request_body.repositories)}")
+    if request_body.file_types:
+        print(f"File Types: {', '.join(request_body.file_types)}")
+    print(f"{'='*60}\n")
+
     try:
         # Determine endpoint based on search type
         endpoint_map = {
@@ -171,22 +232,22 @@ async def search(request: SearchRequest):
             "keyword": "/search/keyword"
         }
 
-        endpoint = endpoint_map.get(request.search_type, "/search/hybrid")
+        endpoint = endpoint_map.get(request_body.search_type, "/search/hybrid")
 
         # Build request payload
         payload = {
-            "query": request.query,
-            "limit": request.limit,
-            "min_score": request.min_score
+            "query": request_body.query,
+            "limit": request_body.limit,
+            "min_score": request_body.min_score
         }
 
         # Add optional filters
-        if request.repositories:
-            payload["repositories"] = request.repositories
-        if request.file_types:
-            payload["file_types"] = request.file_types
-        if request.folder_filter:
-            payload["folder_filter"] = request.folder_filter
+        if request_body.repositories:
+            payload["repositories"] = request_body.repositories
+        if request_body.file_types:
+            payload["file_types"] = request_body.file_types
+        if request_body.folder_filter:
+            payload["folder_filter"] = request_body.folder_filter
 
         # Call MyRAGDB API
         async with httpx.AsyncClient(timeout=TIMEOUT) as client:
@@ -194,10 +255,18 @@ async def search(request: SearchRequest):
             response.raise_for_status()
             data = response.json()
 
+            # Log results
+            print(f"✅ SEARCH COMPLETE")
+            print(f"Total Results: {data['total_results']}")
+            print(f"Search Time: {data['search_time_ms']:.2f}ms")
+            if data['results']:
+                print(f"Top Result: {data['results'][0].get('file_path', 'N/A')}")
+            print(f"{'='*60}\n")
+
             # Return formatted response
             return SearchResponse(
                 query=data["query"],
-                search_type=request.search_type,
+                search_type=request_body.search_type,
                 total_results=data["total_results"],
                 search_time_ms=data["search_time_ms"],
                 results=[SearchResult(**r) for r in data["results"]]
@@ -329,13 +398,13 @@ async def get_stats():
 # Server Startup
 # ============================================================================
 
-def start_server(host: str = "0.0.0.0", port: int = 8080):
+def start_server(host: str = "0.0.0.0", port: int = 8093):
     """
     Start the HTTP middleware server.
 
     Args:
         host: Host to bind to (default: 0.0.0.0 for all interfaces)
-        port: Port to listen on (default: 8080)
+        port: Port to listen on (default: 8093)
     """
     print("="*60)
     print("MyRAGDB MCP HTTP Middleware")

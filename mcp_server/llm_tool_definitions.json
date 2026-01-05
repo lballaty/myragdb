@@ -95,10 +95,10 @@
   },
   "implementation": {
     "description": "How to implement these tools in your LLM client",
-    "base_url": "http://localhost:8080",
+    "base_url": "http://localhost:8093",
     "endpoints": {
       "search_codebase": {
-        "url": "http://localhost:8080/search",
+        "url": "http://localhost:8093/search",
         "method": "POST",
         "example_request": {
           "query": "authentication flow",
@@ -123,11 +123,11 @@
         }
       },
       "list_repositories": {
-        "url": "http://localhost:8080/repositories",
+        "url": "http://localhost:8093/repositories",
         "method": "GET"
       },
       "get_index_stats": {
-        "url": "http://localhost:8080/stats",
+        "url": "http://localhost:8093/stats",
         "method": "GET"
       }
     }

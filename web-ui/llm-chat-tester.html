@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyRAGDB LLM Chat Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f7;
+            color: #1d1d1f;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .controls {
+            padding: 20px 30px;
+            background: #fafafa;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .control-group label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        select, button {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid #d0d0d0;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        select {
+            background: white;
+            cursor: pointer;
+            min-width: 200px;
+        }
+
+        option.running {
+            background-color: #d4edda;
+            color: #155724;
+            font-weight: 500;
+        }
+
+        option.offline {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .chat-container {
+            height: 500px;
+            overflow-y: auto;
+            padding: 20px 30px;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message.user {
+            align-items: flex-end;
+        }
+
+        .message.assistant {
+            align-items: flex-start;
+        }
+
+        .message-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            color: #666;
+        }
+
+        .message.user .message-label {
+            color: #667eea;
+        }
+
+        .message-bubble {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-bubble {
+            background: #667eea;
+            color: white;
+        }
+
+        .message.assistant .message-bubble {
+            background: #f0f0f0;
+            color: #1d1d1f;
+        }
+
+        .message.system .message-bubble {
+            background: #fff3cd;
+            color: #856404;
+            max-width: 100%;
+            font-size: 13px;
+        }
+
+        .tool-call {
+            background: #e3f2fd;
+            border-left: 3px solid #2196f3;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 13px;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+
+        .tool-call .tool-name {
+            font-weight: 600;
+            color: #1976d2;
+        }
+
+        .input-area {
+            padding: 20px 30px;
+            background: #fafafa;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #d0d0d0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+        }
+
+        #send-button {
+            padding: 12px 30px;
+        }
+
+        .status {
+            padding: 10px 20px;
+            background: #f0f0f0;
+            font-size: 12px;
+            text-align: center;
+            color: #666;
+        }
+
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 MyRAGDB LLM Chat Tester</h1>
+            <p>Test your local LLMs with MyRAGDB codebase search tool</p>
+        </div>
+
+        <div class="status" id="status">Initializing...</div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>Select LLM</label>
+                <select id="llm-selector">
+                    <option value="">Loading...</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Actions</label>
+                <button onclick="testConnection()">Test Connection</button>
+            </div>
+
+            <div class="control-group">
+                <label>Clear</label>
+                <button onclick="clearChat()">Clear Chat</button>
+            </div>
+        </div>
+
+        <div class="chat-container" id="chat-container"></div>
+
+        <div class="input-area">
+            <textarea
+                id="user-input"
+                placeholder="Type your message... (e.g., 'Search for authentication code in my repositories')"
+                rows="3"
+            ></textarea>
+            <button id="send-button" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            myragdb: 'http://localhost:8093',
+            llmController: 'http://localhost:8090',
+            apiKey: 'choose-a-shared-key' // From controller .runner.sh
+        };
+
+        // Available LLMs from your setup
+        const LLM_MODELS = [
+            { id: 'phi3', name: 'Phi-3', port: 8081 },
+            { id: 'smollm3', name: 'SmolLM3', port: 8082 },
+            { id: 'mistral', name: 'Mistral 7B', port: 8083 },
+            { id: 'qwen2.5-32b', name: 'Qwen 2.5 32B', port: 8084 },
+            { id: 'qwen-coder-7b', name: 'Qwen Coder 7B', port: 8085 },
+            { id: 'hermes-3-llama-8b', name: 'Hermes 3 Llama 8B', port: 8086 },
+            { id: 'llama-3.1-8b', name: 'Llama 3.1 8B', port: 8087 },
+            { id: 'llama-4-scout-17b', name: 'Llama 4 Scout 17B', port: 8088 },
+            { id: 'mistral-small-24b', name: 'Mistral Small 24B', port: 8089 },
+            { id: 'deepseek-r1-qwen-32b', name: 'DeepSeek R1 Qwen 32B', port: 8092 }
+        ];
+
+        let chatHistory = [];
+        let selectedModel = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadModels();
+            checkServices();
+
+            // Enter to send (Shift+Enter for new line)
+            document.getElementById('user-input').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+        });
+
+        async function loadModels() {
+            const selector = document.getElementById('llm-selector');
+
+            // Check which LLMs are running
+            const runningStatuses = await Promise.all(
+                LLM_MODELS.map(async (model) => {
+                    try {
+                        const response = await fetch(`http://localhost:${model.port}/v1/models`, {
+                            method: 'GET',
+                            signal: AbortSignal.timeout(2000) // 2 second timeout
+                        });
+                        return { id: model.id, running: response.ok };
+                    } catch (e) {
+                        return { id: model.id, running: false };
+                    }
+                })
+            );
+
+            // Create a map of running statuses
+            const statusMap = {};
+            runningStatuses.forEach(s => statusMap[s.id] = s.running);
+
+            // Build dropdown with status indicators
+            selector.innerHTML = LLM_MODELS.map(m => {
+                const status = statusMap[m.id] ? 'running' : 'offline';
+                const indicator = statusMap[m.id] ? '🟢' : '🔴';
+                return `<option value="${m.id}" class="${status}">${indicator} ${m.name} (port ${m.port})</option>`;
+            }).join('');
+
+            // Select first running model, or first model if none running
+            const firstRunning = LLM_MODELS.find(m => statusMap[m.id]);
+            if (firstRunning) {
+                selectedModel = firstRunning;
+                selector.value = selectedModel.id;
+                updateStatus(`Selected: ${selectedModel.name} (running)`, 'connected');
+            } else if (LLM_MODELS.length > 0) {
+                selectedModel = LLM_MODELS[0];
+                selector.value = selectedModel.id;
+                updateStatus(`Selected: ${selectedModel.name} (offline - start it first)`, 'error');
+            }
+
+            selector.addEventListener('change', (e) => {
+                selectedModel = LLM_MODELS.find(m => m.id === e.target.value);
+                const isRunning = statusMap[selectedModel.id];
+                updateStatus(
+                    `Selected: ${selectedModel.name} ${isRunning ? '(running)' : '(offline)'}`,
+                    isRunning ? 'connected' : 'error'
+                );
+            });
+        }
+
+        async function checkServices() {
+            try {
+                // Check MyRAGDB middleware
+                const ragdbResp = await fetch(`${CONFIG.myragdb}/health`);
+                const ragdbHealth = await ragdbResp.json();
+
+                if (ragdbHealth.status === 'healthy') {
+                    updateStatus(`✓ MyRAGDB connected | LLM: ${selectedModel?.name || 'None selected'}`, 'connected');
+                } else {
+                    updateStatus('⚠ MyRAGDB middleware not healthy', 'error');
+                }
+            } catch (e) {
+                updateStatus('✗ MyRAGDB middleware not available on port 8093', 'error');
+            }
+        }
+
+        async function testConnection() {
+            if (!selectedModel) {
+                alert('Please select an LLM first');
+                return;
+            }
+
+            updateStatus('Testing connection...', '');
+
+            try {
+                const response = await fetch(`http://localhost:${selectedModel.port}/v1/models`);
+                const data = await response.json();
+
+                addMessage('system', `✓ Connected to ${selectedModel.name} on port ${selectedModel.port}`);
+                updateStatus(`✓ Connected to ${selectedModel.name}`, 'connected');
+            } catch (e) {
+                addMessage('system', `✗ Failed to connect to ${selectedModel.name}: ${e.message}`);
+                updateStatus(`✗ Connection failed: ${e.message}`, 'error');
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const message = input.value.trim();
+
+            if (!message) return;
+            if (!selectedModel) {
+                alert('Please select an LLM first');
+                return;
+            }
+
+            // Add user message to chat
+            addMessage('user', message);
+            chatHistory.push({ role: 'user', content: message });
+
+            input.value = '';
+            updateStatus('Thinking...', '');
+
+            try {
+                // Send to LLM with tool definition
+                const response = await fetch(`http://localhost:${selectedModel.port}/v1/chat/completions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: selectedModel.id,
+                        messages: chatHistory,
+                        tools: [
+                            {
+                                type: 'function',
+                                function: {
+                                    name: 'search_codebase',
+                                    description: 'Search across all indexed codebases using hybrid keyword + semantic search. Finds relevant code, documentation, and files based on natural language queries.',
+                                    parameters: {
+                                        type: 'object',
+                                        properties: {
+                                            query: {
+                                                type: 'string',
+                                                description: 'Natural language search query (e.g., "how is authentication implemented", "JWT token validation")'
+                                            },
+                                            search_type: {
+                                                type: 'string',
+                                                enum: ['hybrid', 'semantic', 'keyword'],
+                                                default: 'hybrid',
+                                                description: 'Type of search'
+                                            },
+                                            limit: {
+                                                type: 'integer',
+                                                minimum: 1,
+                                                maximum: 100,
+                                                default: 10,
+                                                description: 'Maximum number of results'
+                                            }
+                                        },
+                                        required: ['query']
+                                    }
+                                }
+                            }
+                        ],
+                        tool_choice: 'auto',
+                        temperature: 0.7,
+                        max_tokens: 1000
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error.message || 'Unknown error');
+                }
+
+                const assistantMessage = data.choices[0].message;
+
+                // Handle tool calls
+                if (assistantMessage.tool_calls) {
+                    for (const toolCall of assistantMessage.tool_calls) {
+                        const args = JSON.parse(toolCall.function.arguments);
+                        addMessage('system', `🔧 Tool Call: ${toolCall.function.name}\n${JSON.stringify(args, null, 2)}`);
+
+                        // Execute tool call
+                        const toolResult = await executeToolCall(toolCall.function.name, args);
+                        addMessage('system', `📊 Tool Result:\n${JSON.stringify(toolResult, null, 2)}`);
+
+                        // Add tool result to history
+                        chatHistory.push(assistantMessage);
+                        chatHistory.push({
+                            role: 'tool',
+                            tool_call_id: toolCall.id,
+                            content: JSON.stringify(toolResult)
+                        });
+
+                        // Get final response with tool result
+                        const finalResp = await fetch(`http://localhost:${selectedModel.port}/v1/chat/completions`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                model: selectedModel.id,
+                                messages: chatHistory,
+                                temperature: 0.7,
+                                max_tokens: 1000
+                            })
+                        });
+
+                        const finalData = await finalResp.json();
+                        const finalMessage = finalData.choices[0].message.content;
+                        addMessage('assistant', finalMessage);
+                        chatHistory.push({ role: 'assistant', content: finalMessage });
+                    }
+                } else {
+                    // Regular response
+                    addMessage('assistant', assistantMessage.content);
+                    chatHistory.push({ role: 'assistant', content: assistantMessage.content });
+                }
+
+                updateStatus(`✓ Response from ${selectedModel.name}`, 'connected');
+
+            } catch (e) {
+                let errorMsg = e.message;
+
+                // Check if it's a tool calling configuration error
+                if (errorMsg.includes('jinja') || errorMsg.includes('tools param')) {
+                    errorMsg = `❌ Tool Calling Not Supported\n\n${selectedModel.name} is not configured for function calling.\n\nThe LLM needs to be started with a compatible chat template.\n\nSolutions:\n1. Try a different LLM (Qwen Coder, Hermes 3, or Llama 3.1)\n2. Or restart ${selectedModel.name} with --jinja flag and compatible template\n\nOriginal error: ${errorMsg}`;
+                }
+
+                addMessage('system', errorMsg);
+                updateStatus(`✗ Error: ${e.message}`, 'error');
+            }
+        }
+
+        async function executeToolCall(toolName, args) {
+            if (toolName === 'search_codebase') {
+                const response = await fetch(`${CONFIG.myragdb}/search`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-LLM-Source': selectedModel ? selectedModel.name : 'Unknown'
+                    },
+                    body: JSON.stringify(args)
+                });
+                return await response.json();
+            }
+            return { error: 'Unknown tool' };
+        }
+
+        function addMessage(role, content) {
+            const container = document.getElementById('chat-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+
+            const label = document.createElement('div');
+            label.className = 'message-label';
+            label.textContent = role === 'user' ? 'You' :
+                               role === 'assistant' ? (selectedModel?.name || 'Assistant') :
+                               'System';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+
+            // Format content
+            if (content.includes('\n') || content.includes('{')) {
+                const pre = document.createElement('pre');
+                pre.textContent = content;
+                bubble.appendChild(pre);
+            } else {
+                bubble.textContent = content;
+            }
+
+            messageDiv.appendChild(label);
+            messageDiv.appendChild(bubble);
+            container.appendChild(messageDiv);
+
+            // Scroll to bottom
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function clearChat() {
+            document.getElementById('chat-container').innerHTML = '';
+            chatHistory = [];
+            updateStatus(`Chat cleared | LLM: ${selectedModel?.name || 'None selected'}`, 'connected');
+        }
+
+        function updateStatus(message, statusClass) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${statusClass}`;
+        }
+    </script>
+</body>
+</html>

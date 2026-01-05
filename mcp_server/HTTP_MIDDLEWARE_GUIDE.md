@@ -15,7 +15,7 @@ The HTTP middleware provides a **simple REST API** wrapper around MyRAGDB's sear
 
 ```
 Local LLM (Ollama/LM Studio/etc)
-    ↓ HTTP (port 8080)
+    ↓ HTTP (port 8093)
 HTTP Middleware
     ↓ HTTP (port 3003)
 MyRAGDB API
@@ -46,16 +46,16 @@ source venv/bin/activate
 python -m mcp_server.http_middleware
 ```
 
-Middleware runs on: `http://localhost:8080`
+Middleware runs on: `http://localhost:8093`
 
 ### 3. Test the Middleware
 
 ```bash
 # Health check
-curl http://localhost:8080/health
+curl http://localhost:8093/health
 
 # Search
-curl -X POST http://localhost:8080/search \
+curl -X POST http://localhost:8093/search \
   -H "Content-Type: application/json" \
   -d '{"query": "authentication", "limit": 5}'
 ```
@@ -211,7 +211,7 @@ Get indexing statistics.
 
 ## Interactive API Documentation
 
-Visit: `http://localhost:8080/docs`
+Visit: `http://localhost:8093/docs`
 
 FastAPI provides automatic interactive documentation where you can:
 - See all endpoints
@@ -246,7 +246,7 @@ Configure Ollama to use MyRAGDB as a tool:
     },
     "required": ["query"]
   },
-  "endpoint": "http://localhost:8080/search",
+  "endpoint": "http://localhost:8093/search",
   "method": "POST"
 }
 ```
@@ -255,7 +255,7 @@ Configure Ollama to use MyRAGDB as a tool:
 
 1. Start LM Studio with API server enabled
 2. Configure function calling with the tool definition above
-3. Make HTTP calls to `http://localhost:8080/search`
+3. Make HTTP calls to `http://localhost:8093/search`
 
 ### OpenAI-Compatible APIs
 
@@ -279,7 +279,7 @@ tools = [{
 }]
 ```
 
-Then implement the function to call `http://localhost:8080/search`.
+Then implement the function to call `http://localhost:8093/search`.
 
 ---
 
@@ -291,7 +291,7 @@ import requests
 def search_codebases(query: str, limit: int = 10):
     """Search codebases using MyRAGDB middleware."""
     response = requests.post(
-        "http://localhost:8080/search",
+        "http://localhost:8093/search",
         json={
             "query": query,
             "search_type": "hybrid",
@@ -313,7 +313,7 @@ for result in results["results"]:
 
 ```bash
 # Search for authentication code
-curl -X POST http://localhost:8080/search \
+curl -X POST http://localhost:8093/search \
   -H "Content-Type: application/json" \
   -d '{
     "query": "authentication JWT token",
@@ -322,13 +322,13 @@ curl -X POST http://localhost:8080/search \
   }'
 
 # List repositories
-curl http://localhost:8080/repositories
+curl http://localhost:8093/repositories
 
 # Get statistics
-curl http://localhost:8080/stats
+curl http://localhost:8093/stats
 
 # Discover new repositories
-curl -X POST http://localhost:8080/discover \
+curl -X POST http://localhost:8093/discover \
   -H "Content-Type: application/json" \
   -d '{
     "root_path": "/Users/username/projects",
@@ -336,7 +336,7 @@ curl -X POST http://localhost:8080/discover \
   }'
 
 # Trigger reindex
-curl -X POST http://localhost:8080/reindex \
+curl -X POST http://localhost:8093/reindex \
   -H "Content-Type: application/json" \
   -d '{
     "repositories": [],
@@ -380,7 +380,7 @@ For production:
 
 **Error:** `Address already in use`
 
-**Solution:** Port 8080 is in use. Start on different port:
+**Solution:** Port 8093 is in use. Start on different port:
 ```bash
 python -m mcp_server.http_middleware --port 8081
 ```
@@ -406,7 +406,7 @@ python -m myragdb.api.server
 | Feature | MCP Server | HTTP Middleware |
 |---------|-----------|-----------------|
 | **Protocol** | stdio (JSON-RPC) | HTTP REST |
-| **Port** | None | 8080 |
+| **Port** | None | 8093 |
 | **Clients** | MCP-compatible LLMs | Any HTTP client |
 | **Best For** | Claude Code, Claude | Ollama, LM Studio, custom |
 | **Ease of Use** | Automatic for MCP clients | Requires HTTP calls |
@@ -421,7 +421,7 @@ python -m myragdb.api.server
 python -c "from mcp_server.http_middleware import start_server; start_server(port=9000)"
 
 # Localhost only (more secure)
-python -c "from mcp_server.http_middleware import start_server; start_server(host='127.0.0.1', port=8080)"
+python -c "from mcp_server.http_middleware import start_server; start_server(host='127.0.0.1', port=8093)"
 ```
 
 ---

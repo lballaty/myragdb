@@ -34,7 +34,8 @@
       "Bash(/tmp/test_docs.txt)",
       "Bash(printf:*)",
       "Bash(/tmp/test_breaking.txt)",
-      "Bash(open http://localhost:3003)"
+      "Bash(open http://localhost:3003)",
+      "Bash(open:*)"
     ],
     "deny": [],
     "ask": []
