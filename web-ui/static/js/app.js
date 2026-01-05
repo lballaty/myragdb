@@ -12,7 +12,8 @@ const state = {
     stats: {
         totalSearches: 0,
         responseTimes: []
-    }
+    },
+    repositories: []
 };
 
 // Initialize application
@@ -20,9 +21,13 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeTabs();
     initializeSearch();
     initializeActivityMonitor();
+    initializeReindex();
     checkHealthStatus();
+    updateIndexingProgress();
     loadStatistics();
+    loadRepositories();
     loadFromLocalStorage();
+    loadVersion();
 });
 
 // Tab Management
@@ -261,10 +266,275 @@ async function loadStatistics() {
             document.getElementById('stat-avg-time').textContent = '-';
         }
 
+        // Update indexing status
+        const indexingStatus = document.getElementById('indexing-status');
+        const reindexButton = document.getElementById('reindex-button');
+        const statusElement = document.getElementById('stat-index-status');
+
+        // Only disable reindex button if BOTH BM25 and Vector are indexing
+        // This allows starting Vector while BM25 is running (and vice versa)
+        const bm25Indexing = data.bm25?.is_indexing || false;
+        const vectorIndexing = data.vector?.is_indexing || false;
+        const bothIndexing = bm25Indexing && vectorIndexing;
+
+        if (data.is_indexing) {
+            indexingStatus.style.display = 'flex';
+            reindexButton.disabled = bothIndexing;  // Only disable if both are running
+
+            // Update status text based on what's indexing
+            if (bothIndexing) {
+                statusElement.textContent = 'Keyword + Vector Indexing...';
+            } else if (bm25Indexing) {
+                statusElement.textContent = 'Keyword Indexing... (Vector available)';
+            } else if (vectorIndexing) {
+                statusElement.textContent = 'Vector Indexing... (Keyword available)';
+            } else {
+                statusElement.textContent = 'Indexing...';
+            }
+            statusElement.style.color = '#f59e0b';
+        } else {
+            indexingStatus.style.display = 'none';
+            reindexButton.disabled = false;
+            statusElement.textContent = 'Ready';
+            statusElement.style.color = '#10b981';
+        }
+
+        // Update last index time
+        if (data.last_index_time) {
+            const date = new Date(data.last_index_time);
+            document.getElementById('stat-last-index').textContent = date.toLocaleString();
+        } else {
+            document.getElementById('stat-last-index').textContent = 'Never';
+        }
+
         addActivityLog('info', `Statistics loaded: ${data.bm25_documents} docs, ${data.vector_chunks} chunks`);
     } catch (error) {
         addActivityLog('error', `Failed to load statistics: ${error.message}`);
     }
+}
+
+// Repository Management
+async function loadRepositories() {
+    const repositoryList = document.getElementById('repository-list');
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/repositories`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const repositories = await response.json();
+        state.repositories = repositories;
+
+        renderRepositories();
+        addActivityLog('info', `Loaded ${repositories.length} repositories`);
+
+    } catch (error) {
+        repositoryList.innerHTML = `<div class="error">Failed to load repositories: ${error.message}</div>`;
+        addActivityLog('error', `Failed to load repositories: ${error.message}`);
+    }
+}
+
+function renderRepositories() {
+    const repositoryList = document.getElementById('repository-list');
+
+    if (state.repositories.length === 0) {
+        repositoryList.innerHTML = '<div style="color: var(--text-muted);">No repositories configured</div>';
+        return;
+    }
+
+    const reposHtml = state.repositories.map(repo => {
+        const enabledClass = repo.enabled ? 'enabled' : 'disabled';
+        const priorityClass = `priority-${repo.priority}`;
+
+        // Format file count and size
+        let fileCountBadge = '';
+        if (repo.file_count !== null && repo.file_count !== undefined) {
+            const sizeClass = repo.file_count > 10000 ? 'large' : repo.file_count > 1000 ? 'medium' : 'small';
+            const formattedSize = formatBytes(repo.total_size_bytes);
+            fileCountBadge = `<span class="repository-badge file-count ${sizeClass}">${repo.file_count.toLocaleString()} files (${formattedSize})</span>`;
+        }
+
+        return `
+            <div class="repository-item">
+                <input type="checkbox"
+                       class="repo-checkbox"
+                       value="${escapeHtml(repo.name)}"
+                       id="repo-${escapeHtml(repo.name)}"
+                       ${repo.enabled ? 'checked' : ''}>
+                <label for="repo-${escapeHtml(repo.name)}" class="repository-info">
+                    <div class="repository-name">${escapeHtml(repo.name)}</div>
+                    <div class="repository-path">${escapeHtml(repo.path)}</div>
+                    <div>
+                        <span class="repository-badge ${enabledClass}">
+                            ${repo.enabled ? 'Enabled' : 'Disabled'}
+                        </span>
+                        <span class="repository-badge ${priorityClass}">
+                            ${repo.priority.toUpperCase()}
+                        </span>
+                        ${fileCountBadge}
+                    </div>
+                </label>
+            </div>
+        `;
+    }).join('');
+
+    repositoryList.innerHTML = reposHtml;
+}
+
+function getSelectedRepositories() {
+    const checkboxes = document.querySelectorAll('.repo-checkbox:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+// Re-indexing
+async function triggerReindex() {
+    const selectedRepos = getSelectedRepositories();
+
+    if (selectedRepos.length === 0) {
+        alert('Please select at least one repository to re-index.');
+        return;
+    }
+
+    const repoText = selectedRepos.length === state.repositories.length
+        ? 'all repositories'
+        : `${selectedRepos.length} selected repositor${selectedRepos.length === 1 ? 'y' : 'ies'}`;
+
+    // Show confirmation modal
+    showReindexModal(selectedRepos, repoText);
+}
+
+function showReindexModal(selectedRepos, repoText) {
+    const modal = document.getElementById('reindex-modal');
+    const modalMessage = document.getElementById('modal-message');
+    const modalCancel = document.getElementById('modal-cancel');
+    const modalConfirm = document.getElementById('modal-confirm');
+
+    // Get selected options
+    const indexBM25 = document.getElementById('index-bm25').checked;
+    const indexVector = document.getElementById('index-vector').checked;
+    const isFullRebuild = document.getElementById('mode-full').checked;
+
+    // Build index type description
+    const indexTypes = [];
+    if (indexBM25) indexTypes.push('Keyword (Meilisearch)');
+    if (indexVector) indexTypes.push('Vector (semantic)');
+    const indexTypeText = indexTypes.length > 0 ? indexTypes.join(' + ') : 'NONE';
+
+    // Build mode description
+    const modeText = isFullRebuild ? 'full rebuild' : 'incremental update';
+    const modeDescription = isFullRebuild
+        ? 'This will <strong>clear existing indexes</strong> and rebuild from scratch.'
+        : 'This will update existing indexes with any new or modified files.';
+
+    // Validation warning
+    let warningHTML = '';
+    if (indexTypes.length === 0) {
+        warningHTML = '<div style="color: var(--danger-color); padding: 1rem; background: #fee2e2; border-radius: 6px; margin-bottom: 1rem;"><strong>⚠️ ERROR:</strong> You must select at least one index type (Keyword or Vector).</div>';
+    }
+
+    // Set modal message
+    modalMessage.innerHTML = `
+        ${warningHTML}
+        <strong>You are about to ${modeText} ${repoText}.</strong><br><br>
+        <strong>Index Types:</strong> ${indexTypeText}<br>
+        <strong>Mode:</strong> ${modeText}<br><br>
+        ${modeDescription}<br><br>
+        <em>Note: This operation may take several minutes for large repositories.</em>
+    `;
+
+    // Disable confirm button if no index types selected
+    modalConfirm.disabled = (indexTypes.length === 0);
+
+    // Show modal
+    modal.style.display = 'flex';
+
+    // Set up event listeners
+    const handleCancel = () => {
+        modal.style.display = 'none';
+        modalCancel.removeEventListener('click', handleCancel);
+        modalConfirm.removeEventListener('click', handleConfirm);
+    };
+
+    const handleConfirm = () => {
+        modal.style.display = 'none';
+        modalCancel.removeEventListener('click', handleCancel);
+        modalConfirm.removeEventListener('click', handleConfirm);
+        executeReindex(selectedRepos);
+    };
+
+    modalCancel.addEventListener('click', handleCancel);
+    modalConfirm.addEventListener('click', handleConfirm);
+}
+
+async function executeReindex(selectedRepos) {
+    const reindexButton = document.getElementById('reindex-button');
+    const indexingStatus = document.getElementById('indexing-status');
+
+    try {
+        reindexButton.disabled = true;
+        indexingStatus.style.display = 'flex';
+
+        // Get selected options
+        const indexBM25 = document.getElementById('index-bm25').checked;
+        const indexVector = document.getElementById('index-vector').checked;
+        const isFullRebuild = document.getElementById('mode-full').checked;
+
+        // Build request body
+        const requestBody = {
+            repositories: selectedRepos.length === state.repositories.length ? null : selectedRepos,
+            index_bm25: indexBM25,
+            index_vector: indexVector,
+            full_rebuild: isFullRebuild
+        };
+
+        const response = await fetch(`${API_BASE_URL}/reindex`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || `HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        addActivityLog('info', `Re-indexing ${data.repositories.join(', ')} started at ${new Date(data.started_at).toLocaleTimeString()}`);
+
+        // Poll for completion every 5 seconds
+        const pollInterval = setInterval(async () => {
+            await loadStatistics();
+
+            // Check if indexing is complete
+            const statsResponse = await fetch(`${API_BASE_URL}/stats`);
+            const statsData = await statsResponse.json();
+
+            if (!statsData.is_indexing) {
+                clearInterval(pollInterval);
+                addActivityLog('info', 'Re-indexing completed successfully');
+            }
+        }, 5000);
+
+    } catch (error) {
+        indexingStatus.style.display = 'none';
+        reindexButton.disabled = false;
+        addActivityLog('error', `Re-indexing failed: ${error.message}`);
+    }
+}
+
+function initializeReindex() {
+    document.getElementById('reindex-button').addEventListener('click', triggerReindex);
+
+    // Initialize "Select All" checkbox
+    document.getElementById('select-all-repos').addEventListener('change', (e) => {
+        const checkboxes = document.querySelectorAll('.repo-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = e.target.checked;
+        });
+    });
 }
 
 // Local Storage
@@ -296,5 +566,106 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Auto-refresh health status every 30 seconds
-setInterval(checkHealthStatus, 30000);
+function formatBytes(bytes) {
+    if (bytes === null || bytes === undefined) return 'Unknown';
+    if (bytes === 0) return '0 Bytes';
+
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+// Indexing Progress Update
+async function updateIndexingProgress() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/stats`);
+        const data = await response.json();
+
+        const progressContainer = document.getElementById('indexing-progress');
+        const headerText = document.getElementById('indexing-header-text');
+        const detailText = document.getElementById('indexing-detail-text');
+        const progressBarFill = document.getElementById('indexing-progress-bar-fill');
+
+        if (data.is_indexing) {
+            // Show progress indicator
+            progressContainer.style.display = 'inline-flex';
+
+            // Build header text with index types
+            const indexTypes = data.index_types.join(' + ');
+            headerText.textContent = `Indexing: ${indexTypes}`;
+
+            // Build detail text
+            let details = [];
+            if (data.current_repository) {
+                details.push(`Repository: ${data.current_repository} (${data.repositories_completed + 1}/${data.repositories_total})`);
+            }
+            if (data.current_phase) {
+                details.push(`Phase: ${data.current_phase}`);
+            }
+
+            // Show progress using actual indexed document counts
+            if (data.current_phase === 'BM25') {
+                details.push(`BM25: ${data.bm25_documents.toLocaleString()} docs`);
+            } else if (data.current_phase === 'Vector') {
+                details.push(`Vector: ${data.vector_chunks.toLocaleString()} chunks`);
+            }
+
+            if (data.files_total > 0) {
+                details.push(`Target: ${data.files_total.toLocaleString()} files`);
+            }
+            if (data.mode) {
+                details.push(`Mode: ${data.mode === 'full_rebuild' ? 'Full Rebuild' : 'Incremental'}`);
+            }
+            detailText.textContent = details.join(' • ');
+
+            // Update progress bar using actual document counts as rough estimate
+            let progressPercent = 0;
+            if (data.files_total > 0) {
+                // Use actual indexed counts for progress estimation
+                let indexedCount = 0;
+                if (data.current_phase === 'BM25') {
+                    indexedCount = data.bm25_documents;
+                } else if (data.current_phase === 'Vector') {
+                    // Vector chunks can exceed file count, so cap at files_total
+                    indexedCount = Math.min(data.vector_chunks, data.files_total);
+                }
+                progressPercent = (indexedCount / data.files_total) * 100;
+            }
+            progressBarFill.style.width = `${Math.min(100, progressPercent)}%`;
+        } else {
+            // Hide progress indicator
+            progressContainer.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Failed to update indexing progress:', error);
+    }
+}
+
+// Version Management
+async function loadVersion() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/version`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        const versionBadge = document.getElementById('version-badge');
+        if (versionBadge) {
+            versionBadge.textContent = `v${data.version}`;
+        }
+    } catch (error) {
+        console.error('Failed to load version:', error);
+        const versionBadge = document.getElementById('version-badge');
+        if (versionBadge) {
+            versionBadge.textContent = 'v?.?.?';
+        }
+    }
+}
+
+// Auto-refresh health status and indexing progress every 2 seconds
+setInterval(() => {
+    checkHealthStatus();
+    updateIndexingProgress();
+}, 2000);
