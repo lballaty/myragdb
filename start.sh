@@ -4,7 +4,8 @@
 # Author: Libor Ballaty <libor@arionetworks.com>
 # Created: 2026-01-04
 
-set -e
+# Don't exit on errors - we handle them explicitly
+set +e
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -49,15 +50,30 @@ fi
 
 # Start the server in background
 echo -e "${GREEN}✓ Starting MyRAGDB API server on port 3003...${NC}"
-python -m myragdb.api.server &
+python -m myragdb.api.server >> /tmp/myragdb_server.log 2>&1 &
 SERVER_PID=$!
 
-# Wait for server to start
-echo -e "${BLUE}⏳ Waiting for server to start...${NC}"
-sleep 3
+# Save PID immediately
+echo $SERVER_PID > .server.pid
 
-# Check if server is healthy
-if curl -s http://localhost:3003/health > /dev/null 2>&1; then
+# Wait for server to start with retries
+echo -e "${BLUE}⏳ Waiting for server to start...${NC}"
+MAX_RETRIES=10
+RETRY_COUNT=0
+SERVER_READY=false
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    sleep 1
+    if curl -s http://localhost:3003/health > /dev/null 2>&1; then
+        SERVER_READY=true
+        break
+    fi
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    echo -e "${BLUE}  Attempt $RETRY_COUNT/$MAX_RETRIES...${NC}"
+done
+
+# Check if server started successfully
+if [ "$SERVER_READY" = true ]; then
     echo -e "${GREEN}✓ Server is running!${NC}"
     echo -e "${GREEN}✓ Opening web UI in browser...${NC}"
 
@@ -70,15 +86,22 @@ if curl -s http://localhost:3003/health > /dev/null 2>&1; then
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "Web UI:  ${BLUE}http://localhost:3003${NC}"
     echo -e "PID:     ${YELLOW}$SERVER_PID${NC}"
+    echo -e "Logs:    ${YELLOW}/tmp/myragdb_server.log${NC}"
     echo ""
     echo -e "To stop the server, run: ${YELLOW}./stop.sh${NC}"
     echo -e "Or kill process: ${YELLOW}kill $SERVER_PID${NC}"
+    echo -e "View logs: ${YELLOW}tail -f /tmp/myragdb_server.log${NC}"
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-
-    # Save PID to file for stop script
-    echo $SERVER_PID > .server.pid
 else
-    echo -e "${YELLOW}⚠️  Server failed to start. Check logs for errors.${NC}"
-    kill $SERVER_PID 2>/dev/null || true
-    exit 1
+    echo -e "${YELLOW}⚠️  Server failed to start after $MAX_RETRIES attempts${NC}"
+    echo -e "${YELLOW}⚠️  The server process is still running in background (PID: $SERVER_PID)${NC}"
+    echo -e "${YELLOW}⚠️  Check logs for startup errors: tail -f /tmp/myragdb_server.log${NC}"
+    echo ""
+    echo -e "${BLUE}Showing last 30 lines of logs:${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    tail -30 /tmp/myragdb_server.log 2>/dev/null || echo -e "${YELLOW}No logs found at /tmp/myragdb_server.log${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo -e "To stop the background server: ${YELLOW}kill $SERVER_PID${NC} or ${YELLOW}./stop.sh${NC}"
+    echo -e "To view live logs: ${YELLOW}tail -f /tmp/myragdb_server.log${NC}"
 fi
