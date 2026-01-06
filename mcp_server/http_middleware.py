@@ -118,6 +118,14 @@ class SearchResult(BaseModel):
     vector_score: Optional[float] = None
 
 
+class DirectorySummary(BaseModel):
+    """Directory summary model."""
+    directory_path: str
+    relative_directory: str
+    repository: str
+    file_count: int
+
+
 class SearchResponse(BaseModel):
     """Search response model."""
     query: str
@@ -125,6 +133,7 @@ class SearchResponse(BaseModel):
     total_results: int
     search_time_ms: float
     results: List[SearchResult]
+    directories: Optional[List[DirectorySummary]] = None
 
 
 class RepositoryInfo(BaseModel):
@@ -269,7 +278,8 @@ async def search(request_body: SearchRequest, request: Request):
                 search_type=request_body.search_type,
                 total_results=data["total_results"],
                 search_time_ms=data["search_time_ms"],
-                results=[SearchResult(**r) for r in data["results"]]
+                results=[SearchResult(**r) for r in data["results"]],
+                directories=[DirectorySummary(**d) for d in data.get("directories", [])] if data.get("directories") else None
             )
 
     except httpx.HTTPStatusError as e:

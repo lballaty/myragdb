@@ -16,7 +16,7 @@ from datetime import datetime
 _BUILD_DATE = datetime(2026, 1, 6)  # Update this when creating new releases
 _MAJOR_VERSION = 2  # Increment for breaking changes
 _MINOR_VERSION = 35  # Increment for new features (backward compatible)
-_PATCH_VERSION = 0  # Increment for bug fixes only
+_PATCH_VERSION = 1  # Increment for bug fixes only
 
 __version__ = f"{_BUILD_DATE.year}.{_BUILD_DATE.month:02d}.{_BUILD_DATE.day:02d}.{_MAJOR_VERSION}.{_MINOR_VERSION}.{_PATCH_VERSION}"
 __version_info__ = (_BUILD_DATE.year, _BUILD_DATE.month, _BUILD_DATE.day, _MAJOR_VERSION, _MINOR_VERSION, _PATCH_VERSION)
