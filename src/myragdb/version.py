@@ -15,7 +15,7 @@ from datetime import datetime
 # Example: 2026.01.05.1.0.0 = January 5, 2026, major version 1.0.0
 _BUILD_DATE = datetime(2026, 1, 6)  # Update this when creating new releases
 _MAJOR_VERSION = 2  # Increment for breaking changes
-_MINOR_VERSION = 27  # Increment for new features (backward compatible)
+_MINOR_VERSION = 28  # Increment for new features (backward compatible)
 _PATCH_VERSION = 0  # Increment for bug fixes only
 
 __version__ = f"{_BUILD_DATE.year}.{_BUILD_DATE.month:02d}.{_BUILD_DATE.day:02d}.{_MAJOR_VERSION}.{_MINOR_VERSION}.{_PATCH_VERSION}"
@@ -24,11 +24,13 @@ __build_date__ = _BUILD_DATE.strftime("%Y-%m-%d")
 
 # Release notes for current version
 RELEASE_NOTES = f"""
-MyRAGDB v{__version__} - Fixed MCP Middleware Port ({__build_date__})
+MyRAGDB v{__version__} - Port Registry Alignment ({__build_date__})
 
-Changes in v2026.01.06.2.27.0:
-- Fixed MCP middleware port from 8093 to correct port 8080
-- MCP middleware now properly accessible at http://localhost:8080
+Changes in v2026.01.06.2.28.0:
+- Aligned MCP middleware to use official port 8093 (per port-registry.json)
+- Updated start.sh to check for port 8093 instead of 8080
+- Port 8080 is reserved for Customer Compliance UI (production priority)
+- MCP middleware properly accessible at http://localhost:8093
 
 Previous changes (v2026.01.06.2.24.0):
 - Integrated MCP HTTP middleware into start.sh (automatic startup)

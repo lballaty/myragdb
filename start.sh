@@ -148,9 +148,9 @@ if [ "$SERVER_READY" = true ]; then
     echo -e "${BLUE}🤖 Starting MCP HTTP Middleware...${NC}"
 
     # Check if MCP middleware is already running
-    MCP_PORT_PID=$(lsof -ti:8080 || true)
+    MCP_PORT_PID=$(lsof -ti:8093 || true)
     if [ -n "$MCP_PORT_PID" ]; then
-        echo -e "${YELLOW}⚠️  MCP middleware already running on port 8080 (PID: $MCP_PORT_PID). Skipping...${NC}"
+        echo -e "${YELLOW}⚠️  MCP middleware already running on port 8093 (PID: $MCP_PORT_PID). Skipping...${NC}"
     else
         # Start MCP middleware in background
         python -m mcp_server.http_middleware >> /tmp/mcp_middleware.log 2>&1 &
@@ -160,8 +160,8 @@ if [ "$SERVER_READY" = true ]; then
 
         # Quick health check (don't wait long, it's optional)
         sleep 1
-        if lsof -ti:8080 > /dev/null 2>&1; then
-            echo -e "${GREEN}✓ MCP middleware is ready on port 8080${NC}"
+        if lsof -ti:8093 > /dev/null 2>&1; then
+            echo -e "${GREEN}✓ MCP middleware is ready on port 8093${NC}"
         else
             echo -e "${YELLOW}⚠️  MCP middleware may not have started (check logs: /tmp/mcp_middleware.log)${NC}"
         fi
@@ -181,7 +181,7 @@ if [ "$SERVER_READY" = true ]; then
     echo -e "API Server:    ${YELLOW}PID $SERVER_PID${NC} | ${YELLOW}Logs: /tmp/myragdb_server.log${NC}"
     if [ -f ".middleware.pid" ]; then
         MCP_DISPLAY_PID=$(cat .middleware.pid)
-        echo -e "MCP Middleware: ${YELLOW}PID $MCP_DISPLAY_PID${NC} | ${BLUE}http://localhost:8080${NC} | ${YELLOW}Logs: /tmp/mcp_middleware.log${NC}"
+        echo -e "MCP Middleware: ${YELLOW}PID $MCP_DISPLAY_PID${NC} | ${BLUE}http://localhost:8093${NC} | ${YELLOW}Logs: /tmp/mcp_middleware.log${NC}"
     fi
     echo ""
     echo -e "To stop all services: ${YELLOW}./stop.sh${NC}"

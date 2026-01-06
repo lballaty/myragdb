@@ -398,13 +398,13 @@ async def get_stats():
 # Server Startup
 # ============================================================================
 
-def start_server(host: str = "0.0.0.0", port: int = 8080):
+def start_server(host: str = "0.0.0.0", port: int = 8093):
     """
     Start the HTTP middleware server.
 
     Args:
         host: Host to bind to (default: 0.0.0.0 for all interfaces)
-        port: Port to listen on (default: 8080)
+        port: Port to listen on (default: 8093)
     """
     print("="*60)
     print("MyRAGDB MCP HTTP Middleware")

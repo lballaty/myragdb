@@ -1531,6 +1531,26 @@ const MODE_DESCRIPTIONS = {
 };
 
 async function loadLLMModels() {
+    const container = document.getElementById('llm-models-grid');
+    if (!container) return;
+
+    // Show loading state immediately - UI renders instantly
+    const loadingModels = [
+        {"id": "qwen-coder-7b", "name": "Qwen Coder 7B", "port": 8085, "status": "checking", "category": "best"},
+        {"id": "qwen2.5-32b", "name": "Qwen 2.5 32B", "port": 8084, "status": "checking", "category": "best"},
+        {"id": "deepseek-r1-qwen-32b", "name": "DeepSeek R1 Qwen 32B", "port": 8092, "status": "checking", "category": "best"},
+        {"id": "llama-3.1-8b", "name": "Llama 3.1 8B", "port": 8087, "status": "checking", "category": "best"},
+        {"id": "llama-4-scout-17b", "name": "Llama 4 Scout 17B", "port": 8088, "status": "checking", "category": "best"},
+        {"id": "hermes-3-llama-8b", "name": "Hermes 3 Llama 8B", "port": 8086, "status": "checking", "category": "best"},
+        {"id": "mistral-7b", "name": "Mistral 7B", "port": 8083, "status": "checking", "category": "limited"},
+        {"id": "mistral-small-24b", "name": "Mistral Small 24B", "port": 8089, "status": "checking", "category": "limited"},
+        {"id": "phi3", "name": "Phi-3", "port": 8081, "status": "checking", "category": "limited"},
+        {"id": "smollm3", "name": "SmolLM3", "port": 8082, "status": "checking", "category": "limited"}
+    ];
+
+    renderLLMModels(loadingModels);
+
+    // Fetch actual status in background
     try {
         const response = await fetch(`${API_BASE_URL}/llm/models`);
         if (!response.ok) {
@@ -1544,15 +1564,12 @@ async function loadLLMModels() {
         console.error('Error loading LLM models:', error);
         addActivityLog('error', `Failed to load LLM models: ${error.message}`);
 
-        const container = document.getElementById('llm-models-grid');
-        if (container) {
-            container.innerHTML = `
-                <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: rgba(255,255,255,0.6);">
-                    <p>Failed to load LLM models</p>
-                    <p style="font-size: 14px; margin-top: 8px;">${error.message}</p>
-                </div>
-            `;
-        }
+        container.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">
+                <p>Failed to load LLM models</p>
+                <p style="font-size: 14px; margin-top: 8px;">${error.message}</p>
+            </div>
+        `;
     }
 }
 
@@ -1593,7 +1610,12 @@ function renderLLMModels(models) {
 
 function createLLMModelCard(model) {
     const isRunning = model.status === 'running';
-    const statusClass = isRunning ? 'running' : 'stopped';
+    const isChecking = model.status === 'checking';
+    const statusClass = isRunning ? 'running' : (isChecking ? 'checking' : 'stopped');
+
+    let statusText = 'Stopped';
+    if (isRunning) statusText = 'Running';
+    if (isChecking) statusText = 'Checking...';
 
     return `
         <div class="llm-model-card ${statusClass}" id="llm-card-${model.id}">
@@ -1611,14 +1633,14 @@ function createLLMModelCard(model) {
                     <span class="llm-model-info-label">Status:</span>
                     <span class="llm-model-status ${statusClass}">
                         <span class="llm-model-status-dot"></span>
-                        ${isRunning ? 'Running' : 'Stopped'}
+                        ${statusText}
                     </span>
                 </div>
             </div>
 
-            <div class="llm-mode-selector" id="llm-mode-selector-${model.id}" ${isRunning ? 'style="display: none;"' : ''}>
+            <div class="llm-mode-selector" id="llm-mode-selector-${model.id}" ${(isRunning || isChecking) ? 'style="display: none;"' : ''}>
                 <label for="llm-mode-${model.id}">Mode:</label>
-                <select id="llm-mode-${model.id}">
+                <select id="llm-mode-${model.id}" ${isChecking ? 'disabled' : ''}>
                     <option value="basic">Basic</option>
                     <option value="tools" selected>Tools (Function Calling)</option>
                     <option value="performance">Performance</option>
@@ -1630,7 +1652,12 @@ function createLLMModelCard(model) {
             </div>
 
             <div class="llm-model-actions">
-                ${isRunning ? `
+                ${isChecking ? `
+                    <button class="llm-start-button" disabled>
+                        <span class="spinner" style="width: 14px; height: 14px; border-width: 2px; margin-right: 8px;"></span>
+                        Checking status...
+                    </button>
+                ` : isRunning ? `
                     <button id="llm-stop-${model.id}" class="llm-stop-button">
                         🛑 Stop LLM
                     </button>

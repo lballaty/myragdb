@@ -1326,6 +1326,11 @@ body {
     border-color: var(--border-color);
 }
 
+.llm-model-card.checking {
+    border-color: #fbbf24;
+    background: #fffbeb;
+}
+
 .llm-model-header {
     display: flex;
     justify-content: space-between;
@@ -1403,6 +1408,11 @@ body {
     color: #6b7280;
 }
 
+.llm-model-status.checking {
+    background: #fef3c7;
+    color: #92400e;
+}
+
 .llm-model-status-dot {
     width: 8px;
     height: 8px;
@@ -1416,6 +1426,11 @@ body {
 
 .llm-model-status.stopped .llm-model-status-dot {
     background: #9ca3af;
+}
+
+.llm-model-status.checking .llm-model-status-dot {
+    background: #fbbf24;
+    animation: pulse 2s ease-in-out infinite;
 }
 
 .llm-mode-selector {
