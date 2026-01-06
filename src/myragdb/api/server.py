@@ -186,6 +186,19 @@ async def root():
     )
 
 
+@app.get("/llm-chat-tester.html")
+async def llm_chat_tester():
+    """
+    Serve the LLM chat tester UI.
+
+    Business Purpose: Provides interface for testing local LLMs with function calling.
+    """
+    chat_tester_path = web_ui_path / "llm-chat-tester.html"
+    if chat_tester_path.exists():
+        return FileResponse(str(chat_tester_path))
+    raise HTTPException(status_code=404, detail="LLM chat tester page not found")
+
+
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """
