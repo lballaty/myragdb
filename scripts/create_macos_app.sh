@@ -84,74 +84,30 @@ APP_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 APP_BUNDLE="$(dirname "$(dirname "$APP_PATH")")"
 PROJECT_ROOT="$(dirname "$APP_BUNDLE")"
 
-# Create a wrapper script for Terminal
-WRAPPER_SCRIPT="/tmp/myragdb_launcher_$$.sh"
-cat > "$WRAPPER_SCRIPT" << 'WRAPPER_EOF'
-#!/bin/bash
-
-# Get project root from arguments
-PROJECT_ROOT="$1"
+# Change to project directory
 cd "$PROJECT_ROOT"
 
-# Colors
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m'
-
-# Trap signals to run stop.sh when terminal is closed
+# Trap signals to run stop.sh when app is quit (via Force Quit)
 cleanup() {
-    echo ""
-    echo -e "${YELLOW}Shutting down MyRAGDB services...${NC}"
-    "$PROJECT_ROOT/stop.sh"
+    "$PROJECT_ROOT/stop.sh" 2>/dev/null
     exit 0
 }
 
+# Register signal handlers for graceful shutdown
 trap cleanup SIGTERM SIGINT SIGHUP EXIT
 
 # Run the startup script
-./start.sh
+./start.sh > /dev/null 2>&1
 
-# Show status
-echo ""
-echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}  MyRAGDB is now running!${NC}"
-echo -e "${GREEN}========================================${NC}"
-echo ""
-echo -e "${BLUE}Services:${NC}"
-echo -e "  • Meilisearch:     http://localhost:7700"
-echo -e "  • MyRAGDB API:     http://localhost:3003"
-echo -e "  • MCP Middleware:  http://localhost:8093"
-echo -e "  • Web UI:          http://localhost:3003"
-echo ""
-echo -e "${YELLOW}To stop: Close this window or press Ctrl+C${NC}"
-echo ""
-
-# Keep the terminal open and monitor services
+# Keep the app running in background (appears in Dock while services are running)
+# To stop: Use "Force Quit" from Dock, or run: ./stop.sh
 while true; do
     sleep 2
     # Check if any of the services are still running
     if [ ! -f "$PROJECT_ROOT/.server.pid" ] && [ ! -f "$PROJECT_ROOT/.middleware.pid" ]; then
-        echo -e "${RED}All services stopped. Closing...${NC}"
-        sleep 2
         exit 0
     fi
 done
-WRAPPER_EOF
-
-chmod +x "$WRAPPER_SCRIPT"
-
-# Open Terminal with the wrapper script
-osascript <<APPLESCRIPT
-tell application "Terminal"
-    activate
-    do script "$WRAPPER_SCRIPT \"$PROJECT_ROOT\""
-end tell
-APPLESCRIPT
-
-# Clean up wrapper script after a delay
-(sleep 5 && rm -f "$WRAPPER_SCRIPT") &
 EOF
 
 # Make launcher executable
