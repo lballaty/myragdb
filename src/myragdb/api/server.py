@@ -41,7 +41,16 @@ from myragdb.api.models import (
     StartLLMRequest,
     StartLLMResponse,
     StopLLMRequest,
-    StopLLMResponse
+    StopLLMResponse,
+    ObservabilityMetricsRequest,
+    ObservabilityMetricsResponse,
+    ObservabilityStatsResponse,
+    ObservabilityCleanupRequest,
+    ObservabilityCleanupResponse,
+    SearchMetricItem,
+    ErrorLogItem,
+    SystemMetricItem,
+    IndexingEventItem
 )
 from myragdb.search.hybrid_search import HybridSearchEngine, HybridSearchResult
 from myragdb.indexers.meilisearch_indexer import MeilisearchIndexer
@@ -1929,6 +1938,177 @@ async def stop_llm(request: StopLLMRequest):
             message=f"Error stopping {request.model_id}: {str(e)}",
             model_id=request.model_id
         )
+
+
+# ====================
+# Observability Endpoints
+# ====================
+
+@app.get("/observability/stats", response_model=ObservabilityStatsResponse)
+async def get_observability_stats(
+    start_time: Optional[int] = None,
+    end_time: Optional[int] = None
+):
+    """
+    Get aggregated observability statistics.
+
+    Business Purpose: Provides high-level metrics for dashboard overview
+    showing search performance, error rates, and system health.
+
+    Args:
+        start_time: Unix timestamp for start of range (optional)
+        end_time: Unix timestamp for end of range (optional)
+
+    Returns:
+        ObservabilityStatsResponse with aggregated statistics
+
+    Example:
+        GET /observability/stats
+        GET /observability/stats?start_time=1704067200&end_time=1704153600
+    """
+    try:
+        get_search_engines()  # Ensures observability_db is initialized
+
+        # Get search statistics
+        search_stats = observability_db.get_search_statistics(
+            start_time=start_time,
+            end_time=end_time
+        )
+
+        # Get error statistics
+        error_stats = observability_db.get_error_statistics(
+            start_time=start_time,
+            end_time=end_time
+        )
+
+        # Get database info
+        database_info = observability_db.get_database_size()
+
+        return ObservabilityStatsResponse(
+            search_stats=search_stats,
+            error_stats=error_stats,
+            database_info=database_info
+        )
+
+    except Exception as e:
+        logger.error("Failed to get observability stats", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Error retrieving observability stats: {str(e)}")
+
+
+@app.post("/observability/metrics", response_model=ObservabilityMetricsResponse)
+async def get_observability_metrics(request: ObservabilityMetricsRequest):
+    """
+    Get detailed observability metrics.
+
+    Business Purpose: Retrieves time-series metrics data for charts and
+    detailed analysis of search performance, errors, and system metrics.
+
+    Args:
+        request: Metrics request with filters
+
+    Returns:
+        ObservabilityMetricsResponse with filtered metrics
+
+    Example:
+        POST /observability/metrics
+        {
+            "metric_type": "search",
+            "start_time": 1704067200,
+            "limit": 1000
+        }
+    """
+    try:
+        get_search_engines()  # Ensures observability_db is initialized
+
+        metric_type = request.metric_type or "all"
+        response_data = {
+            "metric_type": metric_type,
+            "total_count": 0,
+            "time_range_start": request.start_time,
+            "time_range_end": request.end_time
+        }
+
+        if metric_type in ("search", "all"):
+            search_metrics = observability_db.get_search_metrics(
+                start_time=request.start_time,
+                end_time=request.end_time,
+                limit=request.limit
+            )
+            response_data["search_metrics"] = [SearchMetricItem(**m) for m in search_metrics]
+            response_data["total_count"] += len(search_metrics)
+
+        if metric_type in ("error", "all"):
+            error_logs = observability_db.get_errors(
+                start_time=request.start_time,
+                end_time=request.end_time,
+                limit=request.limit
+            )
+            response_data["error_logs"] = [ErrorLogItem(**e) for e in error_logs]
+            response_data["total_count"] += len(error_logs)
+
+        if metric_type in ("system", "all"):
+            system_metrics = observability_db.get_system_metrics(
+                start_time=request.start_time,
+                end_time=request.end_time,
+                limit=request.limit
+            )
+            response_data["system_metrics"] = [SystemMetricItem(**m) for m in system_metrics]
+            response_data["total_count"] += len(system_metrics)
+
+        if metric_type in ("indexing", "all"):
+            indexing_events = observability_db.get_indexing_events(
+                start_time=request.start_time,
+                end_time=request.end_time,
+                limit=request.limit
+            )
+            response_data["indexing_events"] = [IndexingEventItem(**e) for e in indexing_events]
+            response_data["total_count"] += len(indexing_events)
+
+        return ObservabilityMetricsResponse(**response_data)
+
+    except Exception as e:
+        logger.error("Failed to get observability metrics", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Error retrieving observability metrics: {str(e)}")
+
+
+@app.post("/observability/cleanup", response_model=ObservabilityCleanupResponse)
+async def cleanup_observability_data(request: ObservabilityCleanupRequest):
+    """
+    Clean up old observability data.
+
+    Business Purpose: Prevents database from growing unbounded by removing
+    old metrics while preserving recent data for analysis.
+
+    Args:
+        request: Cleanup request with retention period
+
+    Returns:
+        ObservabilityCleanupResponse with deletion counts
+
+    Example:
+        POST /observability/cleanup
+        {
+            "retention_days": 30
+        }
+    """
+    try:
+        get_search_engines()  # Ensures observability_db is initialized
+
+        records_deleted = observability_db.cleanup_old_data(
+            retention_days=request.retention_days
+        )
+
+        total_deleted = sum(records_deleted.values())
+
+        return ObservabilityCleanupResponse(
+            status="success",
+            records_deleted=records_deleted,
+            message=f"Successfully deleted {total_deleted} old records (retention: {request.retention_days} days)"
+        )
+
+    except Exception as e:
+        logger.error("Failed to cleanup observability data", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Error cleaning up observability data: {str(e)}")
 
 
 def main():

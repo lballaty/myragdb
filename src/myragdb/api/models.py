@@ -120,6 +120,19 @@ class SearchResultItem(BaseModel):
         }
 
 
+class DirectorySummary(BaseModel):
+    """
+    Summary of a directory containing search results.
+
+    Business Purpose: Helps LLMs understand which directories contain
+    relevant files without parsing file paths.
+    """
+    directory_path: str = Field(..., description="Full directory path")
+    relative_directory: str = Field(..., description="Relative directory path from repository root")
+    repository: str = Field(..., description="Repository name")
+    file_count: int = Field(..., description="Number of files in this directory matching the search")
+
+
 class SearchResponse(BaseModel):
     """
     Response model for search endpoints.
@@ -132,13 +145,15 @@ class SearchResponse(BaseModel):
             query="authentication",
             total_results=7,
             search_time_ms=234.5,
-            results=[...]
+            results=[...],
+            directories=[...]
         )
     """
     query: str = Field(..., description="Original search query")
     total_results: int = Field(..., description="Number of results returned")
     search_time_ms: float = Field(..., description="Search duration in milliseconds")
     results: List[SearchResultItem] = Field(..., description="Search results")
+    directories: Optional[List[DirectorySummary]] = Field(None, description="Summary of directories containing results (if applicable)")
 
     class Config:
         json_schema_extra = {
@@ -591,3 +606,129 @@ class StopLLMResponse(BaseModel):
                 "model_id": "qwen-coder-7b"
             }
         }
+
+
+# ====================
+# Observability Models
+# ====================
+
+class ObservabilityMetricsRequest(BaseModel):
+    """
+    Request model for retrieving observability metrics.
+
+    Business Purpose: Allows filtering metrics by time range and type
+    for dashboard visualizations and analysis.
+
+    Example:
+        request = ObservabilityMetricsRequest(
+            start_time=1704067200,
+            end_time=1704153600,
+            metric_type="search"
+        )
+    """
+    start_time: Optional[int] = Field(
+        default=None,
+        description="Unix timestamp for start of time range"
+    )
+    end_time: Optional[int] = Field(
+        default=None,
+        description="Unix timestamp for end of time range"
+    )
+    metric_type: Optional[str] = Field(
+        default=None,
+        description="Type of metrics: 'search', 'error', 'system', 'indexing'"
+    )
+    limit: int = Field(
+        default=1000,
+        description="Maximum number of records to return"
+    )
+
+
+class SearchMetricItem(BaseModel):
+    """Individual search metric record."""
+    id: int
+    timestamp: int
+    query: str
+    search_type: str
+    response_time_ms: float
+    result_count: int
+    repository: Optional[str] = None
+    source: str
+
+
+class ErrorLogItem(BaseModel):
+    """Individual error log record."""
+    id: int
+    timestamp: int
+    error_type: str
+    message: str
+    severity: str
+    component: str
+    stack_trace: Optional[str] = None
+    context: Optional[dict] = None
+    resolved: bool
+
+
+class SystemMetricItem(BaseModel):
+    """Individual system metric record."""
+    id: int
+    timestamp: int
+    metric_name: str
+    metric_value: float
+    unit: str
+    category: str
+
+
+class IndexingEventItem(BaseModel):
+    """Individual indexing event record."""
+    id: int
+    timestamp: int
+    repository: str
+    event_type: str
+    status: str
+    files_processed: int
+    duration_seconds: Optional[float] = None
+    error_message: Optional[str] = None
+    metadata: Optional[dict] = None
+
+
+class ObservabilityMetricsResponse(BaseModel):
+    """
+    Response model for observability metrics.
+
+    Business Purpose: Returns metrics data for visualization and analysis.
+    """
+    metric_type: str
+    total_count: int
+    time_range_start: Optional[int] = None
+    time_range_end: Optional[int] = None
+    search_metrics: Optional[List[SearchMetricItem]] = None
+    error_logs: Optional[List[ErrorLogItem]] = None
+    system_metrics: Optional[List[SystemMetricItem]] = None
+    indexing_events: Optional[List[IndexingEventItem]] = None
+
+
+class ObservabilityStatsResponse(BaseModel):
+    """
+    Response model for aggregated observability statistics.
+
+    Business Purpose: Provides high-level summary metrics for dashboards.
+    """
+    search_stats: dict = Field(description="Aggregated search statistics")
+    error_stats: dict = Field(description="Aggregated error statistics")
+    database_info: dict = Field(description="Database size and row counts")
+
+
+class ObservabilityCleanupRequest(BaseModel):
+    """Request model for data cleanup operations."""
+    retention_days: int = Field(
+        default=30,
+        description="Number of days to retain data"
+    )
+
+
+class ObservabilityCleanupResponse(BaseModel):
+    """Response model for cleanup operations."""
+    status: str
+    records_deleted: dict
+    message: str
