@@ -1698,6 +1698,9 @@ async function startLLM(modelId) {
 
             addActivityLog('success', `${modelId} started successfully in ${mode} mode`);
 
+            // Update header LLM status badge immediately
+            updateLLMStatusBadge();
+
             // Auto-hide success message after 5 seconds
             setTimeout(() => {
                 messageElement.style.display = 'none';
