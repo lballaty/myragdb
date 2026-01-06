@@ -666,7 +666,7 @@ function renderRepositories() {
         let indexingStatsBadges = '';
         if (repo.indexing_stats && repo.indexing_stats.length > 0) {
             const statsItems = repo.indexing_stats.map(stat => {
-                const indexType = stat.index_type === 'keyword' ? 'K' : 'V'; // K=Keyword, V=Vector
+                const indexType = stat.index_type === 'keyword' ? 'Keyword' : 'Vector';
 
                 // Show last reindex time if available, otherwise initial time
                 const timeSeconds = stat.last_reindex_time_seconds !== null
@@ -690,12 +690,7 @@ function renderRepositories() {
                     timeDisplay = `${mins}m ${secs}s`;
                 }
 
-                // Determine if this was a reindex or initial
-                const isReindex = stat.last_reindex_time_seconds !== null &&
-                                 stat.last_reindex_time_seconds !== stat.initial_index_time_seconds;
-                const badge = isReindex ? '🔄' : '⚡';
-
-                return `<span class="repository-badge indexing-stat" title="${stat.index_type} indexing: ${stat.total_files_indexed} files in ${timeDisplay} (${filesPerSec.toFixed(1)} files/sec)">${badge}${indexType}: ${timeDisplay}</span>`;
+                return `<span class="repository-badge file-count" title="${stat.index_type} indexing: ${stat.total_files_indexed} files in ${timeDisplay} (${filesPerSec.toFixed(1)} files/sec)">${indexType}: ${timeDisplay}</span>`;
             }).filter(s => s !== '').join(' ');
 
             if (statsItems && statsItems.trim() !== '') {
