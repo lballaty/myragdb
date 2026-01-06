@@ -48,6 +48,7 @@ from myragdb.indexers.meilisearch_indexer import MeilisearchIndexer
 from myragdb.indexers.vector_indexer import VectorIndexer
 from myragdb.llm.query_rewriter import QueryRewriter
 from myragdb.db.metadata import MetadataStore
+from myragdb.db.observability import ObservabilityDatabase
 from myragdb.config import settings, load_repositories_config
 from myragdb.utils.repo_discovery import RepositoryDiscovery, DiscoveredRepository
 import structlog
@@ -61,6 +62,7 @@ vector_indexer = None
 query_rewriter = None
 hybrid_engine = None
 metadata_store = None
+observability_db = None
 
 # Indexing state - supports independent Keyword (Meilisearch) and Vector indexing
 indexing_state = {
@@ -110,7 +112,7 @@ def get_search_engines():
     Returns:
         Tuple of (meilisearch_indexer, vector_indexer, hybrid_engine)
     """
-    global meilisearch_indexer, vector_indexer, query_rewriter, hybrid_engine, metadata_store
+    global meilisearch_indexer, vector_indexer, query_rewriter, hybrid_engine, metadata_store, observability_db
 
     if metadata_store is None:
         logger.info("Initializing metadata store")
@@ -121,6 +123,10 @@ def get_search_engines():
         if last_index_time:
             indexing_state["last_index_time"] = last_index_time
             logger.info("Loaded last index time from metadata", last_index_time=last_index_time)
+
+    if observability_db is None:
+        logger.info("Initializing observability database")
+        observability_db = ObservabilityDatabase()
 
     if meilisearch_indexer is None:
         logger.info("Initializing Meilisearch indexer", host=settings.meilisearch_host)
@@ -860,6 +866,19 @@ async def search_hybrid(request: SearchRequest):
 
         search_time_ms = (time.time() - start_time) * 1000
 
+        # Record search metrics for observability
+        try:
+            observability_db.record_search_metric(
+                query=request.query,
+                search_type='hybrid',
+                response_time_ms=search_time_ms,
+                result_count=len(result_items),
+                repository=repo_filter,
+                source='web_ui'
+            )
+        except Exception as e:
+            logger.warning("Failed to record search metric", error=str(e))
+
         # Extract unique directories if query seems to be asking for directories
         directories = _extract_directories(request.query, results) if results else None
 
@@ -872,6 +891,18 @@ async def search_hybrid(request: SearchRequest):
         )
 
     except Exception as e:
+        # Record error for observability
+        try:
+            observability_db.record_error(
+                error_type=type(e).__name__,
+                message=str(e),
+                severity='ERROR',
+                component='search_hybrid',
+                context={'query': request.query, 'repository_filter': repo_filter}
+            )
+        except Exception as log_err:
+            logger.warning("Failed to record error", error=str(log_err))
+
         raise HTTPException(status_code=500, detail=f"Search error: {str(e)}")
 
 
@@ -922,6 +953,19 @@ async def search_keyword(request: SearchRequest):
 
         search_time_ms = (time.time() - start_time) * 1000
 
+        # Record search metrics for observability
+        try:
+            observability_db.record_search_metric(
+                query=request.query,
+                search_type='keyword',
+                response_time_ms=search_time_ms,
+                result_count=len(result_items),
+                repository=request.repository_filter,
+                source='web_ui'
+            )
+        except Exception as e:
+            logger.warning("Failed to record search metric", error=str(e))
+
         logger.info("Keyword search completed",
                    query=request.query,
                    results_count=len(result_items),
@@ -935,6 +979,18 @@ async def search_keyword(request: SearchRequest):
         )
 
     except Exception as e:
+        # Record error for observability
+        try:
+            observability_db.record_error(
+                error_type=type(e).__name__,
+                message=str(e),
+                severity='ERROR',
+                component='search_keyword',
+                context={'query': request.query, 'repository_filter': request.repository_filter}
+            )
+        except Exception as log_err:
+            logger.warning("Failed to record error", error=str(log_err))
+
         logger.error("Keyword search failed", query=request.query, error=str(e))
         raise HTTPException(status_code=500, detail=f"Keyword search error: {str(e)}")
 
@@ -982,6 +1038,19 @@ async def search_semantic(request: SearchRequest):
 
         search_time_ms = (time.time() - start_time) * 1000
 
+        # Record search metrics for observability
+        try:
+            observability_db.record_search_metric(
+                query=request.query,
+                search_type='semantic',
+                response_time_ms=search_time_ms,
+                result_count=len(result_items),
+                repository=request.repository_filter,
+                source='web_ui'
+            )
+        except Exception as e:
+            logger.warning("Failed to record search metric", error=str(e))
+
         return SearchResponse(
             query=request.query,
             total_results=len(result_items),
@@ -990,6 +1059,18 @@ async def search_semantic(request: SearchRequest):
         )
 
     except Exception as e:
+        # Record error for observability
+        try:
+            observability_db.record_error(
+                error_type=type(e).__name__,
+                message=str(e),
+                severity='ERROR',
+                component='search_semantic',
+                context={'query': request.query, 'repository_filter': request.repository_filter}
+            )
+        except Exception as log_err:
+            logger.warning("Failed to record error", error=str(log_err))
+
         raise HTTPException(status_code=500, detail=f"Semantic search error: {str(e)}")
 
 
@@ -1029,6 +1110,9 @@ def run_keyword_index(
             indexing_state["index_types"].append("Keyword")
 
         print(f"[Keyword] Starting indexing for repositories: {repository_names or 'all enabled'}")
+
+        # Record indexing start event for observability
+        indexing_start_time = time.time()
 
         # Import indexing logic
         from myragdb.indexers.file_scanner import FileScanner
@@ -1130,6 +1214,23 @@ def run_keyword_index(
                 is_initial=full_rebuild
             )
 
+            # Record indexing event for observability
+            try:
+                observability_db.record_indexing_event(
+                    repository=repo.name,
+                    event_type='complete',
+                    status='success',
+                    files_processed=repo_file_count,
+                    duration_seconds=repo_duration,
+                    metadata={
+                        'index_type': 'keyword',
+                        'mode': 'full_rebuild' if full_rebuild else 'incremental',
+                        'size_bytes': repo_total_size
+                    }
+                )
+            except Exception as e:
+                logger.warning("Failed to record indexing event", error=str(e))
+
             print(f"[Keyword]   Indexed {repo_file_count} files ({repo_total_size / 1024 / 1024:.1f} MB) in {repo_duration:.1f}s")
 
             # Mark repository as completed
@@ -1173,6 +1274,30 @@ def run_keyword_index(
         print("[Keyword] Indexing completed successfully")
 
     except Exception as e:
+        # Record error for observability
+        try:
+            current_repo = indexing_state["keyword"].get("current_repository", "unknown")
+            observability_db.record_error(
+                error_type=type(e).__name__,
+                message=str(e),
+                severity='CRITICAL',
+                component='keyword_indexer',
+                context={
+                    'repository': current_repo,
+                    'mode': 'full_rebuild' if full_rebuild else 'incremental'
+                }
+            )
+            observability_db.record_indexing_event(
+                repository=current_repo,
+                event_type='error',
+                status='failed',
+                files_processed=indexing_state["keyword"].get("files_processed", 0),
+                error_message=str(e),
+                metadata={'index_type': 'keyword', 'mode': 'full_rebuild' if full_rebuild else 'incremental'}
+            )
+        except Exception as log_err:
+            logger.warning("Failed to record error", error=str(log_err))
+
         # Clear progress state on error
         indexing_state["keyword"]["is_indexing"] = False
         indexing_state["keyword"]["stop_requested"] = False
