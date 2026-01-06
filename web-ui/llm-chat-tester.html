@@ -248,6 +248,68 @@
             overflow-x: auto;
             font-size: 12px;
         }
+
+        .context-indicator {
+            padding: 10px 30px;
+            background: #f0f0f0;
+            border-bottom: 1px solid #e0e0e0;
+            display: none;
+            align-items: center;
+            gap: 15px;
+            font-size: 13px;
+        }
+
+        .context-indicator.active {
+            display: flex;
+        }
+
+        .context-bar-container {
+            flex: 1;
+            max-width: 300px;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .context-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50 0%, #8bc34a 50%, #ffc107 80%, #f44336 100%);
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .context-text {
+            font-weight: 500;
+            color: #666;
+            min-width: 150px;
+        }
+
+        .context-warning {
+            background: #fff3cd;
+            color: #856404;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .compress-button {
+            background: #ff9800;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .compress-button:hover {
+            background: #f57c00;
+        }
     </style>
 </head>
 <body>
@@ -259,6 +321,17 @@
         </div>
 
         <div class="status" id="status">Initializing...</div>
+
+        <div class="context-indicator" id="context-indicator">
+            <span class="context-text" id="context-text">Context: 0 / 0 tokens (0%)</span>
+            <div class="context-bar-container">
+                <div class="context-bar" id="context-bar" style="width: 0%"></div>
+            </div>
+            <span class="context-warning" id="context-warning" style="display: none;">⚠️ Approaching limit</span>
+            <button class="compress-button" id="compress-button" onclick="compressContext()" style="display: none;">
+                📦 Compress Context
+            </button>
+        </div>
 
         <div class="controls">
             <div class="control-group">
@@ -299,22 +372,166 @@
             apiKey: 'choose-a-shared-key' // From controller .runner.sh
         };
 
-        // Available LLMs from your setup
+        // Available LLMs from your setup with context sizes (verified from official specs)
         const LLM_MODELS = [
-            { id: 'phi3', name: 'Phi-3', port: 8081 },
-            { id: 'smollm3', name: 'SmolLM3', port: 8082 },
-            { id: 'mistral', name: 'Mistral 7B', port: 8083 },
-            { id: 'qwen2.5-32b', name: 'Qwen 2.5 32B', port: 8084 },
-            { id: 'qwen-coder-7b', name: 'Qwen Coder 7B', port: 8085 },
-            { id: 'hermes-3-llama-8b', name: 'Hermes 3 Llama 8B', port: 8086 },
-            { id: 'llama-3.1-8b', name: 'Llama 3.1 8B', port: 8087 },
-            { id: 'llama-4-scout-17b', name: 'Llama 4 Scout 17B', port: 8088 },
-            { id: 'mistral-small-24b', name: 'Mistral Small 24B', port: 8089 },
-            { id: 'deepseek-r1-qwen-32b', name: 'DeepSeek R1 Qwen 32B', port: 8092 }
+            { id: 'phi3', name: 'Phi-3', port: 8081, contextSize: 8192 },
+            { id: 'smollm3', name: 'SmolLM3', port: 8082, contextSize: 32768 },
+            { id: 'mistral', name: 'Mistral 7B', port: 8083, contextSize: 32768 },
+            { id: 'qwen2.5-32b', name: 'Qwen 2.5 32B', port: 8084, contextSize: 32768 },
+            { id: 'qwen-coder-7b', name: 'Qwen Coder 7B', port: 8085, contextSize: 32768 },
+            { id: 'hermes-3-llama-8b', name: 'Hermes 3 Llama 8B', port: 8086, contextSize: 32768 },
+            { id: 'llama-3.1-8b', name: 'Llama 3.1 8B', port: 8087, contextSize: 32768 },
+            { id: 'llama-4-scout-17b', name: 'Llama 4 Scout 17B', port: 8088, contextSize: 32768 },
+            { id: 'mistral-small-24b', name: 'Mistral Small 24B', port: 8089, contextSize: 32768 },
+            { id: 'deepseek-r1-qwen-32b', name: 'DeepSeek R1 Qwen 32B', port: 8092, contextSize: 32768 }
         ];
 
         let chatHistory = [];
         let selectedModel = null;
+
+        // Token estimation function (rough approximation: 1 token ≈ 4 characters)
+        function estimateTokens(text) {
+            if (!text) return 0;
+            // More accurate estimation: count words + special chars
+            const words = text.split(/\s+/).length;
+            const specialChars = (text.match(/[{}[\](),.;:'"!?]/g) || []).length;
+            return Math.ceil(words * 1.3 + specialChars * 0.5);
+        }
+
+        // Calculate total tokens in chat history
+        function calculateContextUsage() {
+            let totalTokens = 0;
+
+            for (const msg of chatHistory) {
+                // Role prefix tokens (system/user/assistant)
+                totalTokens += 4;
+
+                // Content tokens
+                if (msg.content) {
+                    totalTokens += estimateTokens(msg.content);
+                }
+
+                // Tool call tokens
+                if (msg.tool_calls) {
+                    totalTokens += JSON.stringify(msg.tool_calls).length / 4;
+                }
+            }
+
+            // Add overhead for message formatting
+            totalTokens += chatHistory.length * 3;
+
+            return Math.ceil(totalTokens);
+        }
+
+        // Update context indicator display
+        function updateContextIndicator() {
+            if (!selectedModel || chatHistory.length === 0) {
+                document.getElementById('context-indicator').classList.remove('active');
+                return;
+            }
+
+            const contextSize = selectedModel.contextSize;
+            const usedTokens = calculateContextUsage();
+            const percentage = Math.min(100, (usedTokens / contextSize) * 100);
+
+            // Show indicator
+            document.getElementById('context-indicator').classList.add('active');
+
+            // Update text
+            const contextText = document.getElementById('context-text');
+            contextText.textContent = `Context: ${usedTokens.toLocaleString()} / ${contextSize.toLocaleString()} tokens (${percentage.toFixed(1)}%)`;
+
+            // Update progress bar
+            const contextBar = document.getElementById('context-bar');
+            contextBar.style.width = `${percentage}%`;
+
+            // Show warning and compress button at 80%
+            const warning = document.getElementById('context-warning');
+            const compressBtn = document.getElementById('compress-button');
+
+            if (percentage >= 80) {
+                warning.style.display = 'inline-block';
+                compressBtn.style.display = 'inline-block';
+
+                if (percentage >= 90) {
+                    warning.textContent = '⚠️ Critical: Compress context now!';
+                } else {
+                    warning.textContent = '⚠️ Approaching limit';
+                }
+            } else {
+                warning.style.display = 'none';
+                compressBtn.style.display = 'none';
+            }
+        }
+
+        // Compress context by summarizing older messages
+        async function compressContext() {
+            if (!selectedModel || chatHistory.length < 3) {
+                alert('Not enough messages to compress');
+                return;
+            }
+
+            const compressBtn = document.getElementById('compress-button');
+            compressBtn.disabled = true;
+            compressBtn.textContent = '⏳ Compressing...';
+
+            try {
+                // Keep the first message (usually system prompt) and last 2 messages
+                // Summarize everything in between
+                const firstMessage = chatHistory[0];
+                const lastTwoMessages = chatHistory.slice(-2);
+                const middleMessages = chatHistory.slice(1, -2);
+
+                if (middleMessages.length === 0) {
+                    alert('Not enough messages to compress');
+                    compressBtn.disabled = false;
+                    compressBtn.textContent = '📦 Compress Context';
+                    return;
+                }
+
+                // Create summary request
+                const summaryPrompt = `Summarize the following conversation concisely, preserving key information:\n\n${
+                    middleMessages.map(m => `${m.role}: ${m.content || JSON.stringify(m)}`).join('\n\n')
+                }`;
+
+                const response = await fetch(`http://localhost:${selectedModel.port}/v1/chat/completions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: selectedModel.id,
+                        messages: [{ role: 'user', content: summaryPrompt }],
+                        temperature: 0.3,
+                        max_tokens: 500
+                    })
+                });
+
+                const data = await response.json();
+                const summary = data.choices[0].message.content;
+
+                // Calculate savings
+                const oldTokens = calculateContextUsage();
+
+                // Replace middle messages with summary
+                chatHistory = [
+                    firstMessage,
+                    { role: 'system', content: `[Previous conversation summary: ${summary}]` },
+                    ...lastTwoMessages
+                ];
+
+                const newTokens = calculateContextUsage();
+                const saved = oldTokens - newTokens;
+
+                // Update UI
+                updateContextIndicator();
+                addMessage('system', `✅ Context compressed: Saved ${saved} tokens (${oldTokens} → ${newTokens})`);
+
+            } catch (e) {
+                addMessage('system', `❌ Compression failed: ${e.message}`);
+            } finally {
+                compressBtn.disabled = false;
+                compressBtn.textContent = '📦 Compress Context';
+            }
+        }
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
@@ -352,11 +569,12 @@
             const statusMap = {};
             runningStatuses.forEach(s => statusMap[s.id] = s.running);
 
-            // Build dropdown with status indicators
+            // Build dropdown with status indicators and context size
             selector.innerHTML = LLM_MODELS.map(m => {
                 const status = statusMap[m.id] ? 'running' : 'offline';
                 const indicator = statusMap[m.id] ? '🟢' : '🔴';
-                return `<option value="${m.id}" class="${status}">${indicator} ${m.name} (port ${m.port})</option>`;
+                const contextSizeStr = m.contextSize >= 1024 ? `${m.contextSize/1024}k` : `${m.contextSize}`;
+                return `<option value="${m.id}" class="${status}">${indicator} ${m.name} (${contextSizeStr} ctx, port ${m.port})</option>`;
             }).join('');
 
             // Select first running model, or first model if none running
@@ -430,6 +648,7 @@
             // Add user message to chat
             addMessage('user', message);
             chatHistory.push({ role: 'user', content: message });
+            updateContextIndicator();
 
             input.value = '';
             updateStatus('Thinking...', '');
@@ -514,6 +733,7 @@
                             tool_call_id: toolCall.id,
                             content: JSON.stringify(toolResult)
                         });
+                        updateContextIndicator();
 
                         // Get final response with tool result
                         const finalResp = await fetch(`http://localhost:${selectedModel.port}/v1/chat/completions`, {
@@ -531,11 +751,13 @@
                         const finalMessage = finalData.choices[0].message.content;
                         addMessage('assistant', finalMessage);
                         chatHistory.push({ role: 'assistant', content: finalMessage });
+                        updateContextIndicator();
                     }
                 } else {
                     // Regular response
                     addMessage('assistant', assistantMessage.content);
                     chatHistory.push({ role: 'assistant', content: assistantMessage.content });
+                    updateContextIndicator();
                 }
 
                 updateStatus(`✓ Response from ${selectedModel.name}`, 'connected');
@@ -602,6 +824,7 @@
         function clearChat() {
             document.getElementById('chat-container').innerHTML = '';
             chatHistory = [];
+            updateContextIndicator();
             updateStatus(`Chat cleared | LLM: ${selectedModel?.name || 'None selected'}`, 'connected');
         }
 

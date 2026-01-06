@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.06.2.32.0">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.06.2.33.0">
 </head>
 <body>
     <div class="container">
@@ -26,7 +26,12 @@
                 </span>
             </div>
             <p class="subtitle">Hybrid Search System - Meilisearch Keyword + Vector Embeddings</p>
-            <p class="subtitle" style="font-size: 0.85em; opacity: 0.7; margin-top: -8px;">Start: <code style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 3px;">/Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb/start.sh</code></p>
+            <p class="subtitle" style="font-size: 0.85em; opacity: 0.7; margin-top: -8px;">
+                <span style="font-weight: 600; opacity: 1;">Start:</span> <code style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 3px;">/Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb/start.sh</code>
+                <span style="margin: 0 8px;">|</span>
+                <span style="font-weight: 600; opacity: 1;">Stop:</span> <code style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 3px;">/Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb/stop.sh</code>
+                <span style="display: block; margin-top: 4px; font-size: 0.9em; opacity: 0.8;">(Starts: Meilisearch → MyRAGDB API → MCP Middleware → Opens Browser | Stops: MCP Middleware → MyRAGDB API → Meilisearch)</span>
+            </p>
             <div style="text-align: center; margin-top: 8px;">
                 <a href="llm-chat-tester.html" style="color: #60a5fa; text-decoration: none; font-size: 0.9em; padding: 6px 12px; background: rgba(96, 165, 250, 0.1); border-radius: 6px; display: inline-block; transition: all 0.2s;">
                     💬 LLM Chat Tester →
@@ -361,6 +366,6 @@
         </div>
     </div>
 
-    <script src="static/js/app.js?v=2026.01.06.2.32.0"></script>
+    <script src="static/js/app.js?v=2026.01.06.2.33.0"></script>
 </body>
 </html>
