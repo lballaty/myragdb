@@ -641,6 +641,9 @@ function renderRepositories() {
         const priorityClass = `priority-${repo.priority}`;
         const excludedClass = isExcluded ? 'excluded-repo' : '';
 
+        // Debug logging for badge rendering
+        console.log(`Rendering ${repo.name}: file_count=${repo.file_count}, has_stats=${!!(repo.indexing_stats && repo.indexing_stats.length)}`);
+
         // Calculate total indexed files from indexing_stats
         // Note: Don't sum across index types (would double-count files indexed in both)
         // Instead, take the max since files are indexed in both keyword and vector
