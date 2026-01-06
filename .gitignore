@@ -66,3 +66,4 @@ yarn-error.log*
 .pnpm-debug.log*
 # Test automatic version amend
 # Test fix commit
+# Test feat auto-amend
