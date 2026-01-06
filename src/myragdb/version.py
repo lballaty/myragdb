@@ -15,7 +15,7 @@ from datetime import datetime
 # Example: 2026.01.05.1.0.0 = January 5, 2026, major version 1.0.0
 _BUILD_DATE = datetime(2026, 1, 6)  # Update this when creating new releases
 _MAJOR_VERSION = 2  # Increment for breaking changes
-_MINOR_VERSION = 22  # Increment for new features (backward compatible)
+_MINOR_VERSION = 24  # Increment for new features (backward compatible)
 _PATCH_VERSION = 0  # Increment for bug fixes only
 
 __version__ = f"{_BUILD_DATE.year}.{_BUILD_DATE.month:02d}.{_BUILD_DATE.day:02d}.{_MAJOR_VERSION}.{_MINOR_VERSION}.{_PATCH_VERSION}"
@@ -24,9 +24,17 @@ __build_date__ = _BUILD_DATE.strftime("%Y-%m-%d")
 
 # Release notes for current version
 RELEASE_NOTES = f"""
-MyRAGDB v{__version__} - Integrated Meilisearch Startup ({__build_date__})
+MyRAGDB v{__version__} - Integrated MCP Middleware Startup ({__build_date__})
 
-Changes in v2026.01.06.2.22.0:
+Changes in v2026.01.06.2.24.0:
+- Integrated MCP HTTP middleware into start.sh (automatic startup)
+- MCP middleware provides REST API for LLMs to access MyRAGDB search
+- Allows local LLMs (llama.cpp, etc.) to use MyRAGDB as a tool
+- Graceful handling: Won't restart if already running on port 8080
+- Proper shutdown order in stop.sh (MCP → MyRAGDB → Meilisearch)
+- Complete system now starts with single command: ./start.sh
+
+Previous changes (v2026.01.06.2.22.0):
 - Integrated Meilisearch startup into start.sh script
 - Single command startup: ./start.sh now starts both Meilisearch and MyRAGDB
 - Enhanced stop.sh to also stop Meilisearch

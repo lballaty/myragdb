@@ -18,30 +18,30 @@ cd "$SCRIPT_DIR"
 
 echo -e "${YELLOW}🛑 Stopping MyRAGDB...${NC}"
 
-# Stop Meilisearch
-if [ -f ".meilisearch.pid" ]; then
-    PID=$(cat .meilisearch.pid)
+# Stop in reverse dependency order: MCP → API Server → Meilisearch
+
+# Stop HTTP Middleware (depends on MyRAGDB API)
+if [ -f ".middleware.pid" ]; then
+    PID=$(cat .middleware.pid)
     if ps -p $PID > /dev/null 2>&1; then
         kill $PID
-        echo -e "${GREEN}✓ Meilisearch stopped (PID: $PID)${NC}"
-        rm .meilisearch.pid
+        echo -e "${GREEN}✓ MCP Middleware stopped (PID: $PID)${NC}"
+        rm .middleware.pid
     else
-        echo -e "${YELLOW}⚠️  Meilisearch process $PID not found (may have already stopped)${NC}"
-        rm .meilisearch.pid
+        echo -e "${YELLOW}⚠️  Middleware process $PID not found (may have already stopped)${NC}"
+        rm .middleware.pid
     fi
 else
-    # Try to find and kill any running Meilisearch processes
-    PIDS=$(pgrep -f "meilisearch" || true)
+    # Try to find and kill any running middleware processes
+    PIDS=$(pgrep -f "python -m mcp_server.http_middleware" || true)
     if [ -n "$PIDS" ]; then
-        echo -e "${YELLOW}Found running Meilisearch processes: $PIDS${NC}"
+        echo -e "${YELLOW}Found running middleware processes: $PIDS${NC}"
         kill $PIDS
-        echo -e "${GREEN}✓ Meilisearch processes stopped${NC}"
-    else
-        echo -e "${YELLOW}⚠️  No running Meilisearch server found${NC}"
+        echo -e "${GREEN}✓ MCP Middleware processes stopped${NC}"
     fi
 fi
 
-# Stop API Server
+# Stop API Server (depends on Meilisearch)
 if [ -f ".server.pid" ]; then
     PID=$(cat .server.pid)
     if ps -p $PID > /dev/null 2>&1; then
@@ -64,23 +64,25 @@ else
     fi
 fi
 
-# Stop HTTP Middleware
-if [ -f ".middleware.pid" ]; then
-    PID=$(cat .middleware.pid)
+# Stop Meilisearch (base dependency)
+if [ -f ".meilisearch.pid" ]; then
+    PID=$(cat .meilisearch.pid)
     if ps -p $PID > /dev/null 2>&1; then
         kill $PID
-        echo -e "${GREEN}✓ HTTP Middleware stopped (PID: $PID)${NC}"
-        rm .middleware.pid
+        echo -e "${GREEN}✓ Meilisearch stopped (PID: $PID)${NC}"
+        rm .meilisearch.pid
     else
-        echo -e "${YELLOW}⚠️  Middleware process $PID not found (may have already stopped)${NC}"
-        rm .middleware.pid
+        echo -e "${YELLOW}⚠️  Meilisearch process $PID not found (may have already stopped)${NC}"
+        rm .meilisearch.pid
     fi
 else
-    # Try to find and kill any running middleware processes
-    PIDS=$(pgrep -f "python -m mcp_server.http_middleware" || true)
+    # Try to find and kill any running Meilisearch processes
+    PIDS=$(pgrep -f "meilisearch" || true)
     if [ -n "$PIDS" ]; then
-        echo -e "${YELLOW}Found running middleware processes: $PIDS${NC}"
+        echo -e "${YELLOW}Found running Meilisearch processes: $PIDS${NC}"
         kill $PIDS
-        echo -e "${GREEN}✓ HTTP Middleware processes stopped${NC}"
+        echo -e "${GREEN}✓ Meilisearch processes stopped${NC}"
+    else
+        echo -e "${YELLOW}⚠️  No running Meilisearch server found${NC}"
     fi
 fi

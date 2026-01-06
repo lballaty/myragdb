@@ -140,6 +140,34 @@ done
 # Check if server started successfully
 if [ "$SERVER_READY" = true ]; then
     echo -e "${GREEN}✓ Server is running!${NC}"
+
+    # ============================================================================
+    # Step 3: Start MCP HTTP Middleware (Optional - for LLM tool access)
+    # ============================================================================
+    echo ""
+    echo -e "${BLUE}🤖 Starting MCP HTTP Middleware...${NC}"
+
+    # Check if MCP middleware is already running
+    MCP_PORT_PID=$(lsof -ti:8080 || true)
+    if [ -n "$MCP_PORT_PID" ]; then
+        echo -e "${YELLOW}⚠️  MCP middleware already running on port 8080 (PID: $MCP_PORT_PID). Skipping...${NC}"
+    else
+        # Start MCP middleware in background
+        python -m mcp_server.http_middleware >> /tmp/mcp_middleware.log 2>&1 &
+        MCP_PID=$!
+        echo $MCP_PID > .middleware.pid
+        echo -e "${GREEN}✓ MCP middleware started (PID: $MCP_PID)${NC}"
+
+        # Quick health check (don't wait long, it's optional)
+        sleep 1
+        if lsof -ti:8080 > /dev/null 2>&1; then
+            echo -e "${GREEN}✓ MCP middleware is ready on port 8080${NC}"
+        else
+            echo -e "${YELLOW}⚠️  MCP middleware may not have started (check logs: /tmp/mcp_middleware.log)${NC}"
+        fi
+    fi
+
+    echo ""
     echo -e "${GREEN}✓ Opening web UI in browser...${NC}"
 
     # Open browser (works on macOS)
@@ -149,13 +177,14 @@ if [ "$SERVER_READY" = true ]; then
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${GREEN}MyRAGDB is running!${NC}"
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "Web UI:  ${BLUE}http://localhost:3003${NC}"
-    echo -e "PID:     ${YELLOW}$SERVER_PID${NC}"
-    echo -e "Logs:    ${YELLOW}/tmp/myragdb_server.log${NC}"
+    echo -e "Web UI:        ${BLUE}http://localhost:3003${NC}"
+    echo -e "API Server:    ${YELLOW}PID $SERVER_PID${NC} | ${YELLOW}Logs: /tmp/myragdb_server.log${NC}"
+    if [ -f ".middleware.pid" ]; then
+        MCP_DISPLAY_PID=$(cat .middleware.pid)
+        echo -e "MCP Middleware: ${YELLOW}PID $MCP_DISPLAY_PID${NC} | ${BLUE}http://localhost:8080${NC} | ${YELLOW}Logs: /tmp/mcp_middleware.log${NC}"
+    fi
     echo ""
-    echo -e "To stop the server, run: ${YELLOW}./stop.sh${NC}"
-    echo -e "Or kill process: ${YELLOW}kill $SERVER_PID${NC}"
-    echo -e "View logs: ${YELLOW}tail -f /tmp/myragdb_server.log${NC}"
+    echo -e "To stop all services: ${YELLOW}./stop.sh${NC}"
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 else
     echo -e "${YELLOW}⚠️  Server failed to start after $MAX_RETRIES attempts${NC}"
