@@ -482,8 +482,17 @@
 
                 const data = await response.json();
 
+                // Debug logging
+                console.log('LLM Response:', data);
+
                 if (data.error) {
                     throw new Error(data.error.message || 'Unknown error');
+                }
+
+                // Check if response has expected structure
+                if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+                    console.error('Invalid response structure:', data);
+                    throw new Error(`Invalid response from LLM. Expected 'choices' array but got: ${JSON.stringify(data)}`);
                 }
 
                 const assistantMessage = data.choices[0].message;
