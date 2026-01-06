@@ -1299,7 +1299,7 @@ def run_vector_index(
                 for scanned_file in files:
                     repo_total_size += scanned_file.size_bytes
 
-                target_vector.index_files(files)
+                target_vector.index_files(files, incremental=not full_rebuild)
                 indexing_state["vector"]["files_processed"] += len(files)
             else:
                 print(f"[Vector]   No files found in {repo.name}")
