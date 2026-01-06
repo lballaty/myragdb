@@ -22,6 +22,7 @@ from myragdb.api.models import (
     SearchRequest,
     SearchResponse,
     SearchResultItem,
+    DirectorySummary,
     SearchType,
     HealthResponse,
     StatsResponse,
@@ -744,6 +745,58 @@ async def delete_repository(repo_name: str):
         raise HTTPException(status_code=500, detail=f"Error removing repository: {str(e)}")
 
 
+def _extract_directories(query: str, results: List[HybridSearchResult]) -> Optional[List[DirectorySummary]]:
+    """
+    Extract unique directories from search results if query asks for directories.
+
+    Business Purpose: Helps LLMs (especially local models) understand which
+    directories contain relevant files without having to parse file paths.
+
+    Args:
+        query: User search query
+        results: List of search results
+
+    Returns:
+        List of DirectorySummary objects if query asks for directories, None otherwise
+    """
+    # Detect directory-related queries
+    query_lower = query.lower()
+    is_directory_query = any(keyword in query_lower for keyword in [
+        'director', 'folder', 'path', 'locate all', 'find all', 'list all', 'where is', 'where are'
+    ])
+
+    if not is_directory_query:
+        return None
+
+    # Group files by directory
+    directories = {}
+    for result in results:
+        file_path = Path(result.file_path)
+        dir_path = str(file_path.parent)
+        rel_dir = str(Path(result.relative_path).parent)
+
+        if dir_path not in directories:
+            directories[dir_path] = {
+                'repository': result.repository,
+                'relative_directory': rel_dir,
+                'files': []
+            }
+        directories[dir_path]['files'].append(result)
+
+    # Convert to DirectorySummary objects (limit to top 20 directories)
+    directory_summaries = [
+        DirectorySummary(
+            directory_path=dir_path,
+            relative_directory=info['relative_directory'],
+            repository=info['repository'],
+            file_count=len(info['files'])
+        )
+        for dir_path, info in sorted(directories.items(), key=lambda x: len(x[1]['files']), reverse=True)[:20]
+    ]
+
+    return directory_summaries if directory_summaries else None
+
+
 @app.post("/search/hybrid", response_model=SearchResponse)
 async def search_hybrid(request: SearchRequest):
     """
@@ -807,11 +860,15 @@ async def search_hybrid(request: SearchRequest):
 
         search_time_ms = (time.time() - start_time) * 1000
 
+        # Extract unique directories if query seems to be asking for directories
+        directories = _extract_directories(request.query, results) if results else None
+
         return SearchResponse(
             query=request.query,
             total_results=len(result_items),
             search_time_ms=search_time_ms,
-            results=result_items
+            results=result_items,
+            directories=directories
         )
 
     except Exception as e:
@@ -1047,12 +1104,9 @@ def run_keyword_index(
                 mode_str = "full rebuild" if full_rebuild else "incremental"
                 print(f"[Keyword]   Found {len(files)} files in {repo.name} ({mode_str})")
 
-                # Calculate total size
-                for file_path in files:
-                    try:
-                        repo_total_size += Path(file_path).stat().st_size
-                    except OSError:
-                        pass
+                # Calculate total size from ScannedFile objects
+                for scanned_file in files:
+                    repo_total_size += scanned_file.size_bytes
 
                 target_meilisearch.index_files_batch(files, batch_size=100, incremental=not full_rebuild)
                 indexing_state["keyword"]["files_processed"] += len(files)
@@ -1241,12 +1295,9 @@ def run_vector_index(
                 mode_str = "full rebuild" if full_rebuild else "incremental"
                 print(f"[Vector]   Found {len(files)} files in {repo.name} ({mode_str})")
 
-                # Calculate total size
-                for file_path in files:
-                    try:
-                        repo_total_size += Path(file_path).stat().st_size
-                    except OSError:
-                        pass
+                # Calculate total size from ScannedFile objects
+                for scanned_file in files:
+                    repo_total_size += scanned_file.size_bytes
 
                 target_vector.index_files(files)
                 indexing_state["vector"]["files_processed"] += len(files)
