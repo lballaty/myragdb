@@ -36,7 +36,9 @@
       "Bash(/tmp/test_breaking.txt)",
       "Bash(open http://localhost:3003)",
       "Bash(open:*)",
-      "Bash(git rev-list:*)"
+      "Bash(git rev-list:*)",
+      "Bash(sqlite3:*)",
+      "Bash(kill:*)"
     ],
     "deny": [],
     "ask": []
