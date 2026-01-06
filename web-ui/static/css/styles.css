@@ -1258,15 +1258,15 @@ body {
 }
 
 .llm-model-card {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 12px;
     padding: 20px;
     transition: all 0.3s ease;
 }
 
 .llm-model-card:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.12);
     border-color: rgba(96, 165, 250, 0.3);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -1274,7 +1274,7 @@ body {
 
 .llm-model-card.running {
     border-color: rgba(34, 197, 94, 0.4);
-    background: rgba(34, 197, 94, 0.05);
+    background: rgba(34, 197, 94, 0.1);
 }
 
 .llm-model-card.stopped {
@@ -1329,12 +1329,13 @@ body {
 }
 
 .llm-model-info-label {
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(255, 255, 255, 0.95);
+    font-weight: 500;
 }
 
 .llm-model-info-value {
-    color: white;
-    font-weight: 500;
+    color: #e0f2fe;
+    font-weight: 600;
 }
 
 .llm-model-status {
