@@ -1500,6 +1500,33 @@ body {
     background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
 }
 
+.llm-stop-button {
+    flex: 1;
+    padding: 12px;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.llm-stop-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.llm-stop-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .llm-model-message {
     margin-top: 12px;
     padding: 10px;

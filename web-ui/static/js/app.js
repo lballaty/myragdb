@@ -1571,13 +1571,21 @@ function renderLLMModels(models) {
 
     container.innerHTML = models.map(model => createLLMModelCard(model)).join('');
 
-    // Attach event listeners to all start buttons
+    // Attach event listeners to all start/stop buttons
     models.forEach(model => {
-        const button = document.getElementById(`llm-start-${model.id}`);
+        const startButton = document.getElementById(`llm-start-${model.id}`);
+        const stopButton = document.getElementById(`llm-stop-${model.id}`);
         const modeSelect = document.getElementById(`llm-mode-${model.id}`);
 
-        if (button && modeSelect) {
-            button.addEventListener('click', () => startLLM(model.id));
+        if (startButton) {
+            startButton.addEventListener('click', () => startLLM(model.id));
+        }
+
+        if (stopButton) {
+            stopButton.addEventListener('click', () => stopLLM(model.id));
+        }
+
+        if (modeSelect) {
             modeSelect.addEventListener('change', (e) => updateModeDescription(model.id, e.target.value));
         }
     });
@@ -1586,7 +1594,6 @@ function renderLLMModels(models) {
 function createLLMModelCard(model) {
     const isRunning = model.status === 'running';
     const statusClass = isRunning ? 'running' : 'stopped';
-    const buttonText = isRunning ? '✅ Running' : '🚀 Start LLM';
 
     return `
         <div class="llm-model-card ${statusClass}" id="llm-card-${model.id}">
@@ -1609,7 +1616,7 @@ function createLLMModelCard(model) {
                 </div>
             </div>
 
-            <div class="llm-mode-selector">
+            <div class="llm-mode-selector" id="llm-mode-selector-${model.id}" ${isRunning ? 'style="display: none;"' : ''}>
                 <label for="llm-mode-${model.id}">Mode:</label>
                 <select id="llm-mode-${model.id}">
                     <option value="basic">Basic</option>
@@ -1623,9 +1630,15 @@ function createLLMModelCard(model) {
             </div>
 
             <div class="llm-model-actions">
-                <button id="llm-start-${model.id}" class="llm-start-button ${statusClass}">
-                    ${buttonText}
-                </button>
+                ${isRunning ? `
+                    <button id="llm-stop-${model.id}" class="llm-stop-button">
+                        🛑 Stop LLM
+                    </button>
+                ` : `
+                    <button id="llm-start-${model.id}" class="llm-start-button">
+                        🚀 Start LLM
+                    </button>
+                `}
             </div>
 
             <div id="llm-message-${model.id}" style="display: none;"></div>
@@ -1730,6 +1743,112 @@ async function startLLM(modelId) {
         button.innerHTML = '🚀 Start LLM';
 
         addActivityLog('error', `Error starting ${modelId}: ${error.message}`);
+    }
+}
+
+async function stopLLM(modelId) {
+    const button = document.getElementById(`llm-stop-${modelId}`);
+    const messageElement = document.getElementById(`llm-message-${modelId}`);
+    const card = document.getElementById(`llm-card-${modelId}`);
+
+    if (!button || !messageElement || !card) return;
+
+    // Disable button and show loading state
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner" style="width: 14px; height: 14px; border-width: 2px; margin-right: 8px;"></span>Stopping...';
+
+    // Clear previous message
+    messageElement.style.display = 'none';
+    messageElement.className = '';
+
+    addActivityLog('info', `Stopping ${modelId}...`);
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/llm/stop`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model_id: modelId
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            // Show success message
+            messageElement.className = 'llm-model-message success';
+            messageElement.textContent = result.message;
+            messageElement.style.display = 'block';
+
+            // Update card appearance
+            card.classList.remove('running');
+            card.classList.add('stopped');
+
+            // Replace stop button with start button
+            const actionsContainer = card.querySelector('.llm-model-actions');
+            if (actionsContainer) {
+                actionsContainer.innerHTML = `
+                    <button id="llm-start-${modelId}" class="llm-start-button">
+                        🚀 Start LLM
+                    </button>
+                `;
+
+                // Re-attach event listener to new start button
+                const newStartButton = document.getElementById(`llm-start-${modelId}`);
+                if (newStartButton) {
+                    newStartButton.addEventListener('click', () => startLLM(modelId));
+                }
+            }
+
+            // Show mode selector again
+            const modeSelector = document.getElementById(`llm-mode-selector-${modelId}`);
+            if (modeSelector) {
+                modeSelector.style.display = 'block';
+            }
+
+            // Update status in card
+            const statusElement = card.querySelector('.llm-model-status');
+            if (statusElement) {
+                statusElement.className = 'llm-model-status stopped';
+                statusElement.innerHTML = '<span class="llm-model-status-dot"></span>Stopped';
+            }
+
+            addActivityLog('success', `${modelId} stopped successfully`);
+
+            // Update header LLM status badge immediately
+            updateLLMStatusBadge();
+
+            // Auto-hide success message after 5 seconds
+            setTimeout(() => {
+                messageElement.style.display = 'none';
+            }, 5000);
+
+        } else {
+            // Show error message
+            messageElement.className = 'llm-model-message error';
+            messageElement.textContent = result.message;
+            messageElement.style.display = 'block';
+
+            // Re-enable button
+            button.disabled = false;
+            button.innerHTML = '🛑 Stop LLM';
+
+            addActivityLog('error', `Failed to stop ${modelId}: ${result.message}`);
+        }
+
+    } catch (error) {
+        console.error('Error stopping LLM:', error);
+
+        messageElement.className = 'llm-model-message error';
+        messageElement.textContent = `Error: ${error.message}`;
+        messageElement.style.display = 'block';
+
+        button.disabled = false;
+        button.innerHTML = '🛑 Stop LLM';
+
+        addActivityLog('error', `Error stopping ${modelId}: ${error.message}`);
     }
 }
 

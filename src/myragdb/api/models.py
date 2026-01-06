@@ -514,3 +514,39 @@ class StartLLMResponse(BaseModel):
                 "log_file": "/Users/liborballaty/llms/logs/qwen-coder-7b-tools.log"
             }
         }
+
+
+class StopLLMRequest(BaseModel):
+    """
+    Request to stop an LLM.
+
+    Business Purpose: Stops a running local LLM gracefully.
+    """
+    model_id: str = Field(..., description="Model ID to stop")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "model_id": "qwen-coder-7b"
+            }
+        }
+
+
+class StopLLMResponse(BaseModel):
+    """
+    Response from stopping an LLM.
+
+    Business Purpose: Confirms LLM stop status.
+    """
+    status: str = Field(..., description="Status: success or error")
+    message: str = Field(..., description="Status message")
+    model_id: str = Field(..., description="Model ID that was stopped")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "success",
+                "message": "Qwen Coder 7B stopped successfully",
+                "model_id": "qwen-coder-7b"
+            }
+        }

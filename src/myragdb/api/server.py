@@ -37,7 +37,9 @@ from myragdb.api.models import (
     AddRepositoriesResponse,
     LLMInfo,
     StartLLMRequest,
-    StartLLMResponse
+    StartLLMResponse,
+    StopLLMRequest,
+    StopLLMResponse
 )
 from myragdb.search.hybrid_search import HybridSearchEngine, HybridSearchResult
 from myragdb.indexers.meilisearch_indexer import MeilisearchIndexer
@@ -1564,6 +1566,105 @@ async def start_llm(request: StartLLMRequest):
             model_id=request.model_id,
             pid=None,
             log_file=None
+        )
+
+
+@app.post("/llm/stop", response_model=StopLLMResponse)
+async def stop_llm(request: StopLLMRequest):
+    """
+    Stop a running LLM.
+
+    Business Purpose: Allows users to stop local LLMs from the web UI
+    to free up resources or switch models.
+
+    Args:
+        request: StopLLMRequest with model_id
+
+    Returns:
+        StopLLMResponse with status and message
+
+    Example:
+        POST /llm/stop
+        {
+            "model_id": "qwen-coder-7b"
+        }
+    """
+    # Validate model_id
+    valid_models = [m["id"] for m in LLM_MODELS]
+    if request.model_id not in valid_models:
+        return StopLLMResponse(
+            status="error",
+            message=f"Invalid model_id '{request.model_id}'. Valid models: {', '.join(valid_models)}",
+            model_id=request.model_id
+        )
+
+    # Get model info to find port
+    model_info = next((m for m in LLM_MODELS if m["id"] == request.model_id), None)
+    if not model_info:
+        return StopLLMResponse(
+            status="error",
+            message=f"Model '{request.model_id}' not found",
+            model_id=request.model_id
+        )
+
+    port = model_info["port"]
+
+    try:
+        # Find process using the port (same method as restart-llm-interactive.sh)
+        result = subprocess.run(
+            ["lsof", "-ti", f":{port}"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+
+        if result.returncode == 0 and result.stdout.strip():
+            pid = int(result.stdout.strip())
+
+            # Kill the process
+            subprocess.run(
+                ["kill", str(pid)],
+                timeout=5
+            )
+
+            # Wait a moment for process to stop
+            import time
+            time.sleep(1)
+
+            # Verify it stopped
+            if not check_llm_running(port):
+                logger.info(f"Stopped LLM {request.model_id} (PID: {pid})")
+                return StopLLMResponse(
+                    status="success",
+                    message=f"{model_info['name']} stopped successfully (PID: {pid})",
+                    model_id=request.model_id
+                )
+            else:
+                return StopLLMResponse(
+                    status="error",
+                    message=f"Failed to stop {model_info['name']}. Process may still be running.",
+                    model_id=request.model_id
+                )
+        else:
+            # No process found on port
+            return StopLLMResponse(
+                status="success",
+                message=f"{model_info['name']} is not running (no process found on port {port})",
+                model_id=request.model_id
+            )
+
+    except subprocess.TimeoutExpired:
+        return StopLLMResponse(
+            status="error",
+            message=f"Timeout while trying to stop {request.model_id}",
+            model_id=request.model_id
+        )
+    except Exception as e:
+        logger.error(f"Error stopping LLM {request.model_id}: {e}")
+        return StopLLMResponse(
+            status="error",
+            message=f"Error stopping {request.model_id}: {str(e)}",
+            model_id=request.model_id
         )
 
 
