@@ -655,13 +655,12 @@ function renderRepositories() {
             const formattedSize = formatBytes(repo.total_size_bytes);
 
             // Total files on disk badge
-            fileCountBadge = `<span class="repository-badge file-count" title="Total files found on disk">📁 ${repo.file_count.toLocaleString()} files (${formattedSize})</span>`;
+            fileCountBadge = `<span class="repository-badge file-count" title="Total files found on disk">${repo.file_count.toLocaleString()} files (${formattedSize})</span>`;
 
             // Indexed files badge (always show to indicate indexing status)
             const indexedPercent = repo.file_count > 0 ? ((totalIndexedFiles / repo.file_count) * 100).toFixed(0) : 0;
             const indexedBadgeColor = totalIndexedFiles > 0 ? 'var(--accent-color)' : '#64748b';
-            const indexedBadgeIcon = totalIndexedFiles > 0 ? '✓' : '○';
-            fileCountBadge += ` <span class="repository-badge file-count" style="background-color: ${indexedBadgeColor}; color: white;" title="Files currently in search index">${indexedBadgeIcon} ${totalIndexedFiles.toLocaleString()} indexed (${indexedPercent}%)</span>`;
+            fileCountBadge += ` <span class="repository-badge file-count" style="background-color: ${indexedBadgeColor}; color: white;" title="Files currently in search index">${totalIndexedFiles.toLocaleString()} indexed (${indexedPercent}%)</span>`;
         }
 
         // Format indexing time stats
