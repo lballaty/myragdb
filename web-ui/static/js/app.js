@@ -674,7 +674,7 @@ function renderRepositories() {
                     ? stat.last_reindex_time_seconds
                     : stat.initial_index_time_seconds;
 
-                if (timeSeconds === null) {
+                if (timeSeconds === null || timeSeconds === 0) {
                     return ''; // No timing data yet
                 }
 
@@ -699,7 +699,7 @@ function renderRepositories() {
                 return `<span class="repository-badge indexing-stat" title="${stat.index_type} indexing: ${stat.total_files_indexed} files in ${timeDisplay} (${filesPerSec.toFixed(1)} files/sec)">${badge}${indexType}: ${timeDisplay}</span>`;
             }).filter(s => s !== '').join(' ');
 
-            if (statsItems) {
+            if (statsItems && statsItems.trim() !== '') {
                 indexingStatsBadges = statsItems;
             }
         }
@@ -730,9 +730,11 @@ function renderRepositories() {
                         <span class="repository-badge ${priorityClass}">
                             ${repo.priority.toUpperCase()}
                         </span>
-                        ${fileCountBadge}
-                        ${indexingStatsBadges}
                     </div>
+                    <div>
+                        ${fileCountBadge}
+                    </div>
+                    ${indexingStatsBadges ? `<div>${indexingStatsBadges}</div>` : ''}
                 </label>
             </div>
         `;
