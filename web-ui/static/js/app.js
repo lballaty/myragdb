@@ -1738,10 +1738,81 @@ document.addEventListener('DOMContentLoaded', () => {
             loadLLMModels();
         });
     }
+
+    // Make LLM status badge clickable to navigate to LLM Manager tab
+    const llmStatusBadge = document.getElementById('llm-status-badge');
+    if (llmStatusBadge) {
+        llmStatusBadge.addEventListener('click', () => {
+            // Switch to LLM Manager tab
+            const llmTab = document.querySelector('[data-tab="llm-manager"]');
+            if (llmTab) {
+                llmTab.click();
+            }
+        });
+    }
 });
 
-// Auto-refresh health status and indexing progress every 2 seconds
+// Update LLM Status Badge
+async function updateLLMStatusBadge() {
+    const badge = document.getElementById('llm-status-badge');
+    if (!badge) return;
+
+    const icon = badge.querySelector('.llm-badge-icon');
+    const text = badge.querySelector('.llm-badge-text');
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/llm/models`);
+        if (!response.ok) {
+            // API not available or error
+            badge.classList.remove('llm-running');
+            badge.classList.add('llm-none');
+            icon.textContent = '🤖';
+            text.textContent = 'No LLM Running';
+            return;
+        }
+
+        const models = await response.json();
+        const runningModels = models.filter(m => m.status === 'running');
+
+        if (runningModels.length === 0) {
+            // No models running
+            badge.classList.remove('llm-running');
+            badge.classList.add('llm-none');
+            icon.textContent = '🤖';
+            text.textContent = 'No LLM Running';
+        } else if (runningModels.length === 1) {
+            // One model running
+            badge.classList.remove('llm-none');
+            badge.classList.add('llm-running');
+            icon.textContent = '✨';
+            text.textContent = `${runningModels[0].name} Running`;
+            badge.title = `Port: ${runningModels[0].port}`;
+        } else {
+            // Multiple models running
+            badge.classList.remove('llm-none');
+            badge.classList.add('llm-running');
+            icon.textContent = '✨';
+            text.textContent = `${runningModels.length} LLMs Running`;
+            const modelNames = runningModels.map(m => `${m.name} (${m.port})`).join(', ');
+            badge.title = `Running: ${modelNames}`;
+        }
+    } catch (error) {
+        // Error fetching LLM status - show as none running
+        badge.classList.remove('llm-running');
+        badge.classList.add('llm-none');
+        icon.textContent = '🤖';
+        text.textContent = 'No LLM Running';
+    }
+}
+
+// Auto-refresh health status, indexing progress, and LLM status every 2 seconds
 setInterval(() => {
     checkHealthStatus();
     updateIndexingProgress();
+    updateLLMStatusBadge();
 }, 2000);
+
+// Initial LLM status check on page load
+document.addEventListener('DOMContentLoaded', () => {
+    updateLLMStatusBadge();
+});

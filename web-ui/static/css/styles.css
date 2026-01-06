@@ -160,6 +160,48 @@ body {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+/* LLM Status Badge */
+.llm-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.9rem;
+    border-radius: 14px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.llm-badge-icon {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.llm-badge-text {
+    line-height: 1;
+}
+
+/* No LLM Running - Gray */
+.llm-status-badge.llm-none {
+    background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+    color: white;
+    border: 2px solid #d1d5db;
+}
+
+/* LLM Running - Purple/Blue */
+.llm-status-badge.llm-running {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+    border: 2px solid #c4b5fd;
+}
+
+.llm-status-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+}
+
 .restart-button {
     background: rgba(255, 255, 255, 0.2);
     color: white;
