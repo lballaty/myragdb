@@ -77,23 +77,47 @@ body {
     animation: pulse 2s infinite;
 }
 
+.status-indicator.healthy {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: 2px solid #6ee7b7;
+}
+
 .status-indicator.healthy .status-dot {
-    background: var(--success-color);
+    background: white;
     animation: none;
 }
 
+.status-indicator.degraded {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    border: 2px solid #fbbf24;
+}
+
 .status-indicator.degraded .status-dot {
-    background: var(--warning-color);
+    background: white;
     animation: pulse 2s infinite;
 }
 
+.status-indicator.unhealthy {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    border: 2px solid #fca5a5;
+}
+
 .status-indicator.unhealthy .status-dot {
-    background: var(--error-color);
+    background: white;
     animation: pulse 1s infinite;
 }
 
+.status-indicator.offline {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    color: white;
+    border: 2px solid #9ca3af;
+}
+
 .status-indicator.offline .status-dot {
-    background: #666;
+    background: white;
     animation: none;
 }
 
@@ -189,11 +213,11 @@ body {
     border: 2px solid #d1d5db;
 }
 
-/* LLM Running - Purple/Blue */
+/* LLM Running - Green */
 .llm-status-badge.llm-running {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: white;
-    border: 2px solid #c4b5fd;
+    border: 2px solid #6ee7b7;
 }
 
 .llm-status-badge:hover {
