@@ -1578,10 +1578,10 @@ async function loadLLMModels() {
     // Show loading state immediately - UI renders instantly
     const loadingModels = [
         {"id": "qwen-coder-7b", "name": "Qwen Coder 7B", "port": 8085, "status": "checking", "category": "best"},
-        {"id": "qwen2.5-32b", "name": "Qwen 2.5 32B", "port": 8084, "status": "checking", "category": "best"},
+        {"id": "qwen2.5-32b", "name": "Qwen 2.5 32B Instruct", "port": 8084, "status": "checking", "category": "best"},
         {"id": "deepseek-r1-qwen-32b", "name": "DeepSeek R1 Qwen 32B", "port": 8092, "status": "checking", "category": "best"},
         {"id": "llama-3.1-8b", "name": "Llama 3.1 8B", "port": 8087, "status": "checking", "category": "best"},
-        {"id": "llama-4-scout-17b", "name": "Llama 4 Scout 17B", "port": 8088, "status": "checking", "category": "best"},
+        {"id": "llama-4-scout-17b", "name": "Llama 4 Scout 17B (Not Downloaded)", "port": 8088, "status": "checking", "category": "best"},
         {"id": "hermes-3-llama-8b", "name": "Hermes 3 Llama 8B", "port": 8086, "status": "checking", "category": "best"},
         {"id": "mistral-7b", "name": "Mistral 7B", "port": 8083, "status": "checking", "category": "limited"},
         {"id": "mistral-small-24b", "name": "Mistral Small 24B", "port": 8089, "status": "checking", "category": "limited"},

@@ -666,7 +666,7 @@
                                 type: 'function',
                                 function: {
                                     name: 'search_codebase',
-                                    description: 'Search across all indexed codebases using hybrid keyword + semantic search. Finds relevant code, documentation, and files based on natural language queries.',
+                                    description: 'Search across all indexed codebases using hybrid keyword + semantic search. Finds relevant code, documentation, and files based on natural language queries.\n\nIMPORTANT: When the user asks about directories/folders (e.g., "find all X directories", "where are Y folders"), the response includes a "directories" array with grouped directory listings. Each directory entry shows: relative_directory (path), file_count (number of files), and repository. Present these directory paths prominently in your response, NOT the individual file results.',
                                     parameters: {
                                         type: 'object',
                                         properties: {

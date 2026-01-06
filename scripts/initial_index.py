@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from myragdb.config import load_repositories_config
 from myragdb.indexers.file_scanner import FileScanner
-from myragdb.indexers.keyword_indexer import KeywordIndexer
+from myragdb.indexers.meilisearch_indexer import MeilisearchIndexer
 from myragdb.indexers.vector_indexer import VectorIndexer
 
 
@@ -60,7 +60,7 @@ def main():
     # Initialize indexers
     print("Initializing indexers...")
     try:
-        keyword_indexer = KeywordIndexer()
+        keyword_indexer = MeilisearchIndexer()
         vector_indexer = VectorIndexer()
         print("✓ Keyword indexer ready")
         print("✓ Vector indexer ready (model loaded)")
@@ -95,14 +95,14 @@ def main():
             # Index with Keyword search
             print(f"  Indexing with Keyword search...")
             keyword_start = time.time()
-            keyword_count = keyword_indexer.index_files(files, batch_size=100)
+            keyword_count = keyword_indexer.index_files_batch(files, batch_size=100)
             keyword_time = time.time() - keyword_start
             print(f"  ✓ Keyword indexed {keyword_count} files in {keyword_time:.1f}s")
 
             # Index with vectors
             print(f"  Generating embeddings and indexing...")
             vector_start = time.time()
-            vector_count = vector_indexer.index_files(files)
+            vector_count = vector_indexer.index_files(files, incremental=False)
             vector_time = time.time() - vector_start
             print(f"  ✓ Vector indexed {vector_count} files in {vector_time:.1f}s")
 
