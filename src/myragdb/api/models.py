@@ -811,3 +811,42 @@ class ToggleAutoReindexResponse(BaseModel):
     auto_reindex_enabled: bool
     watcher_status: str  # "active", "stopped", or "not_found"
     message: str
+
+
+# README Viewer Models
+
+class ReadmeRequest(BaseModel):
+    """
+    Request model for fetching repository README.
+
+    Business Purpose: Allows UI to fetch and display README content
+    for repositories to help users understand what each repository contains.
+
+    Example:
+        request = ReadmeRequest(repository="myragdb")
+    """
+    repository: str = Field(..., description="Repository name")
+
+
+class ReadmeResponse(BaseModel):
+    """
+    Response model for README content.
+
+    Business Purpose: Returns README file content with metadata for
+    display in modal viewer.
+
+    Example:
+        {
+            "repository": "myragdb",
+            "readme_found": true,
+            "readme_path": "/path/to/myragdb/README.md",
+            "content": "# MyRAGDB\\n\\nHybrid search system...",
+            "file_name": "README.md"
+        }
+    """
+    repository: str
+    readme_found: bool
+    readme_path: Optional[str] = None
+    content: Optional[str] = None
+    file_name: Optional[str] = None
+    error: Optional[str] = None

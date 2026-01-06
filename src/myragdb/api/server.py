@@ -54,7 +54,9 @@ from myragdb.api.models import (
     WatcherStatusItem,
     WatcherStatusResponse,
     ToggleAutoReindexRequest,
-    ToggleAutoReindexResponse
+    ToggleAutoReindexResponse,
+    ReadmeRequest,
+    ReadmeResponse
 )
 from myragdb.search.hybrid_search import HybridSearchEngine, HybridSearchResult
 from myragdb.indexers.meilisearch_indexer import MeilisearchIndexer
@@ -2368,6 +2370,132 @@ async def toggle_auto_reindex(repository: str, request: ToggleAutoReindexRequest
         raise HTTPException(
             status_code=500,
             detail=f"Failed to toggle auto-reindex: {str(e)}"
+        )
+
+
+# ============================================================================
+# README Viewer Endpoints
+# ============================================================================
+
+@app.get("/repositories/{repository}/readme", response_model=ReadmeResponse)
+async def get_repository_readme(repository: str):
+    """
+    Fetch README content for a repository.
+
+    Business Purpose: Allows users to view repository README files
+    directly in the UI to understand what each repository contains
+    without leaving the application.
+
+    Args:
+        repository: Repository name
+
+    Returns:
+        ReadmeResponse with README content if found
+
+    Example:
+        GET /repositories/myragdb/readme
+
+        Response:
+        {
+            "repository": "myragdb",
+            "readme_found": true,
+            "readme_path": "/path/to/myragdb/README.md",
+            "content": "# MyRAGDB\\n\\n...",
+            "file_name": "README.md"
+        }
+    """
+    try:
+        # Load repository config
+        repo_config = load_repositories_config()
+        repo = repo_config.get_repository_by_name(repository)
+
+        if not repo:
+            return ReadmeResponse(
+                repository=repository,
+                readme_found=False,
+                error=f"Repository not found: {repository}"
+            )
+
+        # Look for README files (case-insensitive)
+        repo_path = Path(repo.path)
+        readme_patterns = [
+            "README.md",
+            "readme.md",
+            "Readme.md",
+            "README.MD",
+            "README.txt",
+            "readme.txt",
+            "README.rst",
+            "readme.rst",
+            "README",
+            "readme"
+        ]
+
+        readme_file = None
+        for pattern in readme_patterns:
+            candidate = repo_path / pattern
+            if candidate.exists() and candidate.is_file():
+                readme_file = candidate
+                break
+
+        if not readme_file:
+            return ReadmeResponse(
+                repository=repository,
+                readme_found=False,
+                error="No README file found in repository"
+            )
+
+        # Read README content
+        try:
+            with open(readme_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # Limit content size to prevent large responses
+            max_size = 100000  # 100KB
+            if len(content) > max_size:
+                content = content[:max_size] + "\n\n... (content truncated)"
+
+            return ReadmeResponse(
+                repository=repository,
+                readme_found=True,
+                readme_path=str(readme_file),
+                content=content,
+                file_name=readme_file.name
+            )
+
+        except UnicodeDecodeError:
+            # Try with different encoding
+            try:
+                with open(readme_file, 'r', encoding='latin-1') as f:
+                    content = f.read()
+
+                return ReadmeResponse(
+                    repository=repository,
+                    readme_found=True,
+                    readme_path=str(readme_file),
+                    content=content,
+                    file_name=readme_file.name
+                )
+            except Exception as e:
+                return ReadmeResponse(
+                    repository=repository,
+                    readme_found=False,
+                    error=f"Failed to read README file: {str(e)}"
+                )
+
+        except Exception as e:
+            return ReadmeResponse(
+                repository=repository,
+                readme_found=False,
+                error=f"Error reading README: {str(e)}"
+            )
+
+    except Exception as e:
+        logger.error("Failed to fetch README", repository=repository, error=str(e), exc_info=True)
+        return ReadmeResponse(
+            repository=repository,
+            readme_found=False,
+            error=f"Internal error: {str(e)}"
         )
 
 
