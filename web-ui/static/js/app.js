@@ -680,9 +680,12 @@ function renderRepositories() {
                 // Calculate rate: files per second
                 const filesPerSec = stat.total_files_indexed / timeSeconds;
 
-                // Format time (e.g., "45.2s" or "2m 15s")
+                // Format time with appropriate precision
                 let timeDisplay;
-                if (timeSeconds < 60) {
+                if (timeSeconds < 0.1) {
+                    // For very fast operations, show milliseconds
+                    timeDisplay = `${(timeSeconds * 1000).toFixed(0)}ms`;
+                } else if (timeSeconds < 60) {
                     timeDisplay = `${timeSeconds.toFixed(1)}s`;
                 } else {
                     const mins = Math.floor(timeSeconds / 60);
