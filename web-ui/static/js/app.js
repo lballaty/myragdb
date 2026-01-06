@@ -642,9 +642,11 @@ function renderRepositories() {
         const excludedClass = isExcluded ? 'excluded-repo' : '';
 
         // Calculate total indexed files from indexing_stats
+        // Note: Don't sum across index types (would double-count files indexed in both)
+        // Instead, take the max since files are indexed in both keyword and vector
         let totalIndexedFiles = 0;
         if (repo.indexing_stats && repo.indexing_stats.length > 0) {
-            totalIndexedFiles = repo.indexing_stats.reduce((sum, stat) => sum + (stat.total_files_indexed || 0), 0);
+            totalIndexedFiles = Math.max(...repo.indexing_stats.map(stat => stat.total_files_indexed || 0));
         }
 
         // Format file count badges - show both on-disk and indexed
