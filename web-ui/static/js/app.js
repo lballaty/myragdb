@@ -214,9 +214,8 @@ async function performSearch() {
     const searchType = document.getElementById('search-type').value;
     const limit = parseInt(document.getElementById('result-limit').value);
     const repositorySelect = document.getElementById('repository-filter');
-    const selectedRepos = Array.from(repositorySelect.selectedOptions)
-        .map(opt => opt.value)
-        .filter(val => val !== ''); // Exclude "All Repositories" empty value
+    const selectedRepo = repositorySelect.value;
+    const selectedRepos = selectedRepo ? [selectedRepo] : []; // Convert single selection to array for API
     const folderFilter = document.getElementById('folder-filter').value.trim();
     const extensionFilter = document.getElementById('extension-filter').value.trim();
     const resultsDiv = document.getElementById('search-results');
