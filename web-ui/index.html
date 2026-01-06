@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.06.2.40.0">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.06.2.41.0">
 </head>
 <body>
     <div class="container">
@@ -63,6 +63,7 @@
             <button class="tab-button active" data-tab="search">Search</button>
             <button class="tab-button" data-tab="activity">Activity Monitor</button>
             <button class="tab-button" data-tab="repositories">Repositories</button>
+            <button class="tab-button" data-tab="observability">Observability</button>
             <button class="tab-button" data-tab="llm-manager">LLM Manager</button>
         </div>
 
@@ -339,6 +340,141 @@
             </div>
         </div>
 
+        <!-- Observability Tab -->
+        <div id="observability-tab" class="tab-content">
+            <div class="observability-section">
+                <h3>📊 Observability</h3>
+                <p class="subtitle">System metrics, performance tracking, and error monitoring</p>
+
+                <!-- Time Range Selector -->
+                <div class="observability-controls">
+                    <label>
+                        <span>Time Range:</span>
+                        <select id="obs-time-range">
+                            <option value="1">Last Hour</option>
+                            <option value="24" selected>Last 24 Hours</option>
+                            <option value="168">Last 7 Days</option>
+                            <option value="720">Last 30 Days</option>
+                            <option value="custom">Custom Range</option>
+                        </select>
+                    </label>
+                    <div id="obs-custom-range" style="display: none;">
+                        <input type="datetime-local" id="obs-start-time" />
+                        <span>to</span>
+                        <input type="datetime-local" id="obs-end-time" />
+                    </div>
+                    <button id="obs-refresh-button" class="primary-button">🔄 Refresh</button>
+                    <button id="obs-cleanup-button" class="secondary-button">🗑️ Cleanup Old Data</button>
+                </div>
+
+                <!-- Summary Stats Cards -->
+                <div class="obs-stats-grid">
+                    <div class="obs-stat-card">
+                        <div class="obs-stat-label">Total Searches</div>
+                        <div class="obs-stat-value" id="obs-total-searches">-</div>
+                        <div class="obs-stat-sublabel">Avg: <span id="obs-avg-response-time">-</span>ms</div>
+                    </div>
+                    <div class="obs-stat-card">
+                        <div class="obs-stat-label">Total Errors</div>
+                        <div class="obs-stat-value" id="obs-total-errors">-</div>
+                        <div class="obs-stat-sublabel">
+                            <span class="obs-error-critical" id="obs-critical-errors">0</span> critical,
+                            <span class="obs-error-error" id="obs-error-errors">0</span> errors
+                        </div>
+                    </div>
+                    <div class="obs-stat-card">
+                        <div class="obs-stat-label">Database Size</div>
+                        <div class="obs-stat-value" id="obs-db-size">-</div>
+                        <div class="obs-stat-sublabel"><span id="obs-total-rows">-</span> total records</div>
+                    </div>
+                    <div class="obs-stat-card">
+                        <div class="obs-stat-label">Fastest Search</div>
+                        <div class="obs-stat-value" id="obs-min-response-time">-</div>
+                        <div class="obs-stat-sublabel">Slowest: <span id="obs-max-response-time">-</span>ms</div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="obs-charts-section">
+                    <!-- Search Performance Chart -->
+                    <div class="obs-chart-container">
+                        <h4>Search Performance Over Time</h4>
+                        <canvas id="obs-search-performance-chart"></canvas>
+                    </div>
+
+                    <!-- Search Volume by Type -->
+                    <div class="obs-chart-container">
+                        <h4>Search Volume by Type</h4>
+                        <canvas id="obs-search-type-chart"></canvas>
+                    </div>
+
+                    <!-- Error Rate Chart -->
+                    <div class="obs-chart-container">
+                        <h4>Error Rate Over Time</h4>
+                        <canvas id="obs-error-rate-chart"></canvas>
+                    </div>
+
+                    <!-- Errors by Component -->
+                    <div class="obs-chart-container">
+                        <h4>Errors by Component</h4>
+                        <canvas id="obs-error-component-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent Errors Table -->
+                <div class="obs-errors-section">
+                    <h4>Recent Errors</h4>
+                    <div class="obs-errors-table-container">
+                        <table class="obs-errors-table" id="obs-errors-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Severity</th>
+                                    <th>Component</th>
+                                    <th>Type</th>
+                                    <th>Message</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="obs-errors-tbody">
+                                <tr>
+                                    <td colspan="6" style="text-align: center; padding: 20px;">
+                                        Loading errors...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Indexing Events Table -->
+                <div class="obs-indexing-section">
+                    <h4>Recent Indexing Events</h4>
+                    <div class="obs-indexing-table-container">
+                        <table class="obs-indexing-table" id="obs-indexing-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Repository</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Files</th>
+                                    <th>Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody id="obs-indexing-tbody">
+                                <tr>
+                                    <td colspan="6" style="text-align: center; padding: 20px;">
+                                        Loading indexing events...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- LLM Manager Tab -->
         <div id="llm-manager-tab" class="tab-content">
             <div class="llm-manager-section">
@@ -364,6 +500,7 @@
         </div>
     </div>
 
-    <script src="static/js/app.js?v=2026.01.06.2.40.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="static/js/app.js?v=2026.01.06.2.41.0"></script>
 </body>
 </html>

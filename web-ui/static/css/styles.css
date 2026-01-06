@@ -1589,3 +1589,226 @@ body {
     border: 1px solid #60a5fa;
     color: #1e40af;
 }
+
+/* ====================
+   Observability Styles
+   ==================== */
+
+.observability-section {
+    padding: 20px;
+}
+
+.observability-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.observability-controls label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.observability-controls select,
+.observability-controls input[type="datetime-local"] {
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-color);
+    font-size: 0.95em;
+}
+
+#obs-custom-range {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Stats Grid */
+.obs-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.obs-stat-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+}
+
+.obs-stat-label {
+    font-size: 0.9em;
+    opacity: 0.7;
+    margin-bottom: 8px;
+}
+
+.obs-stat-value {
+    font-size: 2em;
+    font-weight: 700;
+    color: var(--accent-color);
+    margin-bottom: 4px;
+}
+
+.obs-stat-sublabel {
+    font-size: 0.85em;
+    opacity: 0.6;
+}
+
+.obs-error-critical {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.obs-error-error {
+    color: #f59e0b;
+    font-weight: 600;
+}
+
+/* Charts Section */
+.obs-charts-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.obs-chart-container {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.obs-chart-container h4 {
+    margin: 0 0 16px 0;
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+.obs-chart-container canvas {
+    max-height: 300px;
+}
+
+/* Errors Section */
+.obs-errors-section,
+.obs-indexing-section {
+    margin-bottom: 32px;
+}
+
+.obs-errors-section h4,
+.obs-indexing-section h4 {
+    margin: 0 0 16px 0;
+    font-size: 1.2em;
+}
+
+.obs-errors-table-container,
+.obs-indexing-table-container {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    overflow-x: auto;
+}
+
+.obs-errors-table,
+.obs-indexing-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.obs-errors-table th,
+.obs-indexing-table th {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.obs-errors-table td,
+.obs-indexing-table td {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.obs-errors-table tbody tr:hover,
+.obs-indexing-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Error Severity Badges */
+.obs-severity-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.obs-severity-badge.critical {
+    background: #ef4444;
+    color: white;
+}
+
+.obs-severity-badge.error {
+    background: #f59e0b;
+    color: white;
+}
+
+.obs-severity-badge.warning {
+    background: #eab308;
+    color: #422006;
+}
+
+/* Status Badges */
+.obs-status-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.obs-status-badge.success {
+    background: #10b981;
+    color: white;
+}
+
+.obs-status-badge.failed {
+    background: #ef4444;
+    color: white;
+}
+
+.obs-status-badge.in_progress {
+    background: #3b82f6;
+    color: white;
+}
+
+/* Action Buttons */
+.obs-error-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.obs-action-button {
+    padding: 4px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: all 0.2s;
+}
+
+.obs-action-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-color);
+}
