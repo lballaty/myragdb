@@ -29,6 +29,8 @@
 
 ## Development Workflow
 
+**NEVER manually edit src/myragdb/version.py - the pre-commit hook handles versioning automatically**
+
 ### Commit Strategy
 1. **Commit frequently** - After every logical unit of work (30-60 min max)
 2. **Update TODO.md** - Mark tasks complete as you go
