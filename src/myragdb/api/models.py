@@ -448,3 +448,69 @@ class AddRepositoriesResponse(BaseModel):
                 "message": "Added 8 repositories to configuration"
             }
         }
+
+
+class LLMInfo(BaseModel):
+    """
+    LLM model information.
+
+    Business Purpose: Provides details about available local LLMs.
+    """
+    id: str = Field(..., description="Model ID")
+    name: str = Field(..., description="Display name")
+    port: int = Field(..., description="Port number")
+    status: str = Field(..., description="Status: running or stopped")
+    category: str = Field(..., description="Category: best or limited")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": "qwen-coder-7b",
+                "name": "Qwen Coder 7B",
+                "port": 8085,
+                "status": "running",
+                "category": "best"
+            }
+        }
+
+
+class StartLLMRequest(BaseModel):
+    """
+    Request to start an LLM.
+
+    Business Purpose: Starts a local LLM with specified mode.
+    """
+    model_id: str = Field(..., description="Model ID to start")
+    mode: str = Field(..., description="Mode: basic, tools, performance, extended")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "model_id": "qwen-coder-7b",
+                "mode": "tools"
+            }
+        }
+
+
+class StartLLMResponse(BaseModel):
+    """
+    Response from starting an LLM.
+
+    Business Purpose: Confirms LLM start status.
+    """
+    status: str = Field(..., description="Status: success or error")
+    message: str = Field(..., description="Status message")
+    model_id: str = Field(..., description="Model ID that was started")
+    pid: Optional[int] = Field(None, description="Process ID if started successfully")
+    log_file: Optional[str] = Field(None, description="Path to log file")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "success",
+                "message": "Qwen Coder 7B started successfully in tools mode",
+                "model_id": "qwen-coder-7b",
+                "pid": 12345,
+                "log_file": "/Users/liborballaty/llms/logs/qwen-coder-7b-tools.log"
+            }
+        }

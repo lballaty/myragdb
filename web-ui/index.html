@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.05.2.18.0">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.05.3.0.0">
 </head>
 <body>
     <div class="container">
@@ -53,6 +53,7 @@
             <button class="tab-button active" data-tab="search">Search</button>
             <button class="tab-button" data-tab="activity">Activity Monitor</button>
             <button class="tab-button" data-tab="repositories">Repositories</button>
+            <button class="tab-button" data-tab="llm-manager">LLM Manager</button>
         </div>
 
         <!-- Search Tab -->
@@ -327,6 +328,18 @@
                 </div>
             </div>
         </div>
+
+        <!-- LLM Manager Tab -->
+        <div id="llm-manager-tab" class="tab-content">
+            <div class="llm-manager-section">
+                <h3>🤖 LLM Manager</h3>
+                <p class="subtitle">Start and manage your local LLMs with different modes</p>
+
+                <div id="llm-models-grid" class="llm-models-grid">
+                    <!-- Models will be loaded here -->
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Confirmation Modal -->
@@ -341,6 +354,6 @@
         </div>
     </div>
 
-    <script src="static/js/app.js?v=2026.01.05.2.18.0"></script>
+    <script src="static/js/app.js?v=2026.01.05.3.0.0"></script>
 </body>
 </html>

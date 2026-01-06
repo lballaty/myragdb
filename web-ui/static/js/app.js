@@ -1520,6 +1520,227 @@ async function toggleRepositoryExcluded(repoName, excludedValue) {
     }
 }
 
+// ============================================================================
+// LLM Manager
+// ============================================================================
+
+const MODE_DESCRIPTIONS = {
+    basic: 'Standard chat mode (no function calling)',
+    tools: 'Function calling enabled with --jinja',
+    performance: 'Function calling + parallel processing',
+    extended: 'Function calling + extended context (32k)'
+};
+
+async function loadLLMModels() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/llm/models`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch LLM models');
+        }
+
+        const models = await response.json();
+        renderLLMModels(models);
+        addActivityLog('info', `Loaded ${models.length} LLM models`);
+    } catch (error) {
+        console.error('Error loading LLM models:', error);
+        addActivityLog('error', `Failed to load LLM models: ${error.message}`);
+
+        const container = document.getElementById('llm-models-grid');
+        if (container) {
+            container.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: rgba(255,255,255,0.6);">
+                    <p>Failed to load LLM models</p>
+                    <p style="font-size: 14px; margin-top: 8px;">${error.message}</p>
+                </div>
+            `;
+        }
+    }
+}
+
+function renderLLMModels(models) {
+    const container = document.getElementById('llm-models-grid');
+    if (!container) return;
+
+    if (models.length === 0) {
+        container.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: rgba(255,255,255,0.6);">
+                <p>No LLM models configured</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = models.map(model => createLLMModelCard(model)).join('');
+
+    // Attach event listeners to all start buttons
+    models.forEach(model => {
+        const button = document.getElementById(`llm-start-${model.id}`);
+        const modeSelect = document.getElementById(`llm-mode-${model.id}`);
+
+        if (button && modeSelect) {
+            button.addEventListener('click', () => startLLM(model.id));
+            modeSelect.addEventListener('change', (e) => updateModeDescription(model.id, e.target.value));
+        }
+    });
+}
+
+function createLLMModelCard(model) {
+    const isRunning = model.status === 'running';
+    const statusClass = isRunning ? 'running' : 'stopped';
+    const buttonText = isRunning ? '✅ Running' : '🚀 Start LLM';
+
+    return `
+        <div class="llm-model-card ${statusClass}" id="llm-card-${model.id}">
+            <div class="llm-model-header">
+                <div class="llm-model-name">${model.name}</div>
+                <div class="llm-model-category ${model.category}">${model.category}</div>
+            </div>
+
+            <div class="llm-model-info">
+                <div class="llm-model-info-row">
+                    <span class="llm-model-info-label">Port:</span>
+                    <span class="llm-model-info-value">${model.port}</span>
+                </div>
+                <div class="llm-model-info-row">
+                    <span class="llm-model-info-label">Status:</span>
+                    <span class="llm-model-status ${statusClass}">
+                        <span class="llm-model-status-dot"></span>
+                        ${isRunning ? 'Running' : 'Stopped'}
+                    </span>
+                </div>
+            </div>
+
+            <div class="llm-mode-selector">
+                <label for="llm-mode-${model.id}">Mode:</label>
+                <select id="llm-mode-${model.id}">
+                    <option value="basic">Basic</option>
+                    <option value="tools" selected>Tools (Function Calling)</option>
+                    <option value="performance">Performance</option>
+                    <option value="extended">Extended Context</option>
+                </select>
+                <div class="llm-mode-info" id="llm-mode-info-${model.id}">
+                    ${MODE_DESCRIPTIONS.tools}
+                </div>
+            </div>
+
+            <div class="llm-model-actions">
+                <button id="llm-start-${model.id}" class="llm-start-button ${statusClass}">
+                    ${buttonText}
+                </button>
+            </div>
+
+            <div id="llm-message-${model.id}" style="display: none;"></div>
+        </div>
+    `;
+}
+
+function updateModeDescription(modelId, mode) {
+    const infoElement = document.getElementById(`llm-mode-info-${modelId}`);
+    if (infoElement && MODE_DESCRIPTIONS[mode]) {
+        infoElement.textContent = MODE_DESCRIPTIONS[mode];
+    }
+}
+
+async function startLLM(modelId) {
+    const button = document.getElementById(`llm-start-${modelId}`);
+    const modeSelect = document.getElementById(`llm-mode-${modelId}`);
+    const messageElement = document.getElementById(`llm-message-${modelId}`);
+    const card = document.getElementById(`llm-card-${modelId}`);
+
+    if (!button || !modeSelect || !messageElement || !card) return;
+
+    const mode = modeSelect.value;
+
+    // Disable button and show loading state
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner" style="width: 14px; height: 14px; border-width: 2px; margin-right: 8px;"></span>Starting...';
+
+    // Clear previous message
+    messageElement.style.display = 'none';
+    messageElement.className = '';
+
+    addActivityLog('info', `Starting ${modelId} in ${mode} mode...`);
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/llm/start`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model_id: modelId,
+                mode: mode
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            // Show success message
+            messageElement.className = 'llm-model-message success';
+            messageElement.textContent = result.message;
+            messageElement.style.display = 'block';
+
+            // Update card appearance
+            card.classList.add('running');
+            card.classList.remove('stopped');
+
+            // Update button
+            button.className = 'llm-start-button running';
+            button.innerHTML = '✅ Running';
+            button.disabled = false;
+
+            // Update status in card
+            const statusElement = card.querySelector('.llm-model-status');
+            if (statusElement) {
+                statusElement.className = 'llm-model-status running';
+                statusElement.innerHTML = '<span class="llm-model-status-dot"></span>Running';
+            }
+
+            addActivityLog('success', `${modelId} started successfully in ${mode} mode`);
+
+            // Auto-hide success message after 5 seconds
+            setTimeout(() => {
+                messageElement.style.display = 'none';
+            }, 5000);
+
+        } else {
+            // Show error message
+            messageElement.className = 'llm-model-message error';
+            messageElement.textContent = result.message;
+            messageElement.style.display = 'block';
+
+            // Re-enable button
+            button.disabled = false;
+            button.innerHTML = '🚀 Start LLM';
+
+            addActivityLog('error', `Failed to start ${modelId}: ${result.message}`);
+        }
+
+    } catch (error) {
+        console.error('Error starting LLM:', error);
+
+        messageElement.className = 'llm-model-message error';
+        messageElement.textContent = `Error: ${error.message}`;
+        messageElement.style.display = 'block';
+
+        button.disabled = false;
+        button.innerHTML = '🚀 Start LLM';
+
+        addActivityLog('error', `Error starting ${modelId}: ${error.message}`);
+    }
+}
+
+// Initialize LLM Manager when tab is shown
+document.addEventListener('DOMContentLoaded', () => {
+    const llmManagerTab = document.querySelector('[data-tab="llm-manager"]');
+    if (llmManagerTab) {
+        llmManagerTab.addEventListener('click', () => {
+            loadLLMModels();
+        });
+    }
+});
+
 // Auto-refresh health status and indexing progress every 2 seconds
 setInterval(() => {
     checkHealthStatus();

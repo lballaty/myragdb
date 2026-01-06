@@ -33,7 +33,10 @@ from myragdb.api.models import (
     DiscoverResponse,
     DiscoveredRepositoryItem,
     AddRepositoriesRequest,
-    AddRepositoriesResponse
+    AddRepositoriesResponse,
+    LLMInfo,
+    StartLLMRequest,
+    StartLLMResponse
 )
 from myragdb.search.hybrid_search import HybridSearchEngine, HybridSearchResult
 from myragdb.indexers.meilisearch_indexer import MeilisearchIndexer
@@ -1357,6 +1360,197 @@ async def stop_indexing(request: StopIndexingRequest):
         message=f"Stop request registered for {', '.join(stopped)}. Indexing will halt at next safe checkpoint.",
         stopped=stopped
     )
+
+
+# ============================================================================
+# LLM Management Endpoints
+# ============================================================================
+
+LLM_MODELS = [
+    {"id": "qwen-coder-7b", "name": "Qwen Coder 7B", "port": 8085, "category": "best"},
+    {"id": "qwen2.5-32b", "name": "Qwen 2.5 32B", "port": 8084, "category": "best"},
+    {"id": "deepseek-r1-qwen-32b", "name": "DeepSeek R1 Qwen 32B", "port": 8092, "category": "best"},
+    {"id": "llama-3.1-8b", "name": "Llama 3.1 8B", "port": 8087, "category": "best"},
+    {"id": "llama-4-scout-17b", "name": "Llama 4 Scout 17B", "port": 8088, "category": "best"},
+    {"id": "hermes-3-llama-8b", "name": "Hermes 3 Llama 8B", "port": 8086, "category": "best"},
+    {"id": "mistral-7b", "name": "Mistral 7B", "port": 8083, "category": "limited"},
+    {"id": "mistral-small-24b", "name": "Mistral Small 24B", "port": 8089, "category": "limited"},
+    {"id": "phi3", "name": "Phi-3", "port": 8081, "category": "limited"},
+    {"id": "smollm3", "name": "SmolLM3", "port": 8082, "category": "limited"},
+]
+
+
+def check_llm_running(port: int) -> bool:
+    """
+    Check if an LLM is running on a specific port.
+
+    Business Purpose: Determine LLM status for UI display.
+
+    Args:
+        port: Port number to check
+
+    Returns:
+        True if process is listening on the port, False otherwise
+
+    Example:
+        is_running = check_llm_running(8085)
+    """
+    try:
+        result = subprocess.run(
+            ["lsof", "-ti", f":{port}"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        return result.returncode == 0 and bool(result.stdout.strip())
+    except Exception as e:
+        logger.error(f"Error checking port {port}: {e}")
+        return False
+
+
+@app.get("/llm/models", response_model=List[LLMInfo])
+async def get_llm_models():
+    """
+    Get list of all available LLM models with their current status.
+
+    Business Purpose: Provides UI with model information for display
+    and management.
+
+    Returns:
+        List of LLM model information including running status
+
+    Example:
+        GET /llm/models
+
+        [
+            {
+                "id": "qwen-coder-7b",
+                "name": "Qwen Coder 7B",
+                "port": 8085,
+                "status": "running",
+                "category": "best"
+            },
+            ...
+        ]
+    """
+    models = []
+    for model in LLM_MODELS:
+        is_running = check_llm_running(model["port"])
+        models.append(
+            LLMInfo(
+                id=model["id"],
+                name=model["name"],
+                port=model["port"],
+                status="running" if is_running else "stopped",
+                category=model["category"]
+            )
+        )
+    return models
+
+
+@app.post("/llm/start", response_model=StartLLMResponse)
+async def start_llm(request: StartLLMRequest):
+    """
+    Start an LLM with specified mode.
+
+    Business Purpose: Allows users to start local LLMs from the web UI
+    without using terminal commands.
+
+    Args:
+        request: StartLLMRequest with model_id and mode
+
+    Returns:
+        StartLLMResponse with status, message, PID, and log file path
+
+    Example:
+        POST /llm/start
+        {
+            "model_id": "qwen-coder-7b",
+            "mode": "tools"
+        }
+    """
+    script_path = "/Users/liborballaty/llms/restart-llm-interactive.sh"
+
+    # Validate model_id
+    valid_models = [m["id"] for m in LLM_MODELS]
+    if request.model_id not in valid_models:
+        return StartLLMResponse(
+            status="error",
+            message=f"Invalid model_id '{request.model_id}'. Valid models: {', '.join(valid_models)}",
+            model_id=request.model_id,
+            pid=None,
+            log_file=None
+        )
+
+    # Validate mode
+    valid_modes = ["basic", "tools", "performance", "extended"]
+    if request.mode not in valid_modes:
+        return StartLLMResponse(
+            status="error",
+            message=f"Invalid mode '{request.mode}'. Valid modes: {', '.join(valid_modes)}",
+            model_id=request.model_id,
+            pid=None,
+            log_file=None
+        )
+
+    try:
+        # Execute the restart script
+        result = subprocess.run(
+            [script_path, request.model_id, request.mode],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+
+        # Extract PID from output
+        pid = None
+        for line in result.stdout.split('\n'):
+            if "Started with PID:" in line:
+                pid_str = line.split("Started with PID:")[1].strip()
+                try:
+                    pid = int(pid_str)
+                except ValueError:
+                    pass
+
+        # Construct log file path
+        log_file = f"/Users/liborballaty/llms/logs/{request.model_id}-{request.mode}.log"
+
+        # Check if process is actually running
+        model_info = next((m for m in LLM_MODELS if m["id"] == request.model_id), None)
+        if model_info and check_llm_running(model_info["port"]):
+            return StartLLMResponse(
+                status="success",
+                message=f"{model_info['name']} started successfully in {request.mode} mode",
+                model_id=request.model_id,
+                pid=pid,
+                log_file=log_file
+            )
+        else:
+            return StartLLMResponse(
+                status="error",
+                message=f"Failed to start {request.model_id}. Check logs: {log_file}",
+                model_id=request.model_id,
+                pid=pid,
+                log_file=log_file
+            )
+
+    except subprocess.TimeoutExpired:
+        return StartLLMResponse(
+            status="error",
+            message=f"Timeout starting {request.model_id}",
+            model_id=request.model_id,
+            pid=None,
+            log_file=None
+        )
+    except Exception as e:
+        logger.error(f"Error starting LLM {request.model_id}: {e}")
+        return StartLLMResponse(
+            status="error",
+            message=f"Error starting {request.model_id}: {str(e)}",
+            model_id=request.model_id,
+            pid=None,
+            log_file=None
+        )
 
 
 def main():
