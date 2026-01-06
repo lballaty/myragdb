@@ -732,3 +732,82 @@ class ObservabilityCleanupResponse(BaseModel):
     status: str
     records_deleted: dict
     message: str
+
+
+# Auto-reindexing / File Watching Models
+
+class WatcherStatusItem(BaseModel):
+    """
+    Status information for a single repository watcher.
+
+    Business Purpose: Provides visibility into which repositories are
+    being monitored for automatic reindexing.
+
+    Example:
+        {
+            "repository": "myragdb",
+            "status": "active",
+            "pending_changes": 0,
+            "path": "/path/to/myragdb",
+            "debounce_seconds": 5
+        }
+    """
+    repository: str
+    status: str  # "active" or "stopped"
+    pending_changes: int
+    path: str
+    debounce_seconds: int
+
+
+class WatcherStatusResponse(BaseModel):
+    """
+    Response model for watcher status endpoint.
+
+    Business Purpose: Shows all active file system watchers and their state.
+
+    Example:
+        response = WatcherStatusResponse(
+            watchers=[...],
+            total_watchers=3,
+            total_pending_changes=0
+        )
+    """
+    watchers: List[WatcherStatusItem]
+    total_watchers: int
+    total_pending_changes: int
+
+
+class ToggleAutoReindexRequest(BaseModel):
+    """
+    Request model for enabling/disabling auto-reindex for a repository.
+
+    Business Purpose: Allows users to control whether a repository
+    should automatically reindex when files change.
+
+    Example:
+        request = ToggleAutoReindexRequest(enabled=True)
+    """
+    enabled: bool = Field(..., description="True to enable auto-reindex, False to disable")
+
+
+class ToggleAutoReindexResponse(BaseModel):
+    """
+    Response model for auto-reindex toggle.
+
+    Business Purpose: Confirms the auto-reindex setting was updated
+    and returns the new watcher status.
+
+    Example:
+        {
+            "status": "success",
+            "repository": "myragdb",
+            "auto_reindex_enabled": true,
+            "watcher_status": "active",
+            "message": "Auto-reindex enabled for repository myragdb"
+        }
+    """
+    status: str
+    repository: str
+    auto_reindex_enabled: bool
+    watcher_status: str  # "active", "stopped", or "not_found"
+    message: str

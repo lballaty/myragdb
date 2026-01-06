@@ -50,7 +50,11 @@ from myragdb.api.models import (
     SearchMetricItem,
     ErrorLogItem,
     SystemMetricItem,
-    IndexingEventItem
+    IndexingEventItem,
+    WatcherStatusItem,
+    WatcherStatusResponse,
+    ToggleAutoReindexRequest,
+    ToggleAutoReindexResponse
 )
 from myragdb.search.hybrid_search import HybridSearchEngine, HybridSearchResult
 from myragdb.indexers.meilisearch_indexer import MeilisearchIndexer
@@ -2202,6 +2206,174 @@ async def cleanup_observability_data(request: ObservabilityCleanupRequest):
         logger.error("Failed to cleanup observability data", error=str(e))
         raise HTTPException(status_code=500, detail=f"Error cleaning up observability data: {str(e)}")
 
+
+# ============================================================================
+# File Watching / Auto-Reindex Endpoints
+# ============================================================================
+
+@app.get("/watcher/status", response_model=WatcherStatusResponse)
+async def get_watcher_status():
+    """
+    Get status of all active repository file system watchers.
+
+    Business Purpose: Provides visibility into which repositories are
+    being monitored for automatic reindexing when files change.
+
+    Returns:
+        WatcherStatusResponse with list of active watchers and their status
+
+    Example:
+        GET /watcher/status
+
+        Response:
+        {
+            "watchers": [
+                {
+                    "repository": "myragdb",
+                    "status": "active",
+                    "pending_changes": 0,
+                    "path": "/path/to/myragdb",
+                    "debounce_seconds": 5
+                }
+            ],
+            "total_watchers": 1,
+            "total_pending_changes": 0
+        }
+    """
+    if not watcher_manager:
+        return WatcherStatusResponse(
+            watchers=[],
+            total_watchers=0,
+            total_pending_changes=0
+        )
+
+    try:
+        watcher_status = watcher_manager.get_watcher_status()
+        total_pending = sum(w["pending_changes"] for w in watcher_status)
+
+        watchers = [
+            WatcherStatusItem(**w) for w in watcher_status
+        ]
+
+        return WatcherStatusResponse(
+            watchers=watchers,
+            total_watchers=len(watchers),
+            total_pending_changes=total_pending
+        )
+    except Exception as e:
+        logger.error("Failed to get watcher status", error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to get watcher status: {str(e)}")
+
+
+@app.post("/repositories/{repository}/auto-reindex", response_model=ToggleAutoReindexResponse)
+async def toggle_auto_reindex(repository: str, request: ToggleAutoReindexRequest):
+    """
+    Enable or disable automatic reindexing for a repository.
+
+    Business Purpose: Allows users to control whether a repository should
+    automatically reindex when files change, providing flexibility to
+    disable watching for repositories that change frequently or don't
+    need immediate updates.
+
+    Args:
+        repository: Repository name
+        request: ToggleAutoReindexRequest with enabled flag
+
+    Returns:
+        ToggleAutoReindexResponse with updated status
+
+    Example:
+        POST /repositories/myragdb/auto-reindex
+        {"enabled": false}
+
+        Response:
+        {
+            "status": "success",
+            "repository": "myragdb",
+            "auto_reindex_enabled": false,
+            "watcher_status": "stopped",
+            "message": "Auto-reindex disabled for repository myragdb"
+        }
+    """
+    if not watcher_manager:
+        raise HTTPException(
+            status_code=503,
+            detail="Watcher manager not initialized"
+        )
+
+    try:
+        # Load repository config
+        repo_config = load_repositories_config()
+        repo = repo_config.get_repository_by_name(repository)
+
+        if not repo:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Repository not found: {repository}"
+            )
+
+        if not repo.enabled:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Repository is not enabled: {repository}"
+            )
+
+        # Toggle watcher
+        if request.enabled:
+            # Start watching
+            # Extract file extensions from include patterns
+            file_extensions = []
+            for pattern in repo.file_patterns.include:
+                if pattern.startswith('**/') and pattern.count('.') == 1:
+                    ext = pattern.split('.')[-1]
+                    file_extensions.append(f'.{ext}')
+
+            if not file_extensions:
+                file_extensions = ['.py', '.md', '.ts', '.tsx', '.js', '.dart']
+
+            watcher_manager.start_watching(
+                repository_name=repo.name,
+                repository_path=repo.path,
+                file_extensions=file_extensions,
+                debounce_seconds=5
+            )
+
+            watcher_status = "active"
+            message = f"Auto-reindex enabled for repository {repository}"
+        else:
+            # Stop watching
+            watcher_manager.stop_watching(repository)
+            watcher_status = "stopped"
+            message = f"Auto-reindex disabled for repository {repository}"
+
+        logger.info(message, repository=repository, enabled=request.enabled)
+
+        return ToggleAutoReindexResponse(
+            status="success",
+            repository=repository,
+            auto_reindex_enabled=request.enabled,
+            watcher_status=watcher_status,
+            message=message
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "Failed to toggle auto-reindex",
+            repository=repository,
+            error=str(e),
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to toggle auto-reindex: {str(e)}"
+        )
+
+
+# ============================================================================
+# Main Entry Point
+# ============================================================================
 
 def main():
     """
