@@ -18,6 +18,29 @@ cd "$SCRIPT_DIR"
 
 echo -e "${YELLOW}🛑 Stopping MyRAGDB...${NC}"
 
+# Stop Meilisearch
+if [ -f ".meilisearch.pid" ]; then
+    PID=$(cat .meilisearch.pid)
+    if ps -p $PID > /dev/null 2>&1; then
+        kill $PID
+        echo -e "${GREEN}✓ Meilisearch stopped (PID: $PID)${NC}"
+        rm .meilisearch.pid
+    else
+        echo -e "${YELLOW}⚠️  Meilisearch process $PID not found (may have already stopped)${NC}"
+        rm .meilisearch.pid
+    fi
+else
+    # Try to find and kill any running Meilisearch processes
+    PIDS=$(pgrep -f "meilisearch" || true)
+    if [ -n "$PIDS" ]; then
+        echo -e "${YELLOW}Found running Meilisearch processes: $PIDS${NC}"
+        kill $PIDS
+        echo -e "${GREEN}✓ Meilisearch processes stopped${NC}"
+    else
+        echo -e "${YELLOW}⚠️  No running Meilisearch server found${NC}"
+    fi
+fi
+
 # Stop API Server
 if [ -f ".server.pid" ]; then
     PID=$(cat .server.pid)

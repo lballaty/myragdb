@@ -15,7 +15,7 @@ from datetime import datetime
 # Example: 2026.01.05.1.0.0 = January 5, 2026, major version 1.0.0
 _BUILD_DATE = datetime(2026, 1, 6)  # Update this when creating new releases
 _MAJOR_VERSION = 2  # Increment for breaking changes
-_MINOR_VERSION = 21  # Increment for new features (backward compatible)
+_MINOR_VERSION = 22  # Increment for new features (backward compatible)
 _PATCH_VERSION = 0  # Increment for bug fixes only
 
 __version__ = f"{_BUILD_DATE.year}.{_BUILD_DATE.month:02d}.{_BUILD_DATE.day:02d}.{_MAJOR_VERSION}.{_MINOR_VERSION}.{_PATCH_VERSION}"
@@ -24,9 +24,17 @@ __build_date__ = _BUILD_DATE.strftime("%Y-%m-%d")
 
 # Release notes for current version
 RELEASE_NOTES = f"""
-MyRAGDB v{__version__} - Repository Lock/Remove Bug Fixes ({__build_date__})
+MyRAGDB v{__version__} - Integrated Meilisearch Startup ({__build_date__})
 
-Changes in v2026.01.05.2.13.2:
+Changes in v2026.01.06.2.22.0:
+- Integrated Meilisearch startup into start.sh script
+- Single command startup: ./start.sh now starts both Meilisearch and MyRAGDB
+- Enhanced stop.sh to also stop Meilisearch
+- Proper dependency ordering ensures Meilisearch is running before MyRAGDB
+- Graceful handling: Won't restart Meilisearch if already running
+- PID file tracking for both services (.meilisearch.pid and .server.pid)
+
+Previous changes (v2026.01.05.2.13.2):
 - Fixed lock/unlock button (logActivity → addActivityLog)
 - Implemented remove repository endpoint (DELETE /repositories/:name)
 - Remove button now actually removes repositories from config

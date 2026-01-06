@@ -19,6 +19,71 @@ cd "$SCRIPT_DIR"
 
 echo -e "${BLUE}🚀 Starting MyRAGDB...${NC}"
 
+# ============================================================================
+# Step 1: Start Meilisearch (required dependency)
+# ============================================================================
+echo -e "${BLUE}📊 Checking Meilisearch status...${NC}"
+
+# Meilisearch configuration (from start_meilisearch.sh)
+MEILI_DATA_DIR="$SCRIPT_DIR/data/meilisearch"
+MEILI_MASTER_KEY="myragdb_dev_key_2026"
+MEILI_MAX_MEMORY=34359738368  # 32 GiB in bytes
+MEILI_INDEX_THREADS=10        # M4 Max optimization
+
+# Check if Meilisearch is already running
+if lsof -Pi :7700 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo -e "${GREEN}✓ Meilisearch already running on port 7700${NC}"
+else
+    echo -e "${YELLOW}⚠️  Meilisearch not running. Starting...${NC}"
+
+    # Create data directory
+    mkdir -p "$MEILI_DATA_DIR"
+
+    # Start Meilisearch in background
+    meilisearch \
+      --db-path "$MEILI_DATA_DIR" \
+      --master-key "$MEILI_MASTER_KEY" \
+      --max-indexing-memory "$MEILI_MAX_MEMORY" \
+      --max-indexing-threads "$MEILI_INDEX_THREADS" \
+      --http-addr 127.0.0.1:7700 \
+      --log-level info >> /tmp/meilisearch.log 2>&1 &
+
+    MEILI_PID=$!
+    echo $MEILI_PID > .meilisearch.pid
+    echo -e "${GREEN}✓ Meilisearch started (PID: $MEILI_PID)${NC}"
+
+    # Wait for Meilisearch to be ready
+    echo -e "${BLUE}⏳ Waiting for Meilisearch to be ready...${NC}"
+    MEILI_MAX_RETRIES=10
+    MEILI_RETRY_COUNT=0
+    MEILI_READY=false
+
+    while [ $MEILI_RETRY_COUNT -lt $MEILI_MAX_RETRIES ]; do
+        sleep 1
+        if curl -s http://localhost:7700/health > /dev/null 2>&1; then
+            MEILI_READY=true
+            break
+        fi
+        MEILI_RETRY_COUNT=$((MEILI_RETRY_COUNT + 1))
+        echo -e "${BLUE}  Attempt $MEILI_RETRY_COUNT/$MEILI_MAX_RETRIES...${NC}"
+    done
+
+    if [ "$MEILI_READY" = true ]; then
+        echo -e "${GREEN}✓ Meilisearch is ready!${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Meilisearch failed to start after $MEILI_MAX_RETRIES attempts${NC}"
+        echo -e "${YELLOW}⚠️  Check logs: tail -f /tmp/meilisearch.log${NC}"
+        exit 1
+    fi
+fi
+
+echo ""
+
+# ============================================================================
+# Step 2: Start MyRAGDB Server
+# ============================================================================
+echo -e "${BLUE}🔧 Preparing MyRAGDB Server...${NC}"
+
 # Check for and kill any existing process on port 3003
 PORT_PID=$(lsof -ti:3003 || true)
 if [ -n "$PORT_PID" ]; then
