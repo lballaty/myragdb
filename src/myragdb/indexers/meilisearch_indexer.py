@@ -390,7 +390,8 @@ class MeilisearchIndexer:
                 'limit': limit,
                 'attributesToHighlight': ['content'],
                 'attributesToCrop': ['content'],
-                'cropLength': 200,
+                'cropLength': 600,
+                'showRankingScore': True,  # CRITICAL: Without this, _rankingScore returns 0
             }
             if filter_str:
                 search_params['filter'] = filter_str
@@ -403,9 +404,9 @@ class MeilisearchIndexer:
                 # Extract snippet (use highlighted content if available)
                 snippet = ''
                 if '_formatted' in hit and 'content' in hit['_formatted']:
-                    snippet = hit['_formatted']['content'][:200]
+                    snippet = hit['_formatted']['content'][:600]
                 elif 'content' in hit:
-                    snippet = hit['content'][:200]
+                    snippet = hit['content'][:600]
 
                 result = MeilisearchResult(
                     id=hit.get('id', ''),

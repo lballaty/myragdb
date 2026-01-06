@@ -40,7 +40,8 @@ class RepositoryConfig(BaseModel):
             name="MyProject",
             path="/path/to/project",
             enabled=True,
-            priority="high"
+            priority="high",
+            auto_reindex=True
         )
     """
     name: str
@@ -48,6 +49,7 @@ class RepositoryConfig(BaseModel):
     enabled: bool = True
     priority: str = "medium"
     excluded: bool = False
+    auto_reindex: bool = True  # Enable automatic reindexing when file changes detected
     file_patterns: FilePatterns = Field(default_factory=FilePatterns)
 
     @validator('path')

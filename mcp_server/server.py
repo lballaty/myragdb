@@ -672,8 +672,42 @@ def _format_search_results(data: dict, search_type: str) -> list[TextContent]:
     output = f"# {search_type} Search: '{query}'\n\n"
     output += f"Found {count} result(s)\n\n"
 
+    # Detect if query is asking for directories
+    query_lower = query.lower()
+    is_directory_query = any(keyword in query_lower for keyword in [
+        'director', 'folder', 'path', 'locate all', 'find all', 'list all'
+    ])
+
+    # If asking for directories, show unique directories first
+    if is_directory_query:
+        from pathlib import Path
+        directories = {}
+        for result in results:
+            file_path = result.get('file_path', '')
+            if file_path:
+                dir_path = str(Path(file_path).parent)
+                if dir_path not in directories:
+                    directories[dir_path] = {
+                        'files': [],
+                        'repository': result.get('repository', ''),
+                        'relative_dir': str(Path(result.get('relative_path', '')).parent)
+                    }
+                directories[dir_path]['files'].append(result)
+
+        output += f"## Directories Found ({len(directories)})\n\n"
+        for dir_path, info in sorted(directories.items())[:10]:
+            rel_dir = info['relative_dir']
+            file_count = len(info['files'])
+            repo = info['repository']
+            output += f"- **{rel_dir}** ({repo}) - {file_count} file(s)\n"
+            output += f"  - Full path: `{dir_path}`\n"
+
+        output += "\n---\n\n"
+
+    # Show detailed file results
+    output += "## Detailed Results\n\n"
     for i, result in enumerate(results, 1):
-        output += f"## {i}. {result['relative_path']}\n\n"
+        output += f"### {i}. {result['relative_path']}\n\n"
         output += f"**Repository:** {result['repository']}\n"
         output += f"**Score:** {result['score']:.3f}\n"
         output += f"**Type:** {result['file_type']}\n"

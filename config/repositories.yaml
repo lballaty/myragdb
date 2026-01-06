@@ -1,7 +1,7 @@
 repositories:
 - name: xLLMArionComply
   path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/xLLMArionComply
-  enabled: true
+  enabled: false
   priority: high
   file_patterns:
     include:
@@ -41,7 +41,7 @@ repositories:
     - '**/coverage/**'
 - name: RepoTools
   path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/RepoTools
-  enabled: true
+  enabled: false
   priority: high
   file_patterns:
     include:
@@ -68,7 +68,7 @@ repositories:
   excluded: false
 - name: ISO27001DocumentGenerator
   path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/ISO27001DocumentGenerator
-  enabled: true
+  enabled: false
   priority: medium
   file_patterns:
     include:
@@ -109,7 +109,7 @@ repositories:
   excluded: false
 - name: gettingThroughTheDay
   path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/gettingThroughTheDay
-  enabled: true
+  enabled: false
   priority: medium
   file_patterns:
     include:
@@ -149,7 +149,7 @@ repositories:
     - '**/coverage/**'
 - name: iframe-test
   path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/iframe-test
-  enabled: true
+  enabled: false
   priority: medium
   file_patterns:
     include:
@@ -230,7 +230,7 @@ repositories:
     - '**/coverage/**'
 - name: usefulScritpts
   path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/usefulScritpts
-  enabled: true
+  enabled: false
   priority: medium
   file_patterns:
     include:
@@ -270,7 +270,7 @@ repositories:
     - '**/coverage/**'
 - name: project-config
   path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/project-config
-  enabled: true
+  enabled: false
   priority: medium
   file_patterns:
     include:

@@ -125,6 +125,42 @@ class VectorIndexer:
         model.to(settings.embedding_device)
         return model
 
+    def _get_chunk_size_for_file_type(self, file_type: str) -> int:
+        """
+        Get optimal chunk size based on file type.
+
+        Business Purpose: Different file types have different optimal chunk sizes
+        based on their structure and content density. Code files benefit from smaller
+        chunks (function-level), while documentation needs larger chunks for context.
+
+        Args:
+            file_type: File extension (e.g., '.py', '.md', '.js')
+
+        Returns:
+            Optimal chunk size in characters
+
+        Example:
+            chunk_size = self._get_chunk_size_for_file_type('.md')
+            # Returns 1800 for markdown documentation
+        """
+        # Code files: smaller chunks (function/class level)
+        code_extensions = {'.py', '.js', '.ts', '.tsx', '.jsx', '.java', '.cpp', '.c', '.go', '.rs', '.dart'}
+
+        # Documentation: larger chunks (section level)
+        doc_extensions = {'.md', '.txt', '.rst', '.adoc'}
+
+        # Config files: don't chunk (usually small and structure matters)
+        config_extensions = {'.json', '.yaml', '.yml', '.toml', '.ini', '.cfg', '.conf'}
+
+        if file_type in code_extensions:
+            return 800  # ~300 tokens - good for function-level chunks
+        elif file_type in doc_extensions:
+            return 1800  # ~500 tokens - good for section-level chunks
+        elif file_type in config_extensions:
+            return 10000  # Large size to avoid chunking small config files
+        else:
+            return 1000  # Default size
+
     def _chunk_content(self, content: str, chunk_size: int = 1000) -> List[str]:
         """
         Split content into chunks for embedding.
@@ -184,8 +220,26 @@ class VectorIndexer:
             # File is now searchable by semantic meaning
         """
         try:
-            # Chunk content if needed
-            chunks = self._chunk_content(scanned_file.content, settings.chunk_size)
+            # Prepare content with file metadata for better semantic matching
+            file_path_obj = Path(scanned_file.file_path)
+            file_name = file_path_obj.name
+            directory_path = str(file_path_obj.parent)
+
+            # Add metadata header to improve file/directory name matching
+            # This allows vector search to match on file names even if not in content
+            metadata_header = f"""File: {file_name}
+Directory: {directory_path}
+Repository: {scanned_file.repository_name}
+Type: {scanned_file.file_type}
+
+"""
+
+            # Combine metadata with content
+            content_with_metadata = metadata_header + (scanned_file.content or "")
+
+            # Chunk content if needed (using content-aware chunk size)
+            chunk_size = self._get_chunk_size_for_file_type(scanned_file.file_type)
+            chunks = self._chunk_content(content_with_metadata, chunk_size)
 
             # Generate embeddings
             embeddings = self.model.encode(chunks, show_progress_bar=False)
@@ -345,7 +399,7 @@ class VectorIndexer:
                     similarity = 1.0 / (1.0 + distance)  # Convert distance to similarity
 
                     # Get snippet from document chunk
-                    snippet = search_results['documents'][0][i][:200]
+                    snippet = search_results['documents'][0][i][:600]
 
                     result = VectorSearchResult(
                         file_path=file_path,
