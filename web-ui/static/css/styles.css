@@ -1248,6 +1248,9 @@ body {
 
 .llm-manager-section {
     padding: 20px;
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
 }
 
 .llm-models-grid {
@@ -1258,27 +1261,27 @@ body {
 }
 
 .llm-model-card {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: var(--bg-color);
+    border: 2px solid var(--border-color);
     border-radius: 12px;
     padding: 20px;
     transition: all 0.3s ease;
 }
 
 .llm-model-card:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(96, 165, 250, 0.3);
+    background: #f1f5f9;
+    border-color: var(--primary-color);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-lg);
 }
 
 .llm-model-card.running {
-    border-color: rgba(34, 197, 94, 0.4);
-    background: rgba(34, 197, 94, 0.1);
+    border-color: var(--success-color);
+    background: #f0fdf4;
 }
 
 .llm-model-card.stopped {
-    border-color: rgba(156, 163, 175, 0.3);
+    border-color: var(--border-color);
 }
 
 .llm-model-header {
@@ -1291,7 +1294,7 @@ body {
 .llm-model-name {
     font-size: 18px;
     font-weight: 600;
-    color: white;
+    color: var(--text-color);
 }
 
 .llm-model-category {
@@ -1304,15 +1307,15 @@ body {
 }
 
 .llm-model-category.best {
-    background: rgba(34, 197, 94, 0.2);
-    color: #22c55e;
-    border: 1px solid rgba(34, 197, 94, 0.3);
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #22c55e;
 }
 
 .llm-model-category.limited {
-    background: rgba(251, 191, 36, 0.2);
-    color: #fbbf24;
-    border: 1px solid rgba(251, 191, 36, 0.3);
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fbbf24;
 }
 
 .llm-model-info {
@@ -1329,12 +1332,12 @@ body {
 }
 
 .llm-model-info-label {
-    color: rgba(255, 255, 255, 0.95);
+    color: var(--text-muted);
     font-weight: 500;
 }
 
 .llm-model-info-value {
-    color: #e0f2fe;
+    color: var(--text-color);
     font-weight: 600;
 }
 
@@ -1349,13 +1352,13 @@ body {
 }
 
 .llm-model-status.running {
-    background: rgba(34, 197, 94, 0.2);
-    color: #22c55e;
+    background: #dcfce7;
+    color: #166534;
 }
 
 .llm-model-status.stopped {
-    background: rgba(156, 163, 175, 0.2);
-    color: #9ca3af;
+    background: #f3f4f6;
+    color: #6b7280;
 }
 
 .llm-model-status-dot {
@@ -1370,7 +1373,7 @@ body {
 }
 
 .llm-model-status.stopped .llm-model-status-dot {
-    background: #6b7280;
+    background: #9ca3af;
 }
 
 .llm-mode-selector {
@@ -1380,36 +1383,37 @@ body {
 .llm-mode-selector label {
     display: block;
     font-size: 13px;
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--text-color);
     margin-bottom: 6px;
+    font-weight: 500;
 }
 
 .llm-mode-selector select {
     width: 100%;
     padding: 10px;
-    background: rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: white;
+    border: 2px solid var(--border-color);
     border-radius: 6px;
-    color: white;
+    color: var(--text-color);
     font-size: 14px;
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .llm-mode-selector select:hover {
-    border-color: rgba(96, 165, 250, 0.5);
-    background: rgba(0, 0, 0, 0.6);
+    border-color: var(--primary-color);
+    background: #f8fafc;
 }
 
 .llm-mode-selector select:focus {
     outline: none;
-    border-color: #60a5fa;
-    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .llm-mode-info {
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--text-muted);
     font-style: italic;
     margin-top: 4px;
 }
@@ -1462,19 +1466,19 @@ body {
 }
 
 .llm-model-message.success {
-    background: rgba(34, 197, 94, 0.15);
-    border: 1px solid rgba(34, 197, 94, 0.3);
-    color: #22c55e;
+    background: #dcfce7;
+    border: 1px solid #22c55e;
+    color: #166534;
 }
 
 .llm-model-message.error {
-    background: rgba(239, 68, 68, 0.15);
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    color: #ef4444;
+    background: #fee2e2;
+    border: 1px solid #ef4444;
+    color: #991b1b;
 }
 
 .llm-model-message.info {
-    background: rgba(96, 165, 250, 0.15);
-    border: 1px solid rgba(96, 165, 250, 0.3);
-    color: #60a5fa;
+    background: #dbeafe;
+    border: 1px solid #60a5fa;
+    color: #1e40af;
 }
