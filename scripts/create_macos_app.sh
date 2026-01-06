@@ -87,15 +87,24 @@ PROJECT_ROOT="$(dirname "$APP_BUNDLE")"
 # Change to project directory
 cd "$PROJECT_ROOT"
 
+# Trap signals to run stop.sh when app is quit
+cleanup() {
+    echo "Shutting down MyRAGDB services..."
+    "$PROJECT_ROOT/stop.sh"
+    exit 0
+}
+
+# Register signal handlers for graceful shutdown
+trap cleanup SIGTERM SIGINT SIGHUP
+
 # Run the startup script
 ./start.sh
 
 # Keep the app running (so it appears in Dock while services are running)
-# The app will quit when you run stop.sh or quit from Activity Monitor
-echo "MyRAGDB is running. To stop, run: $PROJECT_ROOT/stop.sh"
-echo "You can also quit this app from the Dock or Activity Monitor."
+echo "MyRAGDB is running."
+echo "To stop: Quit this app from the Dock, or run: $PROJECT_ROOT/stop.sh"
 
-# Wait for user to quit
+# Wait for user to quit or services to stop
 while true; do
     sleep 1
     # Check if any of the services are still running

@@ -1,0 +1,37 @@
+#!/bin/bash
+# MyRAGDB Launcher Script
+
+# Get the directory where this app bundle is located
+APP_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+APP_BUNDLE="$(dirname "$(dirname "$APP_PATH")")"
+PROJECT_ROOT="$(dirname "$APP_BUNDLE")"
+
+# Change to project directory
+cd "$PROJECT_ROOT"
+
+# Trap signals to run stop.sh when app is quit
+cleanup() {
+    echo "Shutting down MyRAGDB services..."
+    "$PROJECT_ROOT/stop.sh"
+    exit 0
+}
+
+# Register signal handlers for graceful shutdown
+trap cleanup SIGTERM SIGINT SIGHUP
+
+# Run the startup script
+./start.sh
+
+# Keep the app running (so it appears in Dock while services are running)
+echo "MyRAGDB is running."
+echo "To stop: Quit this app from the Dock, or run: $PROJECT_ROOT/stop.sh"
+
+# Wait for user to quit or services to stop
+while true; do
+    sleep 1
+    # Check if any of the services are still running
+    if [ ! -f "$PROJECT_ROOT/.server.pid" ] && [ ! -f "$PROJECT_ROOT/.middleware.pid" ]; then
+        echo "All services stopped. Quitting app..."
+        exit 0
+    fi
+done
