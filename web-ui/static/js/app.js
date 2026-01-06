@@ -641,11 +641,25 @@ function renderRepositories() {
         const priorityClass = `priority-${repo.priority}`;
         const excludedClass = isExcluded ? 'excluded-repo' : '';
 
-        // Format file count and size
+        // Calculate total indexed files from indexing_stats
+        let totalIndexedFiles = 0;
+        if (repo.indexing_stats && repo.indexing_stats.length > 0) {
+            totalIndexedFiles = repo.indexing_stats.reduce((sum, stat) => sum + (stat.total_files_indexed || 0), 0);
+        }
+
+        // Format file count badges - show both on-disk and indexed
         let fileCountBadge = '';
         if (repo.file_count !== null && repo.file_count !== undefined) {
             const formattedSize = formatBytes(repo.total_size_bytes);
-            fileCountBadge = `<span class="repository-badge file-count">${repo.file_count.toLocaleString()} files (${formattedSize})</span>`;
+
+            // Total files on disk badge
+            fileCountBadge = `<span class="repository-badge file-count" title="Total files found on disk">📁 ${repo.file_count.toLocaleString()} files (${formattedSize})</span>`;
+
+            // Indexed files badge (only show if any files have been indexed)
+            if (totalIndexedFiles > 0) {
+                const indexedPercent = ((totalIndexedFiles / repo.file_count) * 100).toFixed(0);
+                fileCountBadge += ` <span class="repository-badge file-count" style="background-color: var(--accent-color); color: white;" title="Files currently in search index">✓ Indexed: ${totalIndexedFiles.toLocaleString()} (${indexedPercent}%)</span>`;
+            }
         }
 
         // Format indexing time stats
