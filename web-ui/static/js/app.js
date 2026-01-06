@@ -731,9 +731,7 @@ function renderRepositories() {
                             ${repo.priority.toUpperCase()}
                         </span>
                     </div>
-                    <div>
-                        ${fileCountBadge}
-                    </div>
+                    ${fileCountBadge ? `<div>${fileCountBadge}</div>` : ''}
                     ${indexingStatsBadges ? `<div>${indexingStatsBadges}</div>` : ''}
                 </label>
             </div>
