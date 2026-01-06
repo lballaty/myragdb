@@ -2021,3 +2021,451 @@ setInterval(() => {
 document.addEventListener('DOMContentLoaded', () => {
     updateLLMStatusBadge();
 });
+
+// ====================
+// Observability Tab
+// ====================
+
+let observabilityCharts = {
+    searchPerformance: null,
+    searchType: null,
+    errorRate: null,
+    errorComponent: null
+};
+
+// Get time range in hours from selector
+function getObservabilityTimeRange() {
+    const selector = document.getElementById('obs-time-range');
+    const value = selector.value;
+
+    if (value === 'custom') {
+        const startInput = document.getElementById('obs-start-time');
+        const endInput = document.getElementById('obs-end-time');
+
+        if (startInput.value && endInput.value) {
+            const startTime = Math.floor(new Date(startInput.value).getTime() / 1000);
+            const endTime = Math.floor(new Date(endInput.value).getTime() / 1000);
+            return { start: startTime, end: endTime };
+        }
+    }
+
+    const hours = parseInt(value);
+    const endTime = Math.floor(Date.now() / 1000);
+    const startTime = endTime - (hours * 3600);
+
+    return { start: startTime, end: endTime };
+}
+
+// Format timestamp to readable date
+function formatObservabilityTimestamp(timestamp) {
+    const date = new Date(timestamp * 1000);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays}d ago`;
+
+    return date.toLocaleDateString();
+}
+
+// Load observability statistics
+async function loadObservabilityStats() {
+    try {
+        const timeRange = getObservabilityTimeRange();
+        const response = await fetch(`/observability/stats?start_time=${timeRange.start}&end_time=${timeRange.end}`);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Update stats cards
+        document.getElementById('obs-total-searches').textContent = data.search_stats.total_searches.toLocaleString();
+        document.getElementById('obs-avg-response-time').textContent = data.search_stats.avg_response_time_ms.toFixed(1);
+        document.getElementById('obs-min-response-time').textContent = `${data.search_stats.min_response_time_ms.toFixed(1)}ms`;
+        document.getElementById('obs-max-response-time').textContent = data.search_stats.max_response_time_ms.toFixed(1);
+
+        document.getElementById('obs-total-errors').textContent = data.error_stats.total_errors.toLocaleString();
+        document.getElementById('obs-critical-errors').textContent = data.error_stats.by_severity.CRITICAL || 0;
+        document.getElementById('obs-error-errors').textContent = data.error_stats.by_severity.ERROR || 0;
+
+        document.getElementById('obs-db-size').textContent = `${data.database_info.size_mb.toFixed(2)} MB`;
+        document.getElementById('obs-total-rows').textContent = data.database_info.total_rows.toLocaleString();
+
+        logActivity('info', 'Loaded observability statistics', 'Observability');
+    } catch (error) {
+        console.error('Failed to load observability stats:', error);
+        logActivity('error', `Failed to load stats: ${error.message}`, 'Observability');
+    }
+}
+
+// Load observability metrics and update charts
+async function loadObservabilityMetrics() {
+    try {
+        const timeRange = getObservabilityTimeRange();
+
+        const response = await fetch('/observability/metrics', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                metric_type: 'all',
+                start_time: timeRange.start,
+                end_time: timeRange.end,
+                limit: 1000
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Update charts
+        updateSearchPerformanceChart(data.search_metrics || []);
+        updateSearchTypeChart(data.search_metrics || []);
+        updateErrorRateChart(data.error_logs || []);
+        updateErrorComponentChart(data.error_logs || []);
+
+        // Update tables
+        updateErrorsTable(data.error_logs || []);
+        updateIndexingEventsTable(data.indexing_events || []);
+
+        logActivity('info', `Loaded ${data.total_count} observability metrics`, 'Observability');
+    } catch (error) {
+        console.error('Failed to load observability metrics:', error);
+        logActivity('error', `Failed to load metrics: ${error.message}`, 'Observability');
+    }
+}
+
+// Update search performance chart (line chart showing response times over time)
+function updateSearchPerformanceChart(metrics) {
+    const ctx = document.getElementById('obs-search-performance-chart');
+
+    // Sort by timestamp
+    metrics.sort((a, b) => a.timestamp - b.timestamp);
+
+    // Group by hour and calculate average
+    const hourlyData = {};
+    metrics.forEach(m => {
+        const hour = Math.floor(m.timestamp / 3600) * 3600;
+        if (!hourlyData[hour]) {
+            hourlyData[hour] = { sum: 0, count: 0 };
+        }
+        hourlyData[hour].sum += m.response_time_ms;
+        hourlyData[hour].count += 1;
+    });
+
+    const labels = Object.keys(hourlyData).map(ts => {
+        const date = new Date(parseInt(ts) * 1000);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    });
+
+    const data = Object.values(hourlyData).map(d => d.sum / d.count);
+
+    if (observabilityCharts.searchPerformance) {
+        observabilityCharts.searchPerformance.destroy();
+    }
+
+    observabilityCharts.searchPerformance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Avg Response Time (ms)',
+                data: data,
+                borderColor: 'rgb(99, 102, 241)',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true }
+            },
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: 'Response Time (ms)' } }
+            }
+        }
+    });
+}
+
+// Update search type chart (pie chart showing distribution)
+function updateSearchTypeChart(metrics) {
+    const ctx = document.getElementById('obs-search-type-chart');
+
+    const typeCounts = {};
+    metrics.forEach(m => {
+        typeCounts[m.search_type] = (typeCounts[m.search_type] || 0) + 1;
+    });
+
+    if (observabilityCharts.searchType) {
+        observabilityCharts.searchType.destroy();
+    }
+
+    observabilityCharts.searchType = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(typeCounts),
+            datasets: [{
+                data: Object.values(typeCounts),
+                backgroundColor: [
+                    'rgb(99, 102, 241)',
+                    'rgb(168, 85, 247)',
+                    'rgb(236, 72, 153)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'right' }
+            }
+        }
+    });
+}
+
+// Update error rate chart (line chart showing errors over time)
+function updateErrorRateChart(errors) {
+    const ctx = document.getElementById('obs-error-rate-chart');
+
+    errors.sort((a, b) => a.timestamp - b.timestamp);
+
+    // Group by hour
+    const hourlyErrors = {};
+    errors.forEach(e => {
+        const hour = Math.floor(e.timestamp / 3600) * 3600;
+        hourlyErrors[hour] = (hourlyErrors[hour] || 0) + 1;
+    });
+
+    const labels = Object.keys(hourlyErrors).map(ts => {
+        const date = new Date(parseInt(ts) * 1000);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    });
+
+    const data = Object.values(hourlyErrors);
+
+    if (observabilityCharts.errorRate) {
+        observabilityCharts.errorRate.destroy();
+    }
+
+    observabilityCharts.errorRate = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Error Count',
+                data: data,
+                backgroundColor: 'rgba(239, 68, 68, 0.6)',
+                borderColor: 'rgb(239, 68, 68)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true }
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+}
+
+// Update error component chart (bar chart showing errors by component)
+function updateErrorComponentChart(errors) {
+    const ctx = document.getElementById('obs-error-component-chart');
+
+    const componentCounts = {};
+    errors.forEach(e => {
+        componentCounts[e.component] = (componentCounts[e.component] || 0) + 1;
+    });
+
+    if (observabilityCharts.errorComponent) {
+        observabilityCharts.errorComponent.destroy();
+    }
+
+    observabilityCharts.errorComponent = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(componentCounts),
+            datasets: [{
+                label: 'Error Count',
+                data: Object.values(componentCounts),
+                backgroundColor: 'rgba(245, 158, 11, 0.6)',
+                borderColor: 'rgb(245, 158, 11)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+}
+
+// Update errors table
+function updateErrorsTable(errors) {
+    const tbody = document.getElementById('obs-errors-tbody');
+
+    if (errors.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No errors found in selected time range</td></tr>';
+        return;
+    }
+
+    // Show most recent errors first
+    errors.sort((a, b) => b.timestamp - a.timestamp);
+    const recentErrors = errors.slice(0, 50);
+
+    tbody.innerHTML = recentErrors.map(error => `
+        <tr>
+            <td>${formatObservabilityTimestamp(error.timestamp)}</td>
+            <td><span class="obs-severity-badge ${error.severity.toLowerCase()}">${error.severity}</span></td>
+            <td>${error.component}</td>
+            <td>${error.error_type}</td>
+            <td style="max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${error.message}">${error.message}</td>
+            <td>
+                <div class="obs-error-actions">
+                    <button class="obs-action-button" onclick="viewErrorDetails(${error.id})">View</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Update indexing events table
+function updateIndexingEventsTable(events) {
+    const tbody = document.getElementById('obs-indexing-tbody');
+
+    if (events.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No indexing events found in selected time range</td></tr>';
+        return;
+    }
+
+    events.sort((a, b) => b.timestamp - a.timestamp);
+    const recentEvents = events.slice(0, 50);
+
+    tbody.innerHTML = recentEvents.map(event => {
+        const metadata = event.metadata || {};
+        const indexType = metadata.index_type || 'unknown';
+        const duration = event.duration_seconds ? `${event.duration_seconds.toFixed(1)}s` : '-';
+
+        return `
+            <tr>
+                <td>${formatObservabilityTimestamp(event.timestamp)}</td>
+                <td>${event.repository}</td>
+                <td>${indexType}</td>
+                <td><span class="obs-status-badge ${event.status}">${event.status}</span></td>
+                <td>${event.files_processed.toLocaleString()}</td>
+                <td>${duration}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// View error details (modal or expansion)
+function viewErrorDetails(errorId) {
+    console.log('View error details:', errorId);
+    // TODO: Implement error details modal
+    alert(`Error ID: ${errorId}\nDetails modal not yet implemented`);
+}
+
+// Handle cleanup old data
+async function handleObservabilityCleanup() {
+    const retentionDays = parseInt(prompt('Enter number of days to retain data:', '30'));
+
+    if (isNaN(retentionDays) || retentionDays < 1) {
+        alert('Invalid retention days');
+        return;
+    }
+
+    if (!confirm(`This will delete all observability data older than ${retentionDays} days. Continue?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/observability/cleanup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ retention_days: retentionDays })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        const total = Object.values(data.records_deleted).reduce((a, b) => a + b, 0);
+
+        alert(`Successfully deleted ${total} old records:\n` +
+              `- Search metrics: ${data.records_deleted.search_metrics}\n` +
+              `- Errors: ${data.records_deleted.error_log}\n` +
+              `- System metrics: ${data.records_deleted.system_metrics}\n` +
+              `- Indexing events: ${data.records_deleted.indexing_events}`);
+
+        // Refresh data
+        refreshObservabilityData();
+
+        logActivity('info', `Cleaned up ${total} old observability records`, 'Observability');
+    } catch (error) {
+        console.error('Failed to cleanup data:', error);
+        alert(`Failed to cleanup data: ${error.message}`);
+        logActivity('error', `Cleanup failed: ${error.message}`, 'Observability');
+    }
+}
+
+// Refresh all observability data
+async function refreshObservabilityData() {
+    await loadObservabilityStats();
+    await loadObservabilityMetrics();
+}
+
+// Handle time range change
+document.getElementById('obs-time-range')?.addEventListener('change', (e) => {
+    const customRange = document.getElementById('obs-custom-range');
+    if (e.target.value === 'custom') {
+        customRange.style.display = 'flex';
+    } else {
+        customRange.style.display = 'none';
+        refreshObservabilityData();
+    }
+});
+
+// Handle custom time range changes
+document.getElementById('obs-start-time')?.addEventListener('change', refreshObservabilityData);
+document.getElementById('obs-end-time')?.addEventListener('change', refreshObservabilityData);
+
+// Handle refresh button
+document.getElementById('obs-refresh-button')?.addEventListener('click', refreshObservabilityData);
+
+// Handle cleanup button
+document.getElementById('obs-cleanup-button')?.addEventListener('click', handleObservabilityCleanup);
+
+// Load observability data when tab becomes active
+document.querySelector('[data-tab="observability"]')?.addEventListener('click', () => {
+    // Small delay to ensure tab is visible
+    setTimeout(() => {
+        refreshObservabilityData();
+    }, 100);
+});
