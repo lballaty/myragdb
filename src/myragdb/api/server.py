@@ -60,6 +60,7 @@ from myragdb.db.metadata import MetadataStore
 from myragdb.db.observability import ObservabilityDatabase
 from myragdb.config import settings, load_repositories_config
 from myragdb.utils.repo_discovery import RepositoryDiscovery, DiscoveredRepository
+from myragdb.watcher.repository_watcher import RepositoryWatcherManager
 import structlog
 
 # Configure structured logging
@@ -72,6 +73,7 @@ query_rewriter = None
 hybrid_engine = None
 metadata_store = None
 observability_db = None
+watcher_manager = None
 
 # Indexing state - supports independent Keyword (Meilisearch) and Vector indexing
 indexing_state = {
@@ -188,6 +190,96 @@ app.add_middleware(
 web_ui_path = Path(__file__).parent.parent.parent.parent / "web-ui"
 if web_ui_path.exists():
     app.mount("/static", StaticFiles(directory=str(web_ui_path / "static")), name="static")
+
+
+# Application lifecycle events
+@app.on_event("startup")
+async def startup_event():
+    """
+    Initialize services on application startup.
+
+    Business Purpose: Start file system watchers for automatic reindexing
+    when files change in indexed repositories.
+    """
+    global watcher_manager
+
+    # Create reindex callback function
+    def trigger_auto_reindex(repository_name: str, changed_files: List[str]):
+        """
+        Callback for watcher to trigger incremental reindexing.
+
+        Args:
+            repository_name: Name of repository with changes
+            changed_files: List of file paths that changed
+        """
+        logger.info(
+            "Automatic reindex triggered by file changes",
+            repository=repository_name,
+            file_count=len(changed_files)
+        )
+
+        # Trigger incremental indexing (both keyword and vector)
+        # Use threading to avoid blocking the watcher
+        threading.Thread(
+            target=run_keyword_index,
+            args=([repository_name], False),  # incremental=True
+            daemon=True,
+            name=f"Auto-Reindex-Keyword-{repository_name}"
+        ).start()
+
+        threading.Thread(
+            target=run_vector_index,
+            args=([repository_name], False),  # incremental=True
+            daemon=True,
+            name=f"Auto-Reindex-Vector-{repository_name}"
+        ).start()
+
+    # Initialize watcher manager
+    watcher_manager = RepositoryWatcherManager(reindex_callback=trigger_auto_reindex)
+
+    # Start watching all enabled repositories with auto_reindex=True
+    try:
+        repo_config = load_repositories_config()
+        for repo in repo_config.get_enabled_repositories():
+            if repo.auto_reindex:
+                # Extract file extensions from include patterns
+                file_extensions = []
+                for pattern in repo.file_patterns.include:
+                    if pattern.startswith('**/') and pattern.count('.') == 1:
+                        # Pattern like '**/*.py' -> extract '.py'
+                        ext = pattern.split('.')[-1]
+                        file_extensions.append(f'.{ext}')
+
+                # Default extensions if none found
+                if not file_extensions:
+                    file_extensions = ['.py', '.md', '.ts', '.tsx', '.js', '.dart']
+
+                watcher_manager.start_watching(
+                    repository_name=repo.name,
+                    repository_path=repo.path,
+                    file_extensions=file_extensions,
+                    debounce_seconds=5
+                )
+
+        logger.info("Repository watchers started successfully")
+    except Exception as e:
+        logger.error("Failed to start repository watchers", error=str(e), exc_info=True)
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """
+    Cleanup on application shutdown.
+
+    Business Purpose: Gracefully stop all file system watchers to
+    avoid orphaned threads and ensure clean shutdown.
+    """
+    if watcher_manager:
+        try:
+            watcher_manager.stop_all()
+            logger.info("Repository watchers stopped successfully")
+        except Exception as e:
+            logger.error("Error stopping repository watchers", error=str(e), exc_info=True)
 
 
 @app.get("/")
