@@ -345,3 +345,141 @@ class FileMetadataDatabase:
             return sha256.hexdigest()
         except (OSError, IOError):
             return None
+
+    def record_repository_indexing(
+        self,
+        repository: str,
+        index_type: str,
+        duration_seconds: float,
+        total_files: int,
+        total_size_bytes: int,
+        is_initial: bool = False
+    ) -> None:
+        """
+        Record indexing statistics for a repository.
+
+        Business Purpose: Tracks indexing performance to enable estimation
+        of future indexing times based on repository size. By correlating
+        duration with file count and total size, users can predict how long
+        a re-index will take.
+
+        Args:
+            repository: Repository name
+            index_type: 'keyword' or 'vector'
+            duration_seconds: How long the indexing took
+            total_files: Number of files indexed
+            total_size_bytes: Total size of indexed files
+            is_initial: True if this is the first time indexing (initial),
+                       False for incremental reindex
+
+        Example:
+            db.record_repository_indexing(
+                repository='xLLMArionComply',
+                index_type='keyword',
+                duration_seconds=45.2,
+                total_files=1234,
+                total_size_bytes=5242880,
+                is_initial=True
+            )
+        """
+        now = int(time.time())
+
+        with self._get_connection() as conn:
+            # Check if we already have stats for this repo+index_type
+            cursor = conn.execute(
+                'SELECT initial_index_time_seconds FROM repository_stats WHERE repository = ? AND index_type = ?',
+                (repository, index_type)
+            )
+            existing = cursor.fetchone()
+
+            if is_initial or existing is None:
+                # This is the initial index - record as initial
+                conn.execute('''
+                    INSERT INTO repository_stats (
+                        repository, index_type, initial_index_time_seconds,
+                        initial_index_timestamp, last_reindex_time_seconds,
+                        last_reindex_timestamp, total_files_indexed, total_size_bytes
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(repository, index_type) DO UPDATE SET
+                        initial_index_time_seconds = excluded.initial_index_time_seconds,
+                        initial_index_timestamp = excluded.initial_index_timestamp,
+                        last_reindex_time_seconds = excluded.last_reindex_time_seconds,
+                        last_reindex_timestamp = excluded.last_reindex_timestamp,
+                        total_files_indexed = excluded.total_files_indexed,
+                        total_size_bytes = excluded.total_size_bytes
+                ''', (
+                    repository, index_type, duration_seconds, now,
+                    duration_seconds, now, total_files, total_size_bytes
+                ))
+            else:
+                # This is a reindex - only update reindex fields
+                conn.execute('''
+                    UPDATE repository_stats
+                    SET last_reindex_time_seconds = ?,
+                        last_reindex_timestamp = ?,
+                        total_files_indexed = ?,
+                        total_size_bytes = ?
+                    WHERE repository = ? AND index_type = ?
+                ''', (
+                    duration_seconds, now, total_files, total_size_bytes,
+                    repository, index_type
+                ))
+
+            conn.commit()
+
+    def get_repository_stats(self, repository: str, index_type: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Get indexing statistics for a repository.
+
+        Business Purpose: Retrieves historical indexing performance data
+        to help estimate future indexing times and track performance trends.
+
+        Args:
+            repository: Repository name
+            index_type: Optional filter for 'keyword' or 'vector'
+
+        Returns:
+            List of stats dicts with timing and size information
+
+        Example:
+            stats = db.get_repository_stats('xLLMArionComply', 'keyword')
+            if stats:
+                initial_time = stats[0]['initial_index_time_seconds']
+                files_per_sec = stats[0]['total_files_indexed'] / initial_time
+                print(f"Indexing rate: {files_per_sec:.1f} files/sec")
+        """
+        with self._get_connection() as conn:
+            if index_type:
+                cursor = conn.execute(
+                    'SELECT * FROM repository_stats WHERE repository = ? AND index_type = ?',
+                    (repository, index_type)
+                )
+            else:
+                cursor = conn.execute(
+                    'SELECT * FROM repository_stats WHERE repository = ?',
+                    (repository,)
+                )
+
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_all_repository_stats(self) -> List[Dict[str, Any]]:
+        """
+        Get indexing statistics for all repositories.
+
+        Business Purpose: Provides overview of indexing performance across
+        all repositories for system-wide analysis.
+
+        Returns:
+            List of all repository stats
+
+        Example:
+            all_stats = db.get_all_repository_stats()
+            for stat in all_stats:
+                print(f"{stat['repository']} ({stat['index_type']}): "
+                      f"{stat['total_files_indexed']} files in "
+                      f"{stat['initial_index_time_seconds']:.1f}s")
+        """
+        with self._get_connection() as conn:
+            cursor = conn.execute('SELECT * FROM repository_stats')
+            return [dict(row) for row in cursor.fetchall()]

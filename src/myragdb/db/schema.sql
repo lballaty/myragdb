@@ -26,6 +26,23 @@ CREATE INDEX IF NOT EXISTS idx_last_indexed ON file_metadata(last_indexed);
 -- Index for fast lookup by index_type
 CREATE INDEX IF NOT EXISTS idx_index_type ON file_metadata(index_type);
 
+-- Repository indexing statistics tracking
+-- Purpose: Track indexing performance and timing for each repository
+CREATE TABLE IF NOT EXISTS repository_stats (
+    repository TEXT NOT NULL,             -- Repository name
+    index_type TEXT NOT NULL,             -- 'keyword' or 'vector'
+    initial_index_time_seconds REAL,      -- How long the initial full index took (seconds)
+    initial_index_timestamp INTEGER,      -- Unix timestamp when initial index completed
+    last_reindex_time_seconds REAL,       -- How long the most recent reindex took (seconds)
+    last_reindex_timestamp INTEGER,       -- Unix timestamp when last reindex completed
+    total_files_indexed INTEGER,          -- Total number of files indexed
+    total_size_bytes INTEGER,             -- Total size of all indexed files
+    PRIMARY KEY (repository, index_type)
+);
+
+-- Index for fast repository lookup
+CREATE INDEX IF NOT EXISTS idx_repo_stats_repository ON repository_stats(repository);
+
 -- Metadata version tracking
 CREATE TABLE IF NOT EXISTS schema_version (
     version INTEGER PRIMARY KEY,

@@ -207,6 +207,35 @@ class StatsResponse(BaseModel):
         }
 
 
+class RepositoryIndexingStats(BaseModel):
+    """
+    Indexing performance statistics for a repository.
+
+    Business Purpose: Tracks how long indexing takes for correlation
+    with file count and size, enabling future time estimates.
+    """
+    index_type: str = Field(..., description="Index type: 'keyword' or 'vector'")
+    initial_index_time_seconds: Optional[float] = Field(None, description="Time taken for initial full index (seconds)")
+    initial_index_timestamp: Optional[int] = Field(None, description="Unix timestamp when initial index completed")
+    last_reindex_time_seconds: Optional[float] = Field(None, description="Time taken for most recent reindex (seconds)")
+    last_reindex_timestamp: Optional[int] = Field(None, description="Unix timestamp when last reindex completed")
+    total_files_indexed: Optional[int] = Field(None, description="Number of files indexed")
+    total_size_bytes: Optional[int] = Field(None, description="Total size of indexed files (bytes)")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "index_type": "keyword",
+                "initial_index_time_seconds": 45.2,
+                "initial_index_timestamp": 1735948800,
+                "last_reindex_time_seconds": 12.3,
+                "last_reindex_timestamp": 1736035200,
+                "total_files_indexed": 1234,
+                "total_size_bytes": 5242880
+            }
+        }
+
+
 class RepositoryInfo(BaseModel):
     """
     Repository information.
@@ -220,6 +249,7 @@ class RepositoryInfo(BaseModel):
     excluded: bool = Field(False, description="Whether repository is excluded from indexing (locked)")
     file_count: Optional[int] = Field(None, description="Number of files that would be indexed (None if not yet scanned)")
     total_size_bytes: Optional[int] = Field(None, description="Total size of all files to be indexed in bytes (None if not yet scanned)")
+    indexing_stats: Optional[List[RepositoryIndexingStats]] = Field(None, description="Indexing performance statistics (keyword and vector)")
 
     class Config:
         json_schema_extra = {
@@ -227,7 +257,18 @@ class RepositoryInfo(BaseModel):
                 "name": "xLLMArionComply",
                 "path": "/Users/user/projects/xLLMArionComply",
                 "enabled": True,
-                "priority": "high"
+                "priority": "high",
+                "file_count": 1234,
+                "total_size_bytes": 5242880,
+                "indexing_stats": [
+                    {
+                        "index_type": "keyword",
+                        "initial_index_time_seconds": 45.2,
+                        "last_reindex_time_seconds": 12.3,
+                        "total_files_indexed": 1234,
+                        "total_size_bytes": 5242880
+                    }
+                ]
             }
         }
 

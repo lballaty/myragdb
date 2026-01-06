@@ -26,6 +26,7 @@ from myragdb.api.models import (
     HealthResponse,
     StatsResponse,
     RepositoryInfo,
+    RepositoryIndexingStats,
     ReindexRequest,
     ReindexResponse,
     StopIndexingRequest,
@@ -420,19 +421,21 @@ async def get_stats():
 @app.get("/repositories", response_model=List[RepositoryInfo])
 async def get_repositories():
     """
-    Get list of configured repositories with file counts.
+    Get list of configured repositories with file counts and indexing stats.
 
     Business Purpose: Allows UI to display available repositories
-    for selective re-indexing, showing file counts to help users
-    understand indexing time.
+    for selective re-indexing, showing file counts and historical
+    indexing performance to help users estimate indexing time.
 
     Returns:
-        List of RepositoryInfo with details and file counts
+        List of RepositoryInfo with details, file counts, and indexing stats
     """
     try:
         from myragdb.indexers.file_scanner import FileScanner
+        from myragdb.db.file_metadata import FileMetadataDatabase
 
         repo_config = load_repositories_config()
+        file_db = FileMetadataDatabase()
         repositories = []
 
         for repo in repo_config.repositories:
@@ -451,6 +454,23 @@ async def get_repositories():
                 file_count = None
                 total_size = None
 
+            # Get indexing statistics from database
+            indexing_stats = []
+            try:
+                stats_data = file_db.get_repository_stats(repo.name)
+                for stat in stats_data:
+                    indexing_stats.append(RepositoryIndexingStats(
+                        index_type=stat['index_type'],
+                        initial_index_time_seconds=stat['initial_index_time_seconds'],
+                        initial_index_timestamp=stat['initial_index_timestamp'],
+                        last_reindex_time_seconds=stat['last_reindex_time_seconds'],
+                        last_reindex_timestamp=stat['last_reindex_timestamp'],
+                        total_files_indexed=stat['total_files_indexed'],
+                        total_size_bytes=stat['total_size_bytes']
+                    ))
+            except Exception as e:
+                print(f"Error loading indexing stats for {repo.name}: {e}")
+
             repositories.append(RepositoryInfo(
                 name=repo.name,
                 path=repo.path,
@@ -458,7 +478,8 @@ async def get_repositories():
                 priority=repo.priority,
                 excluded=getattr(repo, 'excluded', False),
                 file_count=file_count,
-                total_size_bytes=total_size
+                total_size_bytes=total_size,
+                indexing_stats=indexing_stats if indexing_stats else None
             ))
 
         return repositories
@@ -1008,6 +1029,9 @@ def run_keyword_index(
 
             print(f"[Keyword] Processing repository: {repo.name}")
 
+            # Start timing for this repository
+            repo_start_time = time.time()
+
             scanner = FileScanner(repo)
             files = list(scanner.scan())
             total_files += len(files)
@@ -1016,13 +1040,43 @@ def run_keyword_index(
             if not indexing_state["vector"]["is_indexing"]:
                 indexing_state["files_total"] = total_files
 
+            repo_file_count = len(files)
+            repo_total_size = 0
+
             if files:
                 mode_str = "full rebuild" if full_rebuild else "incremental"
                 print(f"[Keyword]   Found {len(files)} files in {repo.name} ({mode_str})")
+
+                # Calculate total size
+                for file_path in files:
+                    try:
+                        repo_total_size += Path(file_path).stat().st_size
+                    except OSError:
+                        pass
+
                 target_meilisearch.index_files_batch(files, batch_size=100, incremental=not full_rebuild)
                 indexing_state["keyword"]["files_processed"] += len(files)
             else:
                 print(f"[Keyword]   No files found in {repo.name}")
+
+            # Record timing for this repository
+            repo_duration = time.time() - repo_start_time
+
+            # Import database
+            from myragdb.db.file_metadata import FileMetadataDatabase
+            file_db = FileMetadataDatabase()
+
+            # Record stats (is_initial=True for full_rebuild)
+            file_db.record_repository_indexing(
+                repository=repo.name,
+                index_type='keyword',
+                duration_seconds=repo_duration,
+                total_files=repo_file_count,
+                total_size_bytes=repo_total_size,
+                is_initial=full_rebuild
+            )
+
+            print(f"[Keyword]   Indexed {repo_file_count} files ({repo_total_size / 1024 / 1024:.1f} MB) in {repo_duration:.1f}s")
 
             # Mark repository as completed
             indexing_state["keyword"]["repositories_completed"] += 1
@@ -1169,6 +1223,9 @@ def run_vector_index(
             print(f"[Vector] Processing repository: {repo.name}")
             print(f"[Vector] State change: current_repository={repo.name}, reason=starting repository processing")
 
+            # Start timing for this repository
+            repo_start_time = time.time()
+
             scanner = FileScanner(repo)
             files = list(scanner.scan())
             total_files += len(files)
@@ -1177,13 +1234,43 @@ def run_vector_index(
             if not indexing_state["keyword"]["is_indexing"]:
                 indexing_state["files_total"] = total_files
 
+            repo_file_count = len(files)
+            repo_total_size = 0
+
             if files:
                 mode_str = "full rebuild" if full_rebuild else "incremental"
                 print(f"[Vector]   Found {len(files)} files in {repo.name} ({mode_str})")
+
+                # Calculate total size
+                for file_path in files:
+                    try:
+                        repo_total_size += Path(file_path).stat().st_size
+                    except OSError:
+                        pass
+
                 target_vector.index_files(files)
                 indexing_state["vector"]["files_processed"] += len(files)
             else:
                 print(f"[Vector]   No files found in {repo.name}")
+
+            # Record timing for this repository
+            repo_duration = time.time() - repo_start_time
+
+            # Import database
+            from myragdb.db.file_metadata import FileMetadataDatabase
+            file_db = FileMetadataDatabase()
+
+            # Record stats (is_initial=True for full_rebuild)
+            file_db.record_repository_indexing(
+                repository=repo.name,
+                index_type='vector',
+                duration_seconds=repo_duration,
+                total_files=repo_file_count,
+                total_size_bytes=repo_total_size,
+                is_initial=full_rebuild
+            )
+
+            print(f"[Vector]   Indexed {repo_file_count} files ({repo_total_size / 1024 / 1024:.1f} MB) in {repo_duration:.1f}s")
 
             # Mark repository as completed
             indexing_state["vector"]["repositories_completed"] += 1

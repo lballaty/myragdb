@@ -789,19 +789,18 @@ body {
     color: #4b5563;
 }
 
-.repository-badge.file-count.small {
-    background: #d1fae5;
-    color: #065f46;
+.repository-badge.file-count {
+    background: var(--bg-secondary);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
 }
 
-.repository-badge.file-count.medium {
-    background: #fed7aa;
-    color: #9a3412;
-}
-
-.repository-badge.file-count.large {
-    background: #fecaca;
-    color: #991b1b;
+.repository-badge.indexing-stat {
+    background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
+    color: #1e40af;
+    border: 1px solid #93c5fd;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    font-size: 0.85em;
 }
 
 .repository-badge.excluded {

@@ -644,9 +644,49 @@ function renderRepositories() {
         // Format file count and size
         let fileCountBadge = '';
         if (repo.file_count !== null && repo.file_count !== undefined) {
-            const sizeClass = repo.file_count > 10000 ? 'large' : repo.file_count > 1000 ? 'medium' : 'small';
             const formattedSize = formatBytes(repo.total_size_bytes);
-            fileCountBadge = `<span class="repository-badge file-count ${sizeClass}">${repo.file_count.toLocaleString()} files (${formattedSize})</span>`;
+            fileCountBadge = `<span class="repository-badge file-count">${repo.file_count.toLocaleString()} files (${formattedSize})</span>`;
+        }
+
+        // Format indexing time stats
+        let indexingStatsBadges = '';
+        if (repo.indexing_stats && repo.indexing_stats.length > 0) {
+            const statsItems = repo.indexing_stats.map(stat => {
+                const indexType = stat.index_type === 'keyword' ? 'K' : 'V'; // K=Keyword, V=Vector
+
+                // Show last reindex time if available, otherwise initial time
+                const timeSeconds = stat.last_reindex_time_seconds !== null
+                    ? stat.last_reindex_time_seconds
+                    : stat.initial_index_time_seconds;
+
+                if (timeSeconds === null) {
+                    return ''; // No timing data yet
+                }
+
+                // Calculate rate: files per second
+                const filesPerSec = stat.total_files_indexed / timeSeconds;
+
+                // Format time (e.g., "45.2s" or "2m 15s")
+                let timeDisplay;
+                if (timeSeconds < 60) {
+                    timeDisplay = `${timeSeconds.toFixed(1)}s`;
+                } else {
+                    const mins = Math.floor(timeSeconds / 60);
+                    const secs = Math.floor(timeSeconds % 60);
+                    timeDisplay = `${mins}m ${secs}s`;
+                }
+
+                // Determine if this was a reindex or initial
+                const isReindex = stat.last_reindex_time_seconds !== null &&
+                                 stat.last_reindex_time_seconds !== stat.initial_index_time_seconds;
+                const badge = isReindex ? '🔄' : '⚡';
+
+                return `<span class="repository-badge indexing-stat" title="${stat.index_type} indexing: ${stat.total_files_indexed} files in ${timeDisplay} (${filesPerSec.toFixed(1)} files/sec)">${badge}${indexType}: ${timeDisplay}</span>`;
+            }).filter(s => s !== '').join(' ');
+
+            if (statsItems) {
+                indexingStatsBadges = statsItems;
+            }
         }
 
         // Excluded badge
@@ -676,6 +716,7 @@ function renderRepositories() {
                             ${repo.priority.toUpperCase()}
                         </span>
                         ${fileCountBadge}
+                        ${indexingStatsBadges}
                     </div>
                 </label>
             </div>
