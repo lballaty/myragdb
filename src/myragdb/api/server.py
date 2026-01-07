@@ -1213,6 +1213,9 @@ async def search_keyword(request: SearchRequest):
                    results_count=len(result_items),
                    search_time_ms=search_time_ms)
 
+        # Extract unique directories if query seems to be asking for directories
+        directories = _extract_directories(request.query, results) if results else None
+
         # Determine which repositories were actually searched
         if request.repositories:
             repositories_searched = request.repositories
@@ -1230,6 +1233,7 @@ async def search_keyword(request: SearchRequest):
             total_results=len(result_items),
             search_time_ms=search_time_ms,
             results=result_items,
+            directories=directories,
             repositories_searched=repositories_searched
         )
 
@@ -1306,6 +1310,9 @@ async def search_semantic(request: SearchRequest):
         except Exception as e:
             logger.warning("Failed to record search metric", error=str(e))
 
+        # Extract unique directories if query seems to be asking for directories
+        directories = _extract_directories(request.query, results) if results else None
+
         # Determine which repositories were actually searched
         if request.repositories:
             repositories_searched = request.repositories
@@ -1323,6 +1330,7 @@ async def search_semantic(request: SearchRequest):
             total_results=len(result_items),
             search_time_ms=search_time_ms,
             results=result_items,
+            directories=directories,
             repositories_searched=repositories_searched
         )
 
