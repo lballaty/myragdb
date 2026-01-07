@@ -654,6 +654,389 @@ class FileMetadataDatabase:
 
             conn.commit()
 
+    # ============================================================================
+    # Directory Management Methods (NEW - Phase A)
+    # ============================================================================
+
+    def add_directory(
+        self,
+        path: str,
+        name: str,
+        notes: Optional[str] = None,
+        enabled: bool = True,
+        priority: int = 0
+    ) -> int:
+        """
+        Add a new non-repository directory to be indexed.
+
+        Business Purpose: Register an arbitrary directory path for indexing
+        alongside repositories. Stores metadata about the directory.
+
+        Args:
+            path: Absolute directory path (must be unique)
+            name: User-friendly name for the directory
+            notes: Optional user notes about the directory
+            enabled: Whether to include in search by default (True)
+            priority: Sort order in UI (higher = first)
+
+        Returns:
+            Directory ID (primary key)
+
+        Raises:
+            sqlite3.IntegrityError: If path already exists
+
+        Example:
+            db.add_directory(
+                path='/Users/user/projects/docs',
+                name='Documentation',
+                notes='Shared team documentation'
+            )
+        """
+        now = int(time.time())
+
+        with self._get_connection() as conn:
+            cursor = conn.execute('''
+                INSERT INTO directories (path, name, enabled, priority, created_at, updated_at, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (path, name, enabled, priority, now, now, notes))
+            conn.commit()
+            return cursor.lastrowid
+
+    def get_directory(self, directory_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Get directory information by ID.
+
+        Args:
+            directory_id: Directory's primary key
+
+        Returns:
+            Dict with directory info, or None if not found
+
+        Example:
+            dir_info = db.get_directory(1)
+            if dir_info:
+                print(f"Path: {dir_info['path']}, Files: {dir_info['file_count']}")
+        """
+        with self._get_connection() as conn:
+            cursor = conn.execute(
+                'SELECT * FROM directories WHERE id = ?',
+                (directory_id,)
+            )
+            row = cursor.fetchone()
+            if row is None:
+                return None
+
+            dir_dict = dict(row)
+
+            # Get file count and stats
+            stats_cursor = conn.execute(
+                'SELECT SUM(total_files_indexed) as file_count, SUM(total_size_bytes) as size_bytes '
+                'FROM directory_stats WHERE directory_id = ?',
+                (directory_id,)
+            )
+            stats_row = stats_cursor.fetchone()
+            if stats_row:
+                dir_dict['file_count'] = stats_row['file_count'] or 0
+                dir_dict['total_size'] = stats_row['size_bytes'] or 0
+            else:
+                dir_dict['file_count'] = 0
+                dir_dict['total_size'] = 0
+
+            return dir_dict
+
+    def list_directories(self, enabled_only: bool = False) -> List[Dict[str, Any]]:
+        """
+        List all managed directories.
+
+        Args:
+            enabled_only: If True, only return enabled directories
+
+        Returns:
+            List of directory dicts
+
+        Example:
+            dirs = db.list_directories(enabled_only=True)
+            for d in dirs:
+                print(f"{d['name']}: {d['path']}")
+        """
+        with self._get_connection() as conn:
+            if enabled_only:
+                cursor = conn.execute('SELECT * FROM directories WHERE enabled = 1 ORDER BY priority DESC, created_at DESC')
+            else:
+                cursor = conn.execute('SELECT * FROM directories ORDER BY priority DESC, created_at DESC')
+
+            directories = []
+            for row in cursor:
+                dir_dict = dict(row)
+
+                # Get stats
+                stats_cursor = conn.execute(
+                    'SELECT SUM(total_files_indexed) as file_count, SUM(total_size_bytes) as size_bytes '
+                    'FROM directory_stats WHERE directory_id = ?',
+                    (row['id'],)
+                )
+                stats_row = stats_cursor.fetchone()
+                if stats_row:
+                    dir_dict['file_count'] = stats_row['file_count'] or 0
+                    dir_dict['total_size'] = stats_row['size_bytes'] or 0
+                else:
+                    dir_dict['file_count'] = 0
+                    dir_dict['total_size'] = 0
+
+                directories.append(dir_dict)
+
+            return directories
+
+    def update_directory(
+        self,
+        directory_id: int,
+        **fields
+    ) -> bool:
+        """
+        Update directory settings.
+
+        Args:
+            directory_id: Directory's primary key
+            **fields: Fields to update (name, notes, enabled, priority)
+
+        Returns:
+            True if updated, False if directory not found
+
+        Example:
+            db.update_directory(1, enabled=False, name='Archived')
+        """
+        now = int(time.time())
+        allowed_fields = {'name', 'notes', 'enabled', 'priority'}
+        update_fields = {k: v for k, v in fields.items() if k in allowed_fields}
+
+        if not update_fields:
+            return True  # No fields to update
+
+        # Build SET clause
+        set_clause = ', '.join([f"{k} = ?" for k in update_fields.keys()])
+        set_clause += f", updated_at = ?"
+
+        values = list(update_fields.values()) + [now, directory_id]
+
+        with self._get_connection() as conn:
+            cursor = conn.execute(
+                f'UPDATE directories SET {set_clause} WHERE id = ?',
+                values
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def delete_directory(self, directory_id: int) -> bool:
+        """
+        Remove a directory from tracking (and all its indexed files).
+
+        Args:
+            directory_id: Directory's primary key
+
+        Returns:
+            True if deleted, False if not found
+
+        Example:
+            if db.delete_directory(1):
+                print("Directory removed")
+        """
+        with self._get_connection() as conn:
+            # Delete directory stats
+            conn.execute('DELETE FROM directory_stats WHERE directory_id = ?', (directory_id,))
+
+            # Delete files from this directory
+            cursor = conn.execute(
+                'DELETE FROM file_metadata WHERE source_type = ? AND source_id = ?',
+                ('directory', str(directory_id))
+            )
+            files_deleted = cursor.rowcount
+
+            # Delete directory
+            cursor = conn.execute('DELETE FROM directories WHERE id = ?', (directory_id,))
+            conn.commit()
+
+            return cursor.rowcount > 0
+
+    def directory_exists(self, path: str) -> bool:
+        """
+        Check if a directory path is already registered.
+
+        Args:
+            path: Absolute directory path
+
+        Returns:
+            True if directory is registered, False otherwise
+
+        Example:
+            if not db.directory_exists('/path/to/dir'):
+                db.add_directory('/path/to/dir', 'My Directory')
+        """
+        with self._get_connection() as conn:
+            cursor = conn.execute(
+                'SELECT id FROM directories WHERE path = ?',
+                (path,)
+            )
+            return cursor.fetchone() is not None
+
+    def record_directory_indexing(
+        self,
+        directory_id: int,
+        index_type: str,
+        duration_seconds: float,
+        total_files: int,
+        total_size_bytes: int,
+        is_initial: bool = False
+    ) -> None:
+        """
+        Record indexing statistics for a directory.
+
+        Business Purpose: Tracks indexing performance per directory,
+        enabling performance estimation for future reindexing.
+
+        Args:
+            directory_id: Directory's primary key
+            index_type: 'keyword' or 'vector'
+            duration_seconds: How long indexing took
+            total_files: Number of files indexed
+            total_size_bytes: Total size of indexed files
+            is_initial: True if first time indexing
+
+        Example:
+            db.record_directory_indexing(
+                directory_id=1,
+                index_type='keyword',
+                duration_seconds=12.5,
+                total_files=456,
+                total_size_bytes=1024000,
+                is_initial=True
+            )
+        """
+        now = int(time.time())
+
+        with self._get_connection() as conn:
+            # Update directory last_indexed timestamp
+            conn.execute(
+                'UPDATE directories SET last_indexed = ? WHERE id = ?',
+                (now, directory_id)
+            )
+
+            # Check if stats already exist
+            cursor = conn.execute(
+                'SELECT initial_index_time_seconds FROM directory_stats WHERE directory_id = ? AND index_type = ?',
+                (directory_id, index_type)
+            )
+            existing = cursor.fetchone()
+
+            if is_initial or existing is None:
+                # Initial index
+                conn.execute('''
+                    INSERT INTO directory_stats (
+                        directory_id, index_type, initial_index_time_seconds,
+                        initial_index_timestamp, last_reindex_time_seconds,
+                        last_reindex_timestamp, total_files_indexed, total_size_bytes
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(directory_id, index_type) DO UPDATE SET
+                        initial_index_time_seconds = excluded.initial_index_time_seconds,
+                        initial_index_timestamp = excluded.initial_index_timestamp,
+                        last_reindex_time_seconds = excluded.last_reindex_time_seconds,
+                        last_reindex_timestamp = excluded.last_reindex_timestamp,
+                        total_files_indexed = excluded.total_files_indexed,
+                        total_size_bytes = excluded.total_size_bytes
+                ''', (
+                    directory_id, index_type, duration_seconds, now,
+                    duration_seconds, now, total_files, total_size_bytes
+                ))
+            else:
+                # Reindex
+                conn.execute('''
+                    UPDATE directory_stats
+                    SET last_reindex_time_seconds = ?,
+                        last_reindex_timestamp = ?,
+                        total_files_indexed = ?,
+                        total_size_bytes = ?
+                    WHERE directory_id = ? AND index_type = ?
+                ''', (
+                    duration_seconds, now, total_files, total_size_bytes,
+                    directory_id, index_type
+                ))
+
+            conn.commit()
+
+    def get_directory_stats(self, directory_id: int, index_type: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Get indexing statistics for a directory.
+
+        Args:
+            directory_id: Directory's primary key
+            index_type: Optional filter for 'keyword' or 'vector'
+
+        Returns:
+            List of stats dicts
+
+        Example:
+            stats = db.get_directory_stats(1, 'keyword')
+            if stats:
+                print(f"Files: {stats[0]['total_files_indexed']}")
+        """
+        with self._get_connection() as conn:
+            if index_type:
+                cursor = conn.execute(
+                    'SELECT * FROM directory_stats WHERE directory_id = ? AND index_type = ?',
+                    (directory_id, index_type)
+                )
+            else:
+                cursor = conn.execute(
+                    'SELECT * FROM directory_stats WHERE directory_id = ?',
+                    (directory_id,)
+                )
+
+            return [dict(row) for row in cursor.fetchall()]
+
+    def remove_directory_files(self, directory_id: int) -> int:
+        """
+        Remove all files associated with a directory.
+
+        Args:
+            directory_id: Directory's primary key
+
+        Returns:
+            Number of files removed
+
+        Example:
+            count = db.remove_directory_files(1)
+            print(f"Removed {count} files")
+        """
+        with self._get_connection() as conn:
+            cursor = conn.execute(
+                'DELETE FROM file_metadata WHERE source_type = ? AND source_id = ?',
+                ('directory', str(directory_id))
+            )
+            conn.commit()
+            return cursor.rowcount
+
+    def get_directory_file_count(self, directory_id: int) -> int:
+        """
+        Get count of indexed files for a directory.
+
+        Args:
+            directory_id: Directory's primary key
+
+        Returns:
+            Number of files indexed
+
+        Example:
+            count = db.get_directory_file_count(1)
+            print(f"Indexed {count} files")
+        """
+        with self._get_connection() as conn:
+            cursor = conn.execute(
+                'SELECT COUNT(*) as count FROM file_metadata WHERE source_type = ? AND source_id = ?',
+                ('directory', str(directory_id))
+            )
+            row = cursor.fetchone()
+            return row['count'] if row else 0
+
 
 # Singleton instance for easy import (replaces MetadataStore)
 _metadata_db_instance = None
