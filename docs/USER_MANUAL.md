@@ -17,11 +17,12 @@
 4. [Search Features](#search-features)
 5. [Repository Management](#repository-management)
 6. [Indexing & Reindexing](#indexing--reindexing)
-7. [LLM Integration](#llm-integration)
-8. [API Reference](#api-reference)
-9. [Configuration](#configuration)
-10. [Troubleshooting](#troubleshooting)
-11. [Best Practices](#best-practices)
+7. [MCP Integration](#mcp-integration)
+8. [LLM Integration](#llm-integration)
+9. [API Reference](#api-reference)
+10. [Configuration](#configuration)
+11. [Troubleshooting](#troubleshooting)
+12. [Best Practices](#best-practices)
 
 ---
 
@@ -36,6 +37,7 @@ MyRAGDB is a **hybrid search system** that combines keyword search (via Meilisea
 - **Hybrid Search**: Combines keyword matching with semantic understanding
 - **Multi-Repository Support**: Index and search across unlimited repositories
 - **Incremental Indexing**: Only reindex changed files for fast updates
+- **MCP Integration**: Model Context Protocol middleware enables AI tools to search your codebase
 - **LLM Integration**: Built-in support for local LLMs with function calling
 - **Repository Discovery**: Automatically find git repositories in directories
 - **Real-time Updates**: File watcher monitors changes (optional)
@@ -47,23 +49,32 @@ MyRAGDB is a **hybrid search system** that combines keyword search (via Meilisea
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        Web UI                                │
-│              (HTML/CSS/JavaScript)                           │
+│               AI Tools (Claude Code, etc.)                   │
+│                   MCP Protocol Clients                       │
 └─────────────────────────────────────────────────────────────┘
                            │
-                           ↓
+                           ↓ (MCP Protocol)
 ┌─────────────────────────────────────────────────────────────┐
-│                    FastAPI Server                            │
-│                  (Python REST API)                           │
+│                  MCP HTTP Middleware                         │
+│              (Port 8093 - Tool Access)                       │
 └─────────────────────────────────────────────────────────────┘
                            │
-          ┌────────────────┼────────────────┐
-          ↓                ↓                ↓
-    ┌──────────┐    ┌──────────┐    ┌──────────┐
-    │Meilisearch│    │ ChromaDB │    │  SQLite  │
-    │ Keyword   │    │  Vector  │    │ Metadata │
-    │  Search   │    │  Search  │    │ Tracking │
-    └──────────┘    └──────────┘    └──────────┘
+        ┌──────────────────┴──────────────────┐
+        ↓                                      ↓
+┌───────────────────┐              ┌─────────────────────────┐
+│      Web UI       │              │   FastAPI Server        │
+│ (HTML/CSS/JS)     │◄────────────►│  (Python REST API)      │
+│  Port 3003        │              │    Port 3003            │
+└───────────────────┘              └─────────────────────────┘
+                                              │
+                         ┌────────────────────┼────────────────┐
+                         ↓                    ↓                ↓
+                   ┌───────────┐      ┌───────────┐    ┌──────────┐
+                   │Meilisearch│      │ ChromaDB  │    │  SQLite  │
+                   │ Keyword   │      │  Vector   │    │ Metadata │
+                   │  Search   │      │  Search   │    │ Tracking │
+                   │ Port 7700 │      │           │    │          │
+                   └───────────┘      └───────────┘    └──────────┘
 ```
 
 ---
@@ -827,6 +838,215 @@ repositories:
 - Low CPU usage (~0.1%)
 - Instant search result updates
 - No manual reindexing needed
+
+---
+
+## MCP Integration
+
+### What is MCP?
+
+**MCP (Model Context Protocol)** is an open standard that enables AI tools like Claude Code to interact with external systems through a standardized interface. MyRAGDB implements MCP to allow AI assistants to search your codebase directly.
+
+**Key Benefits:**
+- AI tools can autonomously search your repositories
+- No manual copy-pasting of code
+- Real-time context retrieval during conversations
+- Seamless integration with Claude Code and other MCP clients
+
+### How MyRAGDB Uses MCP
+
+MyRAGDB includes an **MCP HTTP Middleware** server that:
+- Runs on **port 8093**
+- Automatically starts with `./start.sh`
+- Exposes MyRAGDB search functionality as MCP tools
+- Translates MCP protocol requests to REST API calls
+
+### Architecture
+
+```
+┌─────────────────┐
+│   Claude Code   │ ← AI assistant
+└────────┬────────┘
+         │ (1) User asks: "Find authentication code"
+         ↓
+┌─────────────────┐
+│  MCP Middleware │ ← Translates MCP → REST API
+│   Port 8093     │
+└────────┬────────┘
+         │ (2) Calls /search endpoint
+         ↓
+┌─────────────────┐
+│  FastAPI Server │ ← Performs hybrid search
+│   Port 3003     │
+└────────┬────────┘
+         │ (3) Returns search results
+         ↓
+┌─────────────────┐
+│   Claude Code   │ ← AI analyzes results and responds
+└─────────────────┘
+```
+
+### Available MCP Tools
+
+When Claude Code connects to MyRAGDB, it gains access to these tools:
+
+#### 1. **myragdb_search**
+Search across all indexed repositories using hybrid search.
+
+**Parameters:**
+- `query` (required): Search query text
+- `mode` (optional): "hybrid", "keyword", or "vector" (default: hybrid)
+- `limit` (optional): Maximum results (default: 10)
+
+**Example:**
+```
+User: "Find all authentication functions"
+Claude: [Uses myragdb_search tool with query="authentication functions"]
+→ Returns relevant code files and implementations
+```
+
+#### 2. **myragdb_repositories**
+List all indexed repositories with statistics.
+
+**Example:**
+```
+User: "What repositories are indexed?"
+Claude: [Uses myragdb_repositories tool]
+→ Returns list with file counts, update times, priorities
+```
+
+### Setting Up MCP with Claude Code
+
+The MCP middleware is **automatically started** by the `./start.sh` script. No additional configuration needed!
+
+**Startup sequence:**
+```bash
+./start.sh
+
+# Step 1: Start Meilisearch (port 7700)
+# Step 2: Start MyRAGDB API (port 3003)
+# Step 3: Start MCP Middleware (port 8093) ← Enables AI tool access
+```
+
+**Verify MCP is running:**
+```bash
+# Check if MCP middleware is active
+lsof -i :8093
+
+# Should show:
+# COMMAND   PID   USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
+# Python    12345 user   3u   IPv4  ...   TCP *:8093 (LISTEN)
+```
+
+### Using MCP with Claude Code
+
+Once MyRAGDB is running, Claude Code can automatically discover and use the MCP tools:
+
+**Example workflow:**
+
+1. **Start MyRAGDB:**
+   ```bash
+   ./start.sh
+   ```
+
+2. **Ask Claude Code:**
+   ```
+   User: "Find all files that implement user authentication"
+
+   Claude: Let me search your codebase for authentication implementations.
+   [Automatically uses myragdb_search tool]
+
+   Results:
+   - src/auth/login.py (95% relevance)
+   - src/auth/session.py (87% relevance)
+   - tests/test_auth.py (76% relevance)
+
+   I found 3 files related to authentication. The main implementation
+   is in src/auth/login.py which handles user login, password hashing,
+   and session creation.
+   ```
+
+3. **Claude Code has full context** without you copying code manually!
+
+### MCP Configuration
+
+The MCP middleware configuration is in `mcp_server/server.py`:
+
+**Default settings:**
+```python
+# Port configuration
+MCP_PORT = 8093
+
+# API endpoint
+API_BASE_URL = "http://localhost:3003"
+
+# Tool definitions
+tools = [
+    {
+        "name": "myragdb_search",
+        "description": "Search code repositories",
+        "parameters": {...}
+    },
+    {
+        "name": "myragdb_repositories",
+        "description": "List indexed repositories",
+        "parameters": {...}
+    }
+]
+```
+
+### Troubleshooting MCP
+
+#### MCP middleware not starting
+
+**Check if port 8093 is already in use:**
+```bash
+lsof -i :8093
+```
+
+**Solution:** Kill the process or change MCP_PORT in config.
+
+#### Claude Code can't connect to MCP
+
+**Verify middleware is running:**
+```bash
+curl http://localhost:8093/health
+
+# Should return: {"status": "healthy"}
+```
+
+**Check logs:**
+```bash
+tail -f /tmp/mcp_middleware.log
+```
+
+#### MCP tools not appearing in Claude Code
+
+**Restart MyRAGDB completely:**
+```bash
+./stop.sh
+./start.sh
+```
+
+**Check Claude Code MCP configuration:**
+- Ensure MCP server URL is set to `http://localhost:8093`
+- Verify no firewall blocking local connections
+
+### MCP vs Direct API Access
+
+**When to use MCP:**
+- ✅ AI assistant needs autonomous search (Claude Code, etc.)
+- ✅ Conversational context retrieval
+- ✅ Multi-step reasoning with code search
+- ✅ Tool-calling AI workflows
+
+**When to use REST API directly:**
+- ✅ Custom applications and scripts
+- ✅ Web UI (already integrated)
+- ✅ CI/CD pipelines
+- ✅ Non-AI automation
+
+Both methods access the same underlying search engine - choose based on your use case!
 
 ---
 

@@ -2664,17 +2664,27 @@ window.closeReadmeModal = closeReadmeModal;
 // User Manual
 // ============================================================================
 
+// Store original content for search
+let originalManualContent = '';
+
 async function openUserManual() {
     const modal = document.getElementById('user-manual-modal');
     const loadingDiv = document.getElementById('user-manual-loading');
     const errorDiv = document.getElementById('user-manual-error');
     const contentDiv = document.getElementById('user-manual-content');
+    const searchInput = document.getElementById('manual-search-input');
 
     // Show modal and loading state
     modal.style.display = 'flex';
     loadingDiv.style.display = 'flex';
     errorDiv.style.display = 'none';
     contentDiv.style.display = 'none';
+
+    // Clear search input
+    if (searchInput) {
+        searchInput.value = '';
+        document.getElementById('manual-search-results').textContent = '';
+    }
 
     try {
         // Fetch the user manual markdown file
@@ -2688,6 +2698,9 @@ async function openUserManual() {
 
         // Convert markdown to HTML using marked.js
         const html = marked.parse(markdown);
+
+        // Store original content for search
+        originalManualContent = html;
 
         // Display content
         contentDiv.innerHTML = html;
@@ -2711,6 +2724,45 @@ function closeUserManual() {
     modal.style.display = 'none';
 }
 
+function searchManual() {
+    const searchInput = document.getElementById('manual-search-input');
+    const contentDiv = document.getElementById('user-manual-content');
+    const resultsSpan = document.getElementById('manual-search-results');
+
+    const query = searchInput.value.trim().toLowerCase();
+
+    // If search is empty, restore original content
+    if (!query) {
+        contentDiv.innerHTML = originalManualContent;
+        resultsSpan.textContent = '';
+        return;
+    }
+
+    // Escape special regex characters
+    const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // Create regex for case-insensitive search
+    const regex = new RegExp(`(${escapeRegex(query)})`, 'gi');
+
+    // Replace content with highlighted version
+    let highlightedContent = originalManualContent.replace(regex, '<mark>$1</mark>');
+    contentDiv.innerHTML = highlightedContent;
+
+    // Count matches
+    const matches = contentDiv.querySelectorAll('mark');
+    if (matches.length > 0) {
+        resultsSpan.textContent = `${matches.length} match${matches.length !== 1 ? 'es' : ''} found`;
+        resultsSpan.style.color = 'var(--accent-color)';
+
+        // Scroll to first match
+        matches[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        matches[0].classList.add('current-match');
+    } else {
+        resultsSpan.textContent = 'No matches found';
+        resultsSpan.style.color = 'var(--danger-color)';
+    }
+}
+
 // Close manual on Escape key
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -2724,3 +2776,4 @@ document.addEventListener('keydown', (e) => {
 // Make functions globally available
 window.openUserManual = openUserManual;
 window.closeUserManual = closeUserManual;
+window.searchManual = searchManual;

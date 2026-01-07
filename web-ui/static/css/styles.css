@@ -1897,6 +1897,31 @@ body {
     color: var(--text-color);
 }
 
+.readme-modal-search {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-color);
+    display: flex;
+    align-items: center;
+}
+
+.readme-modal-search input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-color);
+    font-size: 0.95rem;
+    transition: all 0.2s;
+}
+
+.readme-modal-search input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
 .readme-modal-body {
     flex: 1;
     overflow-y: auto;
@@ -2058,6 +2083,19 @@ body {
     border: none;
     border-top: 1px solid var(--border-color);
     margin: 2rem 0;
+}
+
+/* Search highlighting in manual */
+.readme-content mark {
+    background: rgba(251, 191, 36, 0.3);
+    color: var(--text-color);
+    padding: 0.1rem 0.2rem;
+    border-radius: 2px;
+}
+
+.readme-content mark.current-match {
+    background: rgba(251, 191, 36, 0.6);
+    border: 2px solid var(--warning-color);
 }
 
 .readme-modal-footer {
