@@ -297,7 +297,16 @@ async def root():
     """
     index_path = web_ui_path / "index.html"
     if index_path.exists():
-        return FileResponse(str(index_path))
+        # Add cache control headers to prevent browser caching of index.html
+        # This ensures users always get the latest version with updated JS/CSS version strings
+        return FileResponse(
+            str(index_path),
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
     return HealthResponse(
         status="healthy",
         message="MyRAGDB service is running (Web UI not found)"
