@@ -210,7 +210,8 @@ class VectorIndexer:
 
         Business Purpose: Converts file content to vector embeddings and
         stores in ChromaDB for semantic search. Uses Base64 hash IDs that
-        match Meilisearch for perfect document parity.
+        match Meilisearch for perfect document parity. Supports both repository
+        and directory sources via source_type and source_id metadata.
 
         Args:
             scanned_file: File to index
@@ -225,11 +226,21 @@ class VectorIndexer:
             file_name = file_path_obj.name
             directory_path = str(file_path_obj.parent)
 
+            # Determine source information
+            if scanned_file.repository_name:
+                source_type = 'repository'
+                source_id = scanned_file.repository_name
+                source_display = f"Repository: {scanned_file.repository_name}"
+            else:
+                source_type = 'directory'
+                source_id = str(scanned_file.directory_id)
+                source_display = f"Directory ID: {scanned_file.directory_id}"
+
             # Add metadata header to improve file/directory name matching
             # This allows vector search to match on file names even if not in content
             metadata_header = f"""File: {file_name}
 Directory: {directory_path}
-Repository: {scanned_file.repository_name}
+{source_display}
 Type: {scanned_file.file_type}
 
 """
@@ -258,7 +269,9 @@ Type: {scanned_file.file_type}
 
                 metadata = {
                     "file_path": scanned_file.file_path,
-                    "repository": scanned_file.repository_name,
+                    "repository": scanned_file.repository_name,  # Kept for backward compatibility
+                    "source_type": source_type,                  # New: 'repository' or 'directory'
+                    "source_id": source_id,                      # New: repo name or directory ID
                     "file_type": scanned_file.file_type,
                     "relative_path": scanned_file.relative_path,
                     "chunk_index": i,
@@ -278,7 +291,7 @@ Type: {scanned_file.file_type}
             # Update metadata database
             self.metadata_db.update_file_metadata(
                 scanned_file.file_path,
-                scanned_file.repository_name,
+                scanned_file.repository_name or f"dir_{scanned_file.directory_id}",
                 'vector'
             )
 
@@ -335,6 +348,49 @@ Type: {scanned_file.file_type}
 
         print(f"[Vector] Indexing complete: {indexed} indexed, {skipped_unchanged} skipped (unchanged)")
         return indexed
+
+    def index_directory(
+        self,
+        directory_path: str,
+        directory_id: int,
+        incremental: bool = True
+    ) -> int:
+        """
+        Index all files in a non-repository directory.
+
+        Business Purpose: Scans a managed directory for indexable files and
+        indexes them with source_type='directory' and source_id=directory_id.
+        Creates semantic embeddings for all files.
+        Supports incremental indexing to only update changed files.
+
+        Args:
+            directory_path: Absolute path to directory
+            directory_id: Database ID of the managed directory
+            incremental: Only index files modified since last indexing
+
+        Returns:
+            Number of files successfully indexed
+
+        Example:
+            count = indexer.index_directory("/path/to/docs", directory_id=1)
+            print(f"Indexed {count} files from directory")
+        """
+        from myragdb.indexers.file_scanner import DirectoryScanner
+
+        print(f"[Vector] Starting directory indexing: {directory_path} (ID={directory_id})")
+
+        # Scan directory for files
+        scanner = DirectoryScanner(directory_path, directory_id)
+        files = list(scanner.scan())
+
+        if not files:
+            print(f"[Vector] No files found in directory: {directory_path}")
+            return 0
+
+        print(f"[Vector] Found {len(files)} files in directory, indexing...")
+
+        # Use batch indexing
+        return self.index_files(files, incremental=incremental)
 
     def search(
         self,
