@@ -12,10 +12,11 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3002:3002"
+      - "3003:3003"
     environment:
       - ENVIRONMENT=development
       - LOG_LEVEL=DEBUG
+      - MYRAGDB_PORT=3003
       - MEILISEARCH_URL=http://meilisearch:7700
       - CHROMA_URL=http://chroma:8000
     volumes:

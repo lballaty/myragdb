@@ -3,7 +3,7 @@
 // Author: Libor Ballaty <libor@arionetworks.com>
 // Created: 2026-01-07
 
-const API_BASE_URL = 'http://localhost:3002';
+const API_BASE_URL = 'http://localhost:3003';
 
 // Agent state management
 const agentState = {

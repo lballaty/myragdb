@@ -59,7 +59,7 @@ class SearchClient:
 
     def __init__(
         self,
-        base_url: str = "http://localhost:3002",
+        base_url: str = "http://localhost:3003",
         timeout: float = 30.0
     ):
         """
