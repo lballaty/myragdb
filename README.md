@@ -7,6 +7,20 @@
 **Last Updated:** 2026-01-07
 **Last Updated By:** Libor Ballaty <libor@arionetworks.com>
 
+## What's New in This Session (2026-01-07)
+
+Comprehensive enhancement session adding advanced filtering, monitoring, and observability features:
+
+- **Date Range Filtering**: Filter results by modification date with ISO 8601 format (from_date, to_date, between_dates)
+- **Min-Score Filtering**: Set relevance thresholds (0.0 to 1.0) to find only highly relevant results
+- **Enhanced Activity Monitor**: Real-time activity logging with type/severity/time filtering, export, and persistent storage
+- **Enhanced Observability Dashboard**: Interactive charts, alert thresholds, system health metrics, error tracking
+- **QueryBuilder Enhancements**: New date range methods (from_date, to_date, between_dates) for fluent query construction
+- **Web UI Advanced Filters**: New HTML5 date pickers and score input in search interface
+- **Comprehensive API Documentation**: Complete SEARCH_API_REFERENCE.md with all endpoints, examples, and usage patterns
+- **Port Alignment**: Verified all ports against port-registry.json (port 3003 for main API)
+- **Updated User Manual**: This README with extensive new sections documenting all enhancements
+
 ---
 
 ## Overview
@@ -145,14 +159,38 @@ The web UI provides a complete interface for all features:
 - Hybrid, keyword-only, or semantic-only search
 - Repository filtering
 - Result count customization
-- Advanced filters (folder, file extension)
+- **Advanced Filters**:
+  - 📅 **Date Range**: Filter results by modification date (ISO 8601 format: YYYY-MM-DD)
+    - `From Date`: Include results from this date (inclusive)
+    - `To Date`: Include results up to this date (inclusive)
+    - Leave blank for no date constraint
+  - 📊 **Min Score**: Minimum relevance threshold (0.0 to 1.0)
+    - 0.0-0.3: Weak match (consider removing)
+    - 0.3-0.6: Moderate match (may have false positives)
+    - 0.6-0.8: Good match (likely relevant)
+    - 0.8-1.0: Excellent match (highly relevant)
+  - 📁 **Folder Filter**: Scope search to specific folder path (e.g., `src/components`)
+  - 📄 **File Extension**: Filter by single file type (e.g., `.py`)
 - Real-time search as you type
 
 #### **Activity Monitor Tab**
-- UI activity log (local events)
-- Server log streaming (backend events)
-- Real-time filtering by log level
-- Configurable line limits
+- **Real-time Activity Logging**:
+  - UI activity log (local events - searches, filters, reindex)
+  - Server log streaming (backend API events)
+  - Auto-refresh every 5 seconds (toggleable)
+  - Persistent local storage (500 most recent items)
+
+- **Advanced Filtering**:
+  - Filter by activity type (search, index, config, api, system)
+  - Filter by severity level (error, warning, info, debug)
+  - Filter by time range (1 hour, 24 hours, 7 days, 30 days, custom)
+  - Text search across log messages
+
+- **Export & Management**:
+  - Export logs as JSON file for analysis
+  - Configurable line display limits (10-100 lines)
+  - Automatic data cleanup based on retention policy
+  - Single-click severity filtering with color coding
 
 #### **Repositories Tab**
 - **Repository Discovery**: Scan filesystem for Git repositories
@@ -177,23 +215,30 @@ The web UI provides a complete interface for all features:
   - Last indexing timestamp
 
 #### **Observability Tab**
-- **Real-time Metrics**:
-  - Total searches with average response time
-  - Error tracking (critical, error, warning)
-  - Database size and record counts
-  - Fastest/slowest search times
+- **Real-time System Metrics**:
+  - Total searches and average response time
+  - Error tracking with severity levels (critical, error, warning, info)
+  - Database statistics (Meilisearch size, ChromaDB collections, metadata records)
+  - Performance indicators (fastest/slowest searches, indexing stats)
+  - Configurable alert thresholds:
+    - Response time: Warning at 1000ms, Error at 2000ms
+    - Error rate: Warning at 5%, Error at 10%
+    - System resources: CPU warning at 80%, Memory warning at 85%
 
-- **Interactive Charts**:
-  - Search performance over time (Chart.js)
-  - Search volume by type (hybrid, keyword, semantic)
-  - Error rate trends
-  - Errors by component
+- **Interactive Charts & Visualizations** (Chart.js):
+  - 📈 **Line Chart**: Search response time trends over time
+  - 🥧 **Doughnut Chart**: Search volume by type (hybrid/keyword/semantic)
+  - 📊 **Bar Chart**: Error distribution by severity
+  - 🎯 **Radar Chart**: System health with multiple metrics
+  - 📉 **Error Rate Trends**: Error percentage over selected time range
 
-- **Data Tables**:
-  - Recent errors with severity, component, type, message
-  - Recent indexing events with status and duration
-  - Time range filtering (1h, 24h, 7d, 30d, custom)
-  - Data cleanup tools
+- **Data Tables & Filtering**:
+  - **Recent Errors**: Severity, component, type, message with sorting
+  - **Indexing Events**: Status, repository, duration, file count
+  - **Time Range Selection**: 1h, 24h, 7d, 30d, or custom date range
+  - **Data Cleanup**: Manual purge or automatic retention policies
+  - **Alert Notifications**: Real-time alerts when thresholds exceeded
+  - **JSON Export**: Export all metrics and events for analysis
 
 #### **LLM Manager Tab**
 - Discover and manage local LLMs
@@ -227,6 +272,7 @@ python -m myragdb.cli search "how to secure API endpoints" --type semantic
 
 ```python
 from myragdb import SearchClient
+from myragdb.agent_library import QueryBuilder
 
 # Initialize client
 client = SearchClient(base_url="http://localhost:3003")
@@ -255,6 +301,85 @@ for result in results:
     print(f"Repository: {result.repository}")
     print("---")
 ```
+
+#### **QueryBuilder - Fluent Query Construction**
+
+Use `QueryBuilder` for programmatic query construction with a fluent API:
+
+```python
+from myragdb.agent_library import QueryBuilder
+
+# Simple search
+query = QueryBuilder().search("authentication").build()
+results = client.search(**query)
+
+# Complex filtered search with date range and score filtering
+query = (QueryBuilder()
+    .search("database migration")
+    .in_repositories(["xLLMArionComply"])
+    .only_python()
+    .between_dates("2025-01-01", "2026-01-07")
+    .with_min_score(0.6)
+    .limit_to(20)
+    .build())
+results = client.search(**query)
+
+# Search with date range
+query = (QueryBuilder()
+    .search("performance optimization")
+    .from_date("2025-12-01")  # Results from this date onwards
+    .semantic()
+    .limit_to(10)
+    .build())
+results = client.search(**query)
+
+# Search with score threshold
+query = (QueryBuilder()
+    .search("error handling")
+    .with_min_score(0.8)  # Only highly relevant results
+    .limit_to(5)
+    .build())
+results = client.search(**query)
+
+# Convenience factory functions
+from myragdb.agent_library.query_builder import (
+    find_in_code,
+    find_in_docs,
+    find_pattern,
+    understand_concept
+)
+
+# Find in code files
+results = client.search(**find_in_code("JWT validation").build())
+
+# Find in documentation
+results = client.search(**find_in_docs("API usage").build())
+
+# Find exact pattern
+results = client.search(**find_pattern("def authenticate").build())
+
+# Understand concept semantically
+results = client.search(**understand_concept("how users log in").build())
+```
+
+**QueryBuilder Methods:**
+
+| Method | Purpose | Example |
+|--------|---------|---------|
+| `.search(query)` | Set search query (required) | `.search("authentication")` |
+| `.hybrid()` / `.keyword()` / `.semantic()` | Search type | `.hybrid()` (default) |
+| `.in_repositories(list)` | Filter to repos | `.in_repositories(["MyApp"])` |
+| `.only_file_types(list)` | Filter by extensions | `.only_file_types([".py", ".md"])` |
+| `.only_python()` | Shortcut for `.py` files | `.only_python()` |
+| `.with_extension(ext)` | Single extension filter | `.with_extension(".py")` |
+| `.in_folder(path)` | Filter by folder | `.in_folder("src/components")` |
+| `.from_date(date)` | Results from date (ISO 8601) | `.from_date("2025-01-01")` |
+| `.to_date(date)` | Results up to date (ISO 8601) | `.to_date("2026-01-07")` |
+| `.between_dates(from, to)` | Date range (inclusive) | `.between_dates("2025-06-01", "2025-06-30")` |
+| `.with_min_score(score)` | Minimum relevance (0.0-1.0) | `.with_min_score(0.6)` |
+| `.limit_to(n)` | Max results (1-100) | `.limit_to(20)` |
+| `.build()` | Build final query dict | Required before `.search(**query)` |
+| `.to_string()` | Human-readable representation | `print(query.to_string())` |
 
 ### 4. MCP Integration (Claude & AI Agents)
 
@@ -567,9 +692,20 @@ flake8 src/
 
 ### API Documentation
 
-Once server is running, visit:
-- **Interactive API Docs**: http://localhost:3003/docs (Swagger UI)
-- **Alternative Docs**: http://localhost:3003/redoc (ReDoc)
+**Comprehensive API Reference:** See [SEARCH_API_REFERENCE.md](SEARCH_API_REFERENCE.md) for complete documentation including:
+- All three search endpoints (hybrid, keyword, semantic)
+- Complete filter reference (date range, score, repository, file type)
+- Request/response examples with full JSON structures
+- Date filtering behavior and examples
+- Score filtering with typical ranges
+- Health check and statistics endpoints
+- Error handling with HTTP status codes
+- Python client library usage
+- cURL examples for all scenarios
+
+**Interactive API Documentation** (when server is running):
+- **Swagger UI**: http://localhost:3003/docs
+- **ReDoc**: http://localhost:3003/redoc
 
 ---
 
@@ -712,17 +848,22 @@ If UI doesn't reflect latest changes:
 - ✅ Multi-repository support
 - ✅ Web UI with full functionality
 - ✅ CLI search interface
-- ✅ Python client library
+- ✅ Python client library with SearchClient
+- ✅ **QueryBuilder fluent API** for programmatic query construction
+- ✅ **Date range filtering** (from_date, to_date, between_dates)
+- ✅ **Min-score filtering** for relevance thresholds
+- ✅ **Advanced search filters** in UI (date range, score, folder, extension)
 - ✅ MCP server for Claude integration
 - ✅ Repository discovery and configuration
 - ✅ Incremental indexing
 - ✅ Auto-reindexing on file changes
-- ✅ Observability dashboard
+- ✅ **Enhanced Activity Monitor** with type/severity/time filtering, export
+- ✅ **Enhanced Observability Dashboard** with alerts, charts, metrics
 - ✅ LLM query rewriting integration
 - ✅ LLM manager UI
 - ✅ Real-time indexing progress
 - ✅ README viewer for repositories
-- ✅ Activity monitoring and logging
+- ✅ **Comprehensive API documentation** (SEARCH_API_REFERENCE.md)
 
 **Upcoming Features:**
 - 🔄 Scheduled indexing (cron-based)
