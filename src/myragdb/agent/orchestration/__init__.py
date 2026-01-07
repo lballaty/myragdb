@@ -12,6 +12,7 @@ from myragdb.agent.orchestration.template_engine import (
     TemplateEngine,
     TemplateLibrary
 )
+from myragdb.agent.orchestration.agent_orchestrator import AgentOrchestrator
 
 __all__ = [
     "WorkflowEngine",
@@ -19,4 +20,5 @@ __all__ = [
     "WorkflowExecution",
     "TemplateEngine",
     "TemplateLibrary",
+    "AgentOrchestrator",
 ]
