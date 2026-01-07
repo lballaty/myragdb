@@ -11,7 +11,7 @@
 
 The Agent Platform provides REST API endpoints for executing templates, workflows, managing skills, and discovering available capabilities.
 
-**Base URL:** `http://localhost:3002/api/v1/agent`
+**Base URL:** `http://localhost:3003/api/v1/agent`
 
 All endpoints return JSON responses and support error handling with appropriate HTTP status codes.
 
@@ -110,7 +110,7 @@ Execute a pre-built workflow template with parameters.
 
 ```bash
 # Basic search
-curl -X POST http://localhost:3002/api/v1/agent/execute \
+curl -X POST http://localhost:3003/api/v1/agent/execute \
   -H "Content-Type: application/json" \
   -d '{
     "request_type": "code_search",
@@ -121,7 +121,7 @@ curl -X POST http://localhost:3002/api/v1/agent/execute \
   }'
 
 # Code analysis
-curl -X POST http://localhost:3002/api/v1/agent/execute \
+curl -X POST http://localhost:3003/api/v1/agent/execute \
   -H "Content-Type: application/json" \
   -d '{
     "request_type": "code_analysis",
@@ -132,7 +132,7 @@ curl -X POST http://localhost:3002/api/v1/agent/execute \
   }'
 
 # With execution tracking
-curl -X POST http://localhost:3002/api/v1/agent/execute \
+curl -X POST http://localhost:3003/api/v1/agent/execute \
   -H "Content-Type: application/json" \
   -d '{
     "request_type": "code_search",
@@ -220,7 +220,7 @@ Execute a custom workflow definition with specified steps.
 
 **Example:**
 ```bash
-curl -X POST http://localhost:3002/api/v1/agent/execute-workflow \
+curl -X POST http://localhost:3003/api/v1/agent/execute-workflow \
   -H "Content-Type: application/json" \
   -d '{
     "name": "search_and_analyze",
@@ -298,7 +298,7 @@ Get list of all registered workflow templates.
 
 **Example:**
 ```bash
-curl http://localhost:3002/api/v1/agent/templates
+curl http://localhost:3003/api/v1/agent/templates
 ```
 
 ---
@@ -356,7 +356,7 @@ Get detailed information about a specific template.
 
 **Example:**
 ```bash
-curl http://localhost:3002/api/v1/agent/templates/code_search
+curl http://localhost:3003/api/v1/agent/templates/code_search
 ```
 
 ---
@@ -413,7 +413,7 @@ Register a new workflow template.
 
 **Example:**
 ```bash
-curl -X POST http://localhost:3002/api/v1/agent/templates \
+curl -X POST http://localhost:3003/api/v1/agent/templates \
   -H "Content-Type: application/json" \
   -d '{
     "template_id": "my_template",
@@ -481,7 +481,7 @@ Get list of all registered skills.
 
 **Example:**
 ```bash
-curl http://localhost:3002/api/v1/agent/skills
+curl http://localhost:3003/api/v1/agent/skills
 ```
 
 ---
@@ -550,8 +550,8 @@ Get detailed information about a specific skill.
 
 **Example:**
 ```bash
-curl http://localhost:3002/api/v1/agent/skills/search
-curl http://localhost:3002/api/v1/agent/skills/code_analysis
+curl http://localhost:3003/api/v1/agent/skills/search
+curl http://localhost:3003/api/v1/agent/skills/code_analysis
 ```
 
 ---
@@ -596,7 +596,7 @@ Get overall orchestrator capabilities and status.
 
 **Example:**
 ```bash
-curl http://localhost:3002/api/v1/agent/info
+curl http://localhost:3003/api/v1/agent/info
 ```
 
 ---
@@ -621,7 +621,7 @@ Check if agent platform is operational.
 
 **Example:**
 ```bash
-curl http://localhost:3002/api/v1/agent/health
+curl http://localhost:3003/api/v1/agent/health
 ```
 
 ---
@@ -660,7 +660,7 @@ import requests
 
 try:
     response = requests.post(
-        "http://localhost:3002/api/v1/agent/execute",
+        "http://localhost:3003/api/v1/agent/execute",
         json={
             "request_type": "code_search",
             "parameters": {"query": "authentication"}
@@ -705,7 +705,7 @@ List endpoints return all results. Future versions will support:
 ### Example 1: Simple Code Search
 
 ```bash
-curl -X POST http://localhost:3002/api/v1/agent/execute \
+curl -X POST http://localhost:3003/api/v1/agent/execute \
   -H "Content-Type: application/json" \
   -d '{
     "request_type": "code_search",
@@ -719,7 +719,7 @@ curl -X POST http://localhost:3002/api/v1/agent/execute \
 ### Example 2: Search and Analyze
 
 ```bash
-curl -X POST http://localhost:3002/api/v1/agent/execute-workflow \
+curl -X POST http://localhost:3003/api/v1/agent/execute-workflow \
   -H "Content-Type: application/json" \
   -d '{
     "name": "analyze_auth",
@@ -744,13 +744,13 @@ curl -X POST http://localhost:3002/api/v1/agent/execute-workflow \
 ### Example 3: Get All Templates
 
 ```bash
-curl http://localhost:3002/api/v1/agent/templates | jq '.templates[] | {id, name, description}'
+curl http://localhost:3003/api/v1/agent/templates | jq '.templates[] | {id, name, description}'
 ```
 
 ### Example 4: Register Custom Template
 
 ```bash
-curl -X POST http://localhost:3002/api/v1/agent/templates \
+curl -X POST http://localhost:3003/api/v1/agent/templates \
   -H "Content-Type: application/json" \
   -d @my_template.json
 ```
@@ -761,7 +761,7 @@ curl -X POST http://localhost:3002/api/v1/agent/templates \
 import requests
 import asyncio
 
-BASE_URL = "http://localhost:3002/api/v1/agent"
+BASE_URL = "http://localhost:3003/api/v1/agent"
 
 class AgentClient:
     def __init__(self, base_url=BASE_URL):
@@ -860,9 +860,9 @@ async function executeTemplate(templateId, params) {
 
 FastAPI auto-generates API documentation:
 
-- **Swagger UI:** `http://localhost:3002/docs`
-- **ReDoc:** `http://localhost:3002/redoc`
-- **OpenAPI JSON:** `http://localhost:3002/openapi.json`
+- **Swagger UI:** `http://localhost:3003/docs`
+- **ReDoc:** `http://localhost:3003/redoc`
+- **OpenAPI JSON:** `http://localhost:3003/openapi.json`
 
 ---
 

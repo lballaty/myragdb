@@ -164,8 +164,8 @@ results = client.search("JWT tokens")
 
 ```bash
 # Test all endpoints
-curl http://localhost:3002/stats
-curl -X POST http://localhost:3002/search/keyword -H "Content-Type: application/json" -d '{"query": "auth"}'
+curl http://localhost:3003/stats
+curl -X POST http://localhost:3003/search/keyword -H "Content-Type: application/json" -d '{"query": "auth"}'
 
 # Test multi-repo search
 python -m myragdb.cli search "authentication" --repos xLLMArionComply RepoDot

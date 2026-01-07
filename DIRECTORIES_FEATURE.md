@@ -119,7 +119,7 @@ The Directories feature enables MyRAGDB to index arbitrary directories (outside 
 
 ### Create a Directory
 ```bash
-curl -X POST http://localhost:3002/directories \
+curl -X POST http://localhost:3003/directories \
   -H "Content-Type: application/json" \
   -d '{
     "path": "/Users/user/projects/docs",
@@ -132,20 +132,20 @@ curl -X POST http://localhost:3002/directories \
 
 ### List Directories
 ```bash
-curl http://localhost:3002/directories
+curl http://localhost:3003/directories
 
 # Only enabled directories
-curl http://localhost:3002/directories?enabled_only=true
+curl http://localhost:3003/directories?enabled_only=true
 ```
 
 ### Get Directory Details
 ```bash
-curl http://localhost:3002/directories/1
+curl http://localhost:3003/directories/1
 ```
 
 ### Update Directory
 ```bash
-curl -X PATCH http://localhost:3002/directories/1 \
+curl -X PATCH http://localhost:3003/directories/1 \
   -H "Content-Type: application/json" \
   -d '{
     "path": "/Users/user/projects/docs",
@@ -157,12 +157,12 @@ curl -X PATCH http://localhost:3002/directories/1 \
 
 ### Delete Directory
 ```bash
-curl -X DELETE http://localhost:3002/directories/1
+curl -X DELETE http://localhost:3003/directories/1
 ```
 
 ### Trigger Reindex
 ```bash
-curl -X POST http://localhost:3002/directories/1/reindex \
+curl -X POST http://localhost:3003/directories/1/reindex \
   -H "Content-Type: application/json" \
   -d '{
     "index_keyword": true,
@@ -173,7 +173,7 @@ curl -X POST http://localhost:3002/directories/1/reindex \
 
 ### Discover Directory Structure
 ```bash
-curl http://localhost:3002/directories/1/discover?max_depth=3
+curl http://localhost:3003/directories/1/discover?max_depth=3
 ```
 
 ## Database Schema Details

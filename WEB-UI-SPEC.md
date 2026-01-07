@@ -557,7 +557,7 @@ interface SettingsState {
 class APIClient {
   private baseURL: string;
   
-  constructor(baseURL: string = 'http://localhost:3002') {
+  constructor(baseURL: string = 'http://localhost:3003') {
     this.baseURL = baseURL;
   }
   
@@ -1165,7 +1165,7 @@ server {
     
     # API proxy
     location /api/ {
-        proxy_pass http://localhost:3002/;
+        proxy_pass http://localhost:3003/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';

@@ -559,7 +559,7 @@ def switch(provider, model):
         model = click.prompt('Select model', type=click.Choice([m.id for m in models]))
 
     # Switch session (no restart!)
-    response = requests.post('http://localhost:3002/llm/switch', json={
+    response = requests.post('http://localhost:3003/llm/switch', json={
         'provider': provider,
         'model_id': model,
         'auth_method': auth_config.auth_method.value,
@@ -575,7 +575,7 @@ def switch(provider, model):
 @llm.command()
 def status():
     """Show current LLM session"""
-    response = requests.get('http://localhost:3002/llm/session')
+    response = requests.get('http://localhost:3003/llm/session')
     session = response.json()
 
     click.echo(f"Active LLM: {session['provider_type']}/{session['model_id']}")
@@ -666,7 +666,7 @@ OPENAI_ORG_ID=...
 ANTHROPIC_ORG_ID=...
 
 # OAuth settings (for subscription auth)
-OAUTH_REDIRECT_URI=http://localhost:3002/llm/auth/callback
+OAUTH_REDIRECT_URI=http://localhost:3003/llm/auth/callback
 OPENAI_OAUTH_CLIENT_ID=...
 OPENAI_OAUTH_CLIENT_SECRET=...
 ```

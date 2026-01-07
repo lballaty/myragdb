@@ -323,7 +323,7 @@ server {
     ssl_ciphers HIGH:!aNULL:!MD5;
 
     location / {
-        proxy_pass http://localhost:3002;
+        proxy_pass http://localhost:3003;
         proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
@@ -495,7 +495,7 @@ jobs:
 The API provides a health check endpoint:
 
 ```bash
-curl http://localhost:3002/api/v1/health
+curl http://localhost:3003/api/v1/health
 ```
 
 **Response:**
@@ -529,7 +529,7 @@ global:
 scrape_configs:
   - job_name: 'myragdb'
     static_configs:
-      - targets: ['localhost:3002']
+      - targets: ['localhost:3003']
     metrics_path: '/api/v1/metrics'
 ```
 
@@ -705,7 +705,7 @@ cat logs/myragdb.log | jq '.'
 cat logs/myragdb.log | jq 'select(.context.request_id == "abc123")'
 
 # Check system health
-curl http://localhost:3002/api/v1/health | jq '.'
+curl http://localhost:3003/api/v1/health | jq '.'
 
 # Monitor resource usage
 docker stats myragdb

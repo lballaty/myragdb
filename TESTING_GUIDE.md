@@ -99,7 +99,7 @@ npm install --save-dev axios
 cp .env.test.example .env.test
 
 # Edit with your values
-API_BASE_URL=http://localhost:3002
+API_BASE_URL=http://localhost:3003
 UI_BASE_URL=http://localhost:3003
 ```
 
@@ -585,7 +585,7 @@ npx playwright test --debug
 ### API Connection Issues
 ```bash
 # Verify backend is running
-curl http://localhost:3002/api/v1/agent/health
+curl http://localhost:3003/api/v1/agent/health
 
 # Verify UI is running
 curl http://localhost:3003

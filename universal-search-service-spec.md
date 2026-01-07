@@ -40,7 +40,7 @@ Build a laptop-wide search service combining keyword search with vector embeddin
 │  MacBook Pro M4 (128GB RAM)                                 │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
-│  🔍 Universal Search Service (localhost:3002)               │
+│  🔍 Universal Search Service (localhost:3003)               │
 │  ┌──────────────────────────────────────────────────────┐  │
 │  │                                                        │  │
 │  │  FastAPI REST Service                                 │  │
@@ -640,7 +640,7 @@ python scripts/initial_index.py
 # 7. Start service
 python -m src.api.server
 
-# Service now running at http://localhost:3002
+# Service now running at http://localhost:3003
 ```
 
 ### Install as System Service (launchd)
@@ -762,7 +762,7 @@ from agent_library import SearchClient, QueryBuilder
 
 class DocumentationSyncAgent:
     def __init__(self):
-        self.search = SearchClient(base_url="http://localhost:3002")
+        self.search = SearchClient(base_url="http://localhost:3003")
     
     def find_related_todos(self, domain_name: str):
         """Find TODO items related to a domain"""
@@ -814,7 +814,7 @@ from agent_library import SearchClient
 
 class PatternFinderAgent:
     def __init__(self):
-        self.search = SearchClient(base_url="http://localhost:3002")
+        self.search = SearchClient(base_url="http://localhost:3003")
     
     def find_similar_implementations(self, description: str):
         """Find how other projects solved similar problems"""
@@ -861,7 +861,7 @@ class PatternFinderAgent:
 ```python
 class CompletenessCheckerAgent:
     def __init__(self):
-        self.search = SearchClient(base_url="http://localhost:3002")
+        self.search = SearchClient(base_url="http://localhost:3003")
     
     def check_code_vs_docs(self, repository: str):
         """Find code components without documentation"""
@@ -1256,7 +1256,7 @@ prometheus-client==0.19.0
 **Search returns no results:**
 ```bash
 # Check if repository is indexed
-curl http://localhost:3002/stats
+curl http://localhost:3003/stats
 
 # Verify files exist
 ls /path/to/repository

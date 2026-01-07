@@ -745,7 +745,7 @@ repositories:
 **Method 3: API**
 
 ```bash
-curl -X POST "http://localhost:3002/repositories/add" \
+curl -X POST "http://localhost:3003/repositories/add" \
   -H "Content-Type: application/json" \
   -d '{
     "directories": ["/path/to/scan"],
@@ -833,7 +833,7 @@ Edit `config/repositories.yaml` and remove the repository entry.
 **Option 3: API**
 
 ```bash
-curl -X DELETE "http://localhost:3002/repositories/myproject"
+curl -X DELETE "http://localhost:3003/repositories/myproject"
 ```
 
 ---
@@ -1432,7 +1432,7 @@ Currently no authentication required (local use only).
 Perform hybrid search across repositories.
 
 ```bash
-curl -X POST "http://localhost:3002/search" \
+curl -X POST "http://localhost:3003/search" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "user authentication",
@@ -1467,7 +1467,7 @@ curl -X POST "http://localhost:3002/search" \
 List all configured repositories.
 
 ```bash
-curl "http://localhost:3002/repositories"
+curl "http://localhost:3003/repositories"
 ```
 
 **POST /repositories/add**
@@ -1475,7 +1475,7 @@ curl "http://localhost:3002/repositories"
 Add repositories via discovery.
 
 ```bash
-curl -X POST "http://localhost:3002/repositories/add" \
+curl -X POST "http://localhost:3003/repositories/add" \
   -H "Content-Type: application/json" \
   -d '{
     "directories": ["/Users/username/projects"],
@@ -1489,7 +1489,7 @@ curl -X POST "http://localhost:3002/repositories/add" \
 Update repository configuration.
 
 ```bash
-curl -X PATCH "http://localhost:3002/repositories/myproject?enabled=true&priority=high" \
+curl -X PATCH "http://localhost:3003/repositories/myproject?enabled=true&priority=high" \
   -H "Content-Type: application/json"
 ```
 
@@ -1498,7 +1498,7 @@ curl -X PATCH "http://localhost:3002/repositories/myproject?enabled=true&priorit
 Remove repository from configuration.
 
 ```bash
-curl -X DELETE "http://localhost:3002/repositories/myproject"
+curl -X DELETE "http://localhost:3003/repositories/myproject"
 ```
 
 #### Indexing
@@ -1508,7 +1508,7 @@ curl -X DELETE "http://localhost:3002/repositories/myproject"
 Trigger incremental reindexing.
 
 ```bash
-curl -X POST "http://localhost:3002/reindex" \
+curl -X POST "http://localhost:3003/reindex" \
   -H "Content-Type: application/json" \
   -d '{
     "repositories": ["myproject"],
@@ -1521,7 +1521,7 @@ curl -X POST "http://localhost:3002/reindex" \
 Get indexing status and statistics.
 
 ```bash
-curl "http://localhost:3002/index/status"
+curl "http://localhost:3003/index/status"
 ```
 
 ### Python Client
@@ -1530,7 +1530,7 @@ curl "http://localhost:3002/index/status"
 from myragdb import SearchClient
 
 # Initialize client
-client = SearchClient(base_url="http://localhost:3002")
+client = SearchClient(base_url="http://localhost:3003")
 
 # Search
 results = client.search(

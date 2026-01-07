@@ -61,7 +61,7 @@
 ### From Web UI
 
 1. Start the MyRAGDB server
-2. Open http://localhost:3002
+2. Open http://localhost:3003
 3. Click **📖 User Manual** button in header
 
 ### From Browser (Standalone)
@@ -84,7 +84,7 @@ glow docs/USER_MANUAL.md
 
 ```bash
 # Fetch user manual via API (when server is running)
-curl http://localhost:3002/docs/USER_MANUAL.md
+curl http://localhost:3003/docs/USER_MANUAL.md
 ```
 
 ---

@@ -40,7 +40,7 @@ Confirm that file system watchers are active for enabled repositories.
 
 3. Call the watcher status API:
    ```bash
-   curl http://localhost:3002/watcher/status
+   curl http://localhost:3003/watcher/status
    ```
 
 ### Expected Result
@@ -94,7 +94,7 @@ Verify that creating a new file triggers automatic reindexing.
 
 7. Search for content from the new file:
    ```bash
-   curl -X POST http://localhost:3002/search/hybrid \
+   curl -X POST http://localhost:3003/search/hybrid \
         -H "Content-Type: application/json" \
         -d '{"query": "test for automatic reindexing", "limit": 5}'
    ```
@@ -125,7 +125,7 @@ Verify that modifying an existing file triggers reindexing.
 
 4. Search for new content:
    ```bash
-   curl -X POST http://localhost:3002/search/hybrid \
+   curl -X POST http://localhost:3003/search/hybrid \
         -H "Content-Type: application/json" \
         -d '{"query": "New Section About Automatic Reindexing", "limit": 5}'
    ```
@@ -230,7 +230,7 @@ Verify that disabling auto-reindex stops the watcher.
 
 1. Disable auto-reindex via API:
    ```bash
-   curl -X POST http://localhost:3002/repositories/myragdb/auto-reindex \
+   curl -X POST http://localhost:3003/repositories/myragdb/auto-reindex \
         -H "Content-Type: application/json" \
         -d '{"enabled": false}'
    ```
@@ -248,7 +248,7 @@ Verify that disabling auto-reindex stops the watcher.
 
 3. Verify watcher stopped:
    ```bash
-   curl http://localhost:3002/watcher/status
+   curl http://localhost:3003/watcher/status
    ```
 
 4. Create a new file:
@@ -277,7 +277,7 @@ Verify that re-enabling auto-reindex starts the watcher.
 
 1. Enable auto-reindex via API:
    ```bash
-   curl -X POST http://localhost:3002/repositories/myragdb/auto-reindex \
+   curl -X POST http://localhost:3003/repositories/myragdb/auto-reindex \
         -H "Content-Type: application/json" \
         -d '{"enabled": true}'
    ```
@@ -319,7 +319,7 @@ Verify that watchers correctly restart after server restart.
 
 4. Check watcher status:
    ```bash
-   curl http://localhost:3002/watcher/status
+   curl http://localhost:3003/watcher/status
    ```
 
 5. Create a file to verify watching:
@@ -364,7 +364,7 @@ Verify that file deletions are detected and trigger reindexing.
 
 6. Search for deleted file content:
    ```bash
-   curl -X POST http://localhost:3002/search/hybrid \
+   curl -X POST http://localhost:3003/search/hybrid \
         -H "Content-Type: application/json" \
         -d '{"query": "Temporary Test File", "limit": 5}'
    ```
