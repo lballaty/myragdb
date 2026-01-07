@@ -287,6 +287,9 @@ async function performSearch() {
 
     const folderFilter = document.getElementById('folder-filter').value.trim();
     const extensionFilter = document.getElementById('extension-filter').value.trim();
+    const dateFrom = document.getElementById('date-from').value;
+    const dateTo = document.getElementById('date-to').value;
+    const minScore = document.getElementById('min-score').value;
     const resultsDiv = document.getElementById('search-results');
     const searchButton = document.getElementById('search-button');
 
@@ -303,7 +306,7 @@ async function performSearch() {
     const startTime = performance.now();
 
     // Build request body with filters
-    const requestBody = { query, limit };
+    const requestBody = { query, limit, search_type: searchType };
     // Use repositories array if specific repos selected, otherwise omit (search all)
     if (selectedRepos.length > 0) {
         requestBody.repositories = selectedRepos;
@@ -314,6 +317,9 @@ async function performSearch() {
     }
     if (folderFilter) requestBody.folder_filter = folderFilter;
     if (extensionFilter) requestBody.extension_filter = extensionFilter;
+    if (dateFrom) requestBody.date_from = dateFrom;
+    if (dateTo) requestBody.date_to = dateTo;
+    if (minScore) requestBody.min_score = parseFloat(minScore);
 
     try {
         const response = await fetch(`${API_BASE_URL}/search/${searchType}`, {

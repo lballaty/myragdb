@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.07.2.78.0">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.07.2.79.0">
     <link rel="stylesheet" href="static/css/activity-observability.css?v=2026.01.07.2.76.0">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -139,6 +139,18 @@
                     <label>
                         <span>Extension Filter:</span>
                         <input type="text" id="extension-filter" placeholder="e.g., .py, .ts">
+                    </label>
+                    <label>
+                        <span>From Date:</span>
+                        <input type="date" id="date-from" title="Filter results from this date (inclusive)">
+                    </label>
+                    <label>
+                        <span>To Date:</span>
+                        <input type="date" id="date-to" title="Filter results up to this date (inclusive)">
+                    </label>
+                    <label>
+                        <span>Min Score:</span>
+                        <input type="number" id="min-score" placeholder="0.0" min="0" max="1" step="0.1" style="max-width: 100px;">
                     </label>
                 </div>
 
@@ -796,6 +808,6 @@
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
     <script src="static/js/activity-monitor.js?v=2026.01.07.2.76.0"></script>
     <script src="static/js/observability.js?v=2026.01.07.2.76.0"></script>
-    <script src="static/js/app.js?v=2026.01.07.2.78.0"></script>
+    <script src="static/js/app.js?v=2026.01.07.2.79.0"></script>
 </body>
 </html>
