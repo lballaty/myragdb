@@ -331,6 +331,15 @@ Each result shows:
 
 **Results Summary:**
 - Shows "Found X results in Yms" above result list
+- **Repository Search Scope**: Displays which repositories were searched
+  - Format: "📚 Searched 34 repositories: repo1, repo2, repo3 and 31 more"
+  - Shows first 3 repository names plus count of additional repositories
+  - Helps verify that repository filters are working correctly
+- **API Call Details** (Collapsible):
+  - Click to expand and see exact API request
+  - Shows endpoint (POST /search/hybrid, /search/keyword, or /search/semantic)
+  - Shows complete request body with all filters
+  - Useful for debugging and comparing with chat interface searches
 - Empty state message if no results
 - Pagination controls if > limit results
 
@@ -744,6 +753,34 @@ curl -X POST "http://localhost:3002/repositories/add" \
     "auto_add": false
   }'
 ```
+
+### Bulk Repository Actions
+
+Apply actions to all repositories at once using the bulk action buttons:
+
+**Available Bulk Actions:**
+- **✅ Enable All**: Enable all repositories for indexing and searching
+- **❌ Disable All**: Disable all repositories (stops indexing and searching)
+- **🔓 Unlock All**: Unlock all repositories (allows reindexing)
+- **🔒 Lock All**: Lock all repositories (prevents reindexing)
+
+**How to Use:**
+1. Navigate to the Repository Management tab
+2. Click the desired bulk action button
+3. Confirm the action when prompted
+4. Wait for the "✓ Done!" confirmation
+5. Repository list will refresh automatically
+
+**Loading Indicators:**
+- Buttons show a spinner and "Processing..." during execution
+- Briefly displays "✓ Done!" on success
+- Returns to normal state after completion
+
+**Use Cases:**
+- **Enable All**: After initial setup or when restoring full search capability
+- **Disable All**: When troubleshooting or temporarily suspending all indexing
+- **Unlock All**: Before running a full reindex across all repositories
+- **Lock All**: To protect stable repositories from accidental reindexing
 
 ### Repository Configuration
 
