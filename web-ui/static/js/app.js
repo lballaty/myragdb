@@ -1699,12 +1699,10 @@ async function bulkUpdateRepositories(action, actionName) {
             const result = await response.json();
             addActivityLog('success', result.message);
 
-            // Refresh both discovered repos and regular repos lists
-            const scanButton = document.getElementById('scan-repositories-button');
-            if (scanButton) {
-                scanButton.click();
-            }
-            loadRepositories();
+            // Reload the page to refresh all repository displays
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
         } else {
             const error = await response.json();
             addActivityLog('error', `Failed to perform bulk update: ${error.detail || 'Unknown error'}`);
