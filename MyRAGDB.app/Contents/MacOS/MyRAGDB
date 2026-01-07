@@ -1,52 +1,121 @@
 #!/bin/bash
 # MyRAGDB Launcher Script
 
+# Create log file
+LOG_FILE="/tmp/myragdb_app_bundle.log"
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+echo "=================================================="
+echo "MyRAGDB App Bundle Launcher - $(date)"
+echo "=================================================="
+
 # Get the directory where this app bundle is located
 APP_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 APP_BUNDLE="$(dirname "$(dirname "$APP_PATH")")"
 PROJECT_ROOT="$(dirname "$APP_BUNDLE")"
 
+echo "APP_PATH: $APP_PATH"
+echo "APP_BUNDLE: $APP_BUNDLE"
+echo "PROJECT_ROOT: $PROJECT_ROOT"
+
 # Change to project directory
 cd "$PROJECT_ROOT"
+echo "Changed to directory: $(pwd)"
+
+# Set up environment - manually set common paths
+echo "Setting up environment..."
+
+# Add common Homebrew paths (M1/Intel Mac)
+if [ -d "/opt/homebrew/bin" ]; then
+    export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
+    echo "Added Homebrew M1 paths"
+fi
+if [ -d "/usr/local/bin" ]; then
+    export PATH="/usr/local/bin:/usr/local/sbin:$PATH"
+    echo "Added Homebrew Intel paths"
+fi
+
+# Add user bin
+if [ -d "$HOME/.local/bin" ]; then
+    export PATH="$HOME/.local/bin:$PATH"
+fi
+
+# Add pyenv if available
+if [ -d "$HOME/.pyenv" ]; then
+    export PYENV_ROOT="$HOME/.pyenv"
+    export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$(pyenv init -)" 2>/dev/null || true
+    echo "Added pyenv"
+fi
+
+echo "PATH: $PATH"
+echo "Python: $(which python3)"
+echo "Python version: $(python3 --version 2>&1)"
+echo "Meilisearch: $(which meilisearch 2>/dev/null || echo 'not found in PATH')"
 
 # Trap signals to run stop.sh when app is quit (via Force Quit)
 cleanup() {
-    "$PROJECT_ROOT/stop.sh" 2>/dev/null
-    exit 0
+    echo "Cleanup triggered at $(date)"
+    "$PROJECT_ROOT/stop.sh"
 }
 
-# Register signal handlers for graceful shutdown
-trap cleanup SIGTERM SIGINT SIGHUP EXIT
+# Register signal handlers for graceful shutdown (but NOT EXIT to avoid premature cleanup)
+trap cleanup SIGTERM SIGINT SIGHUP
 
 # Check if services are already running (relaunch scenario)
+echo "Checking if services are already running..."
 if lsof -Pi :3003 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo "Services already running - just opening browser"
     # Services already running - just open browser
     open "http://localhost:3003"
-    # Exit immediately since services are already managed by another instance
+    # Don't trigger cleanup - services are managed by another instance
+    trap - SIGTERM SIGINT SIGHUP  # Remove signal handlers
     exit 0
 fi
 
 # Run the startup script (first launch)
-./start.sh > /dev/null 2>&1
+echo "Starting MyRAGDB via start.sh..."
+echo "Command: $PROJECT_ROOT/start.sh"
+"$PROJECT_ROOT/start.sh"
 
 # Wait for server to be ready
+echo "Waiting for server to be ready..."
 for i in {1..10}; do
     if lsof -Pi :3003 -sTCP:LISTEN -t >/dev/null 2>&1; then
+        echo "Server is ready on port 3003!"
         break
     fi
+    echo "Attempt $i/10..."
     sleep 1
 done
 
+# Final check
+if ! lsof -Pi :3003 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo "ERROR: Server failed to start after 10 attempts"
+    echo "Check logs:"
+    echo "  - /tmp/myragdb_server.log"
+    echo "  - /tmp/mcp_middleware.log"
+    echo "  - /tmp/myragdb_app_bundle.log (this file)"
+
+    # Show a user-friendly error dialog
+    osascript -e 'display dialog "MyRAGDB failed to start. Check /tmp/myragdb_app_bundle.log for details." buttons {"OK"} default button "OK" with icon stop with title "MyRAGDB Error"'
+    exit 1
+fi
+
 # Open web UI in default browser
+echo "Opening web UI in browser..."
 open "http://localhost:3003"
 
+echo "MyRAGDB is running. Entering monitoring loop..."
+echo "To stop: Use 'Force Quit' from Dock, or run: ./stop.sh"
+echo "Double-click app again to reopen web UI in browser"
+
 # Keep the app running in background (appears in Dock while services are running)
-# To stop: Use "Force Quit" from Dock, or run: ./stop.sh
-# Double-click app again to reopen web UI in browser
 while true; do
     sleep 2
     # Check if any of the services are still running
     if [ ! -f "$PROJECT_ROOT/.server.pid" ] && [ ! -f "$PROJECT_ROOT/.middleware.pid" ]; then
+        echo "Services stopped - exiting app"
         exit 0
     fi
 done
