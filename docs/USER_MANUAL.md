@@ -1207,6 +1207,24 @@ LLM: [Calls search_repositories function]
 - Combine multiple searches
 - Explain code found
 
+**Important: Query Rewriting**
+
+The LLM may modify your query before searching:
+- **User asks**: "find readme files"
+- **LLM searches**: "find all README files"
+
+This query rewriting means:
+- Chat results may differ from Search tab results for the same input
+- The LLM interprets natural language and optimizes the query
+- Check the tool call details in chat to see the actual query used
+- For precise control over search queries, use the Search tab instead
+
+**Comparing Search Results:**
+- **Search Tab**: Shows "API Call Details" with exact request
+- **Chat Interface**: Shows tool call with LLM-generated query
+- Both call the same backend API
+- Differences are due to query rewriting, not search engine behavior
+
 ### Performance Tuning
 
 **GPU Acceleration:**
