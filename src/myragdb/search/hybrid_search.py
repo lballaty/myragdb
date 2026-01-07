@@ -187,15 +187,17 @@ class HybridSearchEngine:
         repository_filter: Optional[str] = None,
         folder_filter: Optional[str] = None,
         extension_filter: Optional[str] = None,
-        directories: Optional[List[int]] = None
+        directories: Optional[List[int]] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None
     ) -> List[HybridSearchResult]:
         """
         Execute hybrid search combining keyword and semantic search with RRF fusion.
 
         Business Purpose: Provides intelligent search that understands both exact
         keyword matches and semantic meaning, returning most relevant results based
-        on combined ranking from both approaches. Supports filtering by repositories
-        and managed directories.
+        on combined ranking from both approaches. Supports filtering by repositories,
+        managed directories, and date ranges.
 
         Args:
             query: User query (natural language or keywords)
@@ -205,6 +207,8 @@ class HybridSearchEngine:
             folder_filter: Optional folder name filter (overrides query rewriter)
             extension_filter: Optional extension filter (overrides query rewriter)
             directories: Optional list of directory IDs to search (None = all)
+            date_from: Optional start date filter (ISO 8601 format: YYYY-MM-DD)
+            date_to: Optional end date filter (ISO 8601 format: YYYY-MM-DD)
 
         Returns:
             List of HybridSearchResult sorted by RRF score (descending)
@@ -247,7 +251,9 @@ class HybridSearchEngine:
                     repository_filter=repository_filter,
                     folder_filter=folder_filter,
                     extension_filter=extension_filter,
-                    directories=directories
+                    directories=directories,
+                    date_from=date_from,
+                    date_to=date_to
                 )
                 print(f"[HybridSearch] Meilisearch returned {len(results)} results")
                 return results

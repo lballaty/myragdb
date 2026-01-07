@@ -156,7 +156,7 @@
 - [x] Add file type filtering to search (SearchRequest.file_types)
 - [x] Add extension filtering (SearchRequest.extension_filter)
 - [x] Add folder filtering (SearchRequest.folder_filter)
-- [ ] Add date range filtering
+- [x] Add date range filtering (date_from, date_to in ISO 8601 format)
 - [x] Implement min score threshold (SearchRequest.min_score)
 - [x] Add configurable result limits (SearchRequest.limit, 1-100)
 - [x] Enhance snippet extraction with context (hybrid_search.py)

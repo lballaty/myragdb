@@ -396,15 +396,17 @@ class MeilisearchIndexer:
         folder_filter: Optional[str] = None,
         extension_filter: Optional[str] = None,
         repository_filter: Optional[str] = None,
-        directories: Optional[List[int]] = None
+        directories: Optional[List[int]] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None
     ) -> List[MeilisearchResult]:
         """
         Search indexed files using keyword search with optional filters.
 
         Business Purpose: Finds files matching query using typo-tolerant keyword search.
         Supports scoped searching (filter by folder/extension/source first, then search within
-        that subset) for instant searches even with 2M+ files. Can filter by repositories
-        or managed directories.
+        that subset) for instant searches even with 2M+ files. Can filter by repositories,
+        managed directories, and date ranges.
 
         Args:
             query: Search query string
@@ -413,6 +415,8 @@ class MeilisearchIndexer:
             extension_filter: Filter by file extension (e.g., ".py")
             repository_filter: Filter by repository name
             directories: Optional list of directory IDs to search (None = all)
+            date_from: Optional start date filter (ISO 8601 format: YYYY-MM-DD)
+            date_to: Optional end date filter (ISO 8601 format: YYYY-MM-DD)
 
         Returns:
             List of MeilisearchResult objects sorted by relevance
@@ -453,6 +457,25 @@ class MeilisearchIndexer:
                 else:
                     # Multiple directories: (dir1 OR dir2 OR dir3)
                     filters.append(f"({' OR '.join(dir_filters)})")
+
+            # Add date range filtering (last_modified is Unix timestamp in seconds)
+            if date_from or date_to:
+                import datetime
+                date_filters = []
+                if date_from:
+                    # Convert ISO 8601 date to Unix timestamp (beginning of day)
+                    date_obj = datetime.datetime.strptime(date_from, "%Y-%m-%d")
+                    timestamp_from = int(date_obj.timestamp())
+                    date_filters.append(f'last_modified >= {timestamp_from}')
+                if date_to:
+                    # Convert ISO 8601 date to Unix timestamp (end of day)
+                    date_obj = datetime.datetime.strptime(date_to, "%Y-%m-%d")
+                    # Add 23:59:59 to get end of day
+                    date_obj = date_obj.replace(hour=23, minute=59, second=59)
+                    timestamp_to = int(date_obj.timestamp())
+                    date_filters.append(f'last_modified <= {timestamp_to}')
+                if date_filters:
+                    filters.append(' AND '.join(date_filters))
 
             filter_str = ' AND '.join(filters) if filters else None
 

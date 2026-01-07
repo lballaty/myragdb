@@ -1072,7 +1072,9 @@ async def search_hybrid(request: SearchRequest):
             limit=fetch_limit,
             repository_filter=repo_filter,
             folder_filter=request.folder_filter,
-            extension_filter=request.extension_filter
+            extension_filter=request.extension_filter,
+            date_from=request.date_from,
+            date_to=request.date_to
         )
 
         # Filter by multiple repositories if specified

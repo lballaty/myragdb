@@ -70,6 +70,14 @@ class SearchRequest(BaseModel):
         le=1.0,
         description="Minimum score threshold"
     )
+    date_from: Optional[str] = Field(
+        default=None,
+        description="Filter results from this date (ISO 8601 format: YYYY-MM-DD)"
+    )
+    date_to: Optional[str] = Field(
+        default=None,
+        description="Filter results up to this date (ISO 8601 format: YYYY-MM-DD)"
+    )
 
     class Config:
         json_schema_extra = {
@@ -80,7 +88,9 @@ class SearchRequest(BaseModel):
                 "directories": [1, 2],
                 "file_types": [".md", ".py"],
                 "limit": 10,
-                "min_score": 0.0
+                "min_score": 0.0,
+                "date_from": "2025-01-01",
+                "date_to": "2026-01-07"
             }
         }
 
