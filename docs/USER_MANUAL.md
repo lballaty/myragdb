@@ -1225,32 +1225,169 @@ This query rewriting means:
 - Both call the same backend API
 - Differences are due to query rewriting, not search engine behavior
 
-### Performance Tuning
+### Using the LLM Chat Tester
+
+The **LLM Chat Tester** provides a conversational interface to interact with your local LLMs and use them as repository search agents.
+
+**Accessing the Chat Interface:**
+
+1. Start MyRAGDB: `./start.sh`
+2. Open the web UI: http://localhost:3003
+3. Click **💬 LLM Chat Tester** in the header
+4. Or navigate directly to: http://localhost:3003/llm-chat-tester.html
+
+**Chat Interface Features:**
+
+1. **LLM Selection**
+   - Dropdown shows all running LLMs
+   - Auto-detects LLMs started from LLM Manager
+   - Displays model name, mode, and port
+
+2. **Chat Area**
+   - Message history with user and assistant messages
+   - Tool call displays showing search queries
+   - Tool result displays with search results
+   - Syntax-highlighted code snippets
+
+3. **Input Controls**
+   - Text input for questions/queries
+   - "Send" button to submit
+   - "Clear Chat" to reset conversation
+   - Context indicator showing message count
+
+**Using the Agent:**
+
+**Step 1: Start an LLM with Tools Mode**
+```bash
+# In the main UI, go to LLM Manager
+# Select a model (e.g., "Qwen Coder 7B")
+# Choose mode: "Tools" (enables function calling)
+# Click "▶️ Start"
+# Wait for status: "Running"
+```
+
+**Step 2: Open Chat Tester**
+- Click "💬 LLM Chat Tester" link
+- Select your running LLM from dropdown
+- Status should show "✓ Connected"
+
+**Step 3: Ask Questions**
+
+Natural language examples:
+```
+"Find all README files"
+"How is authentication implemented?"
+"Show me database migration files"
+"Where are the API endpoints defined?"
+"Find code that uses JWT tokens"
+```
+
+**Step 4: Review Results**
+
+The agent will:
+1. **Understand your question** - Interprets natural language
+2. **Call search tool** - You'll see: 🔧 Tool Call: search_codebase
+3. **Display tool parameters** - Shows query, search_type, limit
+4. **Show search results** - Formatted JSON with results
+5. **Synthesize response** - LLM explains findings in natural language
+
+**Example Conversation:**
+
+```
+You: Find authentication code in the user service
+
+🔧 Tool Call: search_codebase
+{
+  "query": "authentication user service implementation",
+  "search_type": "hybrid",
+  "limit": 10
+}
+
+📊 Tool Result:
+{
+  "total_results": 8,
+  "repositories_searched": ["xLLMArionComply", "myragdb", ...],
+  "results": [...]
+}
+
+Agent: I found 8 authentication-related files across your repositories.
+The main implementation appears to be in xLLMArionComply/arioncomply-v1/tests/api/authentication/...
+```
+
+**Tips for Effective Use:**
+
+- **Be specific**: "Find JWT token validation" is better than "find security"
+- **Use domain terms**: Technical keywords help the agent search more precisely
+- **Review tool calls**: Check what query the LLM actually sent to understand results
+- **Iterate naturally**: Ask follow-up questions to refine results
+
+**Performance Considerations:**
+
+The LLM Chat Tester adds latency compared to direct search:
+- **Direct Search**: 200-500ms (Meilisearch + vector search)
+- **LLM Chat**: 2-5 seconds (LLM inference + tool call + search)
+
+Use the Chat Tester when you want natural language interaction and contextual understanding. Use the Search tab for faster, direct queries.
+
+#### Performance Tuning for LLM Chat
 
 **GPU Acceleration:**
 
-Edit startup script to add GPU layers:
+If you have a compatible GPU (NVIDIA CUDA, Apple Metal), enable GPU acceleration in llama-cpp-python for 5-10x faster inference:
+
 ```bash
-llama-server --model model.gguf --n-gpu-layers 35
+# Install with GPU support
+CMAKE_ARGS="-DGGML_METAL=on" pip install llama-cpp-python  # macOS Metal
+CMAKE_ARGS="-DGGML_CUDA=on" pip install llama-cpp-python   # NVIDIA CUDA
+
+# Restart the HTTP middleware
+./stop.sh
+./start.sh
 ```
 
 **Context Window:**
-- Basic: 2048 tokens
-- Extended: 32768 tokens
+
+Larger context windows allow the LLM to see more search results at once:
+
+- **Small models** (7B-8B params): 4K-8K tokens recommended
+- **Medium models** (13B-32B params): 8K-16K tokens recommended
+- **Large models** (70B+ params): 16K-32K tokens recommended
+
+Configure in `mcp_server/http_middleware.py`:
+```python
+n_ctx=8192  # Context window size
+```
 
 **Batch Size:**
-- Default: 512
-- High performance: 2048
+
+Increase batch size for faster processing if you have sufficient RAM/VRAM:
+
+```python
+n_batch=512  # Default: 512 tokens per batch
+n_batch=1024 # Faster with more memory
+```
+
+**Model Selection:**
+
+Choose models based on your use case:
+
+- **Fast inference**: Llama 3.1 8B (Q4/Q5 quantization)
+- **Balanced**: Mistral Small 24B (Q8 quantization)
+- **High quality**: DeepSeek R1 32B (Q4_K_M quantization)
+- **Function calling**: Hermes 3, Qwen Coder (native tool use support)
+
+**Memory Requirements:**
+
+| Model Size | Quantization | RAM Required | VRAM Required (GPU) |
+|-----------|--------------|--------------|---------------------|
+| 7B-8B     | Q4_K_M       | 6-8 GB       | 4-6 GB             |
+| 13B       | Q4_K_M       | 10-12 GB     | 8-10 GB            |
+| 24B-32B   | Q4_K_M       | 20-24 GB     | 16-20 GB           |
+| 32B       | Q8_0         | 35-40 GB     | 32-36 GB           |
 
 ---
 
 ## API Reference
-
-### Base URL
-
-```
-http://localhost:3002
-```
 
 ### Authentication
 
