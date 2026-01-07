@@ -7,7 +7,9 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.07.2.75.1">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.07.2.76.0">
+    <link rel="stylesheet" href="static/css/activity-observability.css?v=2026.01.07.2.75.1">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
@@ -159,26 +161,44 @@
                         <button id="tab-server-logs" class="activity-tab-button">Server Logs</button>
                     </div>
                     <div class="activity-controls-group">
-                        <label id="log-level-filter" style="display: none;">
-                            <span>Level:</span>
-                            <select id="log-level-select">
-                                <option value="">All</option>
-                                <option value="ERROR">ERROR</option>
-                                <option value="WARNING">WARNING</option>
-                                <option value="INFO">INFO</option>
+                        <label>
+                            <span>Type Filter:</span>
+                            <select id="activity-type-filter">
+                                <option value="">All Types</option>
+                                <option value="search">Search</option>
+                                <option value="indexing">Indexing</option>
+                                <option value="system">System</option>
+                                <option value="error">Error</option>
                             </select>
                         </label>
-                        <label id="log-lines-filter" style="display: none;">
-                            <span>Lines:</span>
-                            <select id="log-lines-select">
-                                <option value="50">50</option>
-                                <option value="100" selected>100</option>
-                                <option value="200">200</option>
-                                <option value="500">500</option>
+                        <label>
+                            <span>Severity:</span>
+                            <select id="activity-severity-filter">
+                                <option value="">All Levels</option>
+                                <option value="error">Error</option>
+                                <option value="warning">Warning</option>
+                                <option value="info">Info</option>
+                                <option value="success">Success</option>
                             </select>
                         </label>
-                        <button id="refresh-activity" class="secondary-button">🔄 Refresh</button>
-                        <button id="clear-activity" class="secondary-button">🗑️ Clear</button>
+                        <label>
+                            <span>Time Range:</span>
+                            <select id="activity-time-range">
+                                <option value="all">All Time</option>
+                                <option value="1m">Last Minute</option>
+                                <option value="5m">Last 5 Minutes</option>
+                                <option value="15m">Last 15 Minutes</option>
+                                <option value="1h">Last Hour</option>
+                            </select>
+                        </label>
+                        <input type="text" id="activity-search" placeholder="Search activities..." style="max-width: 200px;">
+                        <label class="auto-refresh-toggle">
+                            <input type="checkbox" id="activity-auto-refresh-toggle" checked>
+                            <span>Auto Refresh</span>
+                        </label>
+                        <button id="activity-refresh-btn" class="secondary-button">🔄 Refresh</button>
+                        <button id="activity-export-btn" class="secondary-button">📥 Export</button>
+                        <button id="activity-clear-btn" class="secondary-button">🗑️ Clear</button>
                     </div>
                 </div>
                 <div id="activity-log" class="activity-log"></div>
@@ -485,8 +505,18 @@
                         <span>to</span>
                         <input type="datetime-local" id="obs-end-time" />
                     </div>
+                    <label class="auto-refresh-toggle">
+                        <input type="checkbox" id="obs-auto-refresh-toggle" checked>
+                        <span>Auto Refresh</span>
+                    </label>
                     <button id="obs-refresh-button" class="primary-button">🔄 Refresh</button>
+                    <button id="obs-export-btn" class="secondary-button">📥 Export</button>
                     <button id="obs-cleanup-button" class="secondary-button">🗑️ Cleanup Old Data</button>
+                </div>
+
+                <!-- Active Alerts -->
+                <div id="obs-alerts-container" style="margin-bottom: 20px;">
+                    <div class="obs-no-alerts">✅ No active alerts</div>
                 </div>
 
                 <!-- Summary Stats Cards -->
@@ -514,6 +544,16 @@
                         <div class="obs-stat-value" id="obs-min-response-time">-</div>
                         <div class="obs-stat-sublabel">Slowest: <span id="obs-max-response-time">-</span>ms</div>
                     </div>
+                    <div class="obs-stat-card">
+                        <div class="obs-stat-label">System CPU</div>
+                        <div class="obs-stat-value" id="obs-cpu-usage">-</div>
+                        <div class="obs-stat-sublabel">Memory: <span id="obs-memory-usage">-</span></div>
+                    </div>
+                    <div class="obs-stat-card">
+                        <div class="obs-stat-label">Disk Usage</div>
+                        <div class="obs-stat-value" id="obs-disk-usage">-</div>
+                        <div class="obs-stat-sublabel">Health: <span id="obs-api-health">-</span></div>
+                    </div>
                 </div>
 
                 <!-- Charts Section -->
@@ -540,6 +580,12 @@
                     <div class="obs-chart-container">
                         <h4>Errors by Component</h4>
                         <canvas id="obs-error-component-chart"></canvas>
+                    </div>
+
+                    <!-- System Health Chart -->
+                    <div class="obs-chart-container">
+                        <h4>System Health Status</h4>
+                        <canvas id="obs-system-health-chart"></canvas>
                     </div>
                 </div>
 
@@ -748,6 +794,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
-    <script src="static/js/app.js?v=2026.01.07.2.75.1"></script>
+    <script src="static/js/activity-monitor.js?v=2026.01.07.2.75.1"></script>
+    <script src="static/js/observability.js?v=2026.01.07.2.75.1"></script>
+    <script src="static/js/app.js?v=2026.01.07.2.76.0"></script>
 </body>
 </html>

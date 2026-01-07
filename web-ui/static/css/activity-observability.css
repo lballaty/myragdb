@@ -1,0 +1,423 @@
+/* File: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb/web-ui/static/css/activity-observability.css */
+/* Description: Enhanced styles for activity monitor and observability dashboard */
+/* Author: Libor Ballaty <libor@arionetworks.com> */
+/* Created: 2026-01-07 */
+
+/* ==================== Activity Monitor ==================== */
+
+.activity-monitor-controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.activity-monitor-controls label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9em;
+}
+
+.activity-monitor-controls select,
+.activity-monitor-controls input[type="text"] {
+    padding: 6px 10px;
+    border: 1px solid #475569;
+    border-radius: 4px;
+    background: #1e293b;
+    color: #e2e8f0;
+    font-size: 0.9em;
+}
+
+.activity-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.activity-entry {
+    padding: 12px;
+    border-left: 4px solid #64748b;
+    background: #1e293b;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.activity-entry:hover {
+    background: #334155;
+    transform: translateX(4px);
+}
+
+.activity-entry.activity-error {
+    border-left-color: #ef4444;
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.activity-entry.activity-warning {
+    border-left-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.05);
+}
+
+.activity-entry.activity-success {
+    border-left-color: #10b981;
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.activity-entry.activity-info {
+    border-left-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.activity-entry.activity-system {
+    border-left-color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.05);
+}
+
+.activity-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+}
+
+.activity-timestamp {
+    font-size: 0.8em;
+    color: #94a3b8;
+    font-family: 'Courier New', monospace;
+    min-width: 80px;
+}
+
+.activity-type-badge {
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #e2e8f0;
+    background: #334155;
+    padding: 2px 8px;
+    border-radius: 3px;
+}
+
+.activity-severity-badge {
+    font-size: 0.75em;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 3px;
+    text-transform: uppercase;
+}
+
+.activity-severity-badge.severity-error {
+    background: #7f1d1d;
+    color: #fecaca;
+}
+
+.activity-severity-badge.severity-warning {
+    background: #78350f;
+    color: #fcd34d;
+}
+
+.activity-severity-badge.severity-success {
+    background: #064e3b;
+    color: #86efac;
+}
+
+.activity-severity-badge.severity-info {
+    background: #0c2d6b;
+    color: #93c5fd;
+}
+
+.activity-message {
+    color: #cbd5e1;
+    font-size: 0.95em;
+    word-break: break-word;
+}
+
+.activity-metadata {
+    font-size: 0.8em;
+    color: #94a3b8;
+    background: rgba(255, 255, 255, 0.02);
+    padding: 6px 8px;
+    border-radius: 3px;
+    margin-top: 6px;
+    font-family: 'Courier New', monospace;
+    overflow-x: auto;
+}
+
+/* ==================== Observability Dashboard ==================== */
+
+.observability-section {
+    padding: 20px;
+}
+
+.observability-controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.observability-controls label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.observability-controls select,
+.observability-controls input[type="datetime-local"] {
+    padding: 8px 12px;
+    border: 1px solid #475569;
+    border-radius: 4px;
+    background: #1e293b;
+    color: #e2e8f0;
+}
+
+#obs-custom-range {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Observability Stats Cards */
+.obs-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.obs-stat-card {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border: 1px solid #475569;
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+    transition: all 0.3s;
+}
+
+.obs-stat-card:hover {
+    border-color: #64748b;
+    background: linear-gradient(135deg, #334155 0%, #475569 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.obs-stat-label {
+    font-size: 0.85em;
+    color: #94a3b8;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.obs-stat-value {
+    font-size: 1.8em;
+    font-weight: bold;
+    color: #10b981;
+    margin-bottom: 4px;
+}
+
+.obs-stat-sublabel {
+    font-size: 0.8em;
+    color: #cbd5e1;
+}
+
+.obs-error-critical {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.obs-error-error {
+    color: #f97316;
+    font-weight: 600;
+}
+
+/* Observability Charts */
+.obs-charts-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.obs-chart-container {
+    background: #0f172a;
+    border: 1px solid #475569;
+    border-radius: 8px;
+    padding: 16px;
+    position: relative;
+}
+
+.obs-chart-container h4 {
+    margin: 0 0 12px 0;
+    color: #e2e8f0;
+    font-size: 1em;
+}
+
+.obs-chart-container canvas {
+    max-height: 300px;
+}
+
+/* Observability Tables */
+.obs-errors-section,
+.obs-indexing-section {
+    margin-bottom: 24px;
+}
+
+.obs-errors-section h4,
+.obs-indexing-section h4 {
+    color: #e2e8f0;
+    margin-bottom: 12px;
+}
+
+.obs-errors-table-container,
+.obs-indexing-table-container {
+    background: #0f172a;
+    border: 1px solid #475569;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+
+.obs-errors-table,
+.obs-indexing-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9em;
+}
+
+.obs-errors-table th,
+.obs-indexing-table th {
+    background: #1e293b;
+    color: #cbd5e1;
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 1px solid #475569;
+}
+
+.obs-errors-table td,
+.obs-indexing-table td {
+    padding: 12px;
+    border-bottom: 1px solid #2d3748;
+    color: #cbd5e1;
+}
+
+.obs-errors-table tr:hover,
+.obs-indexing-table tr:hover {
+    background: #1e293b;
+}
+
+/* Observability Alerts */
+.obs-alerts-container {
+    margin-bottom: 24px;
+}
+
+.obs-no-alerts {
+    padding: 20px;
+    text-align: center;
+    color: #10b981;
+    font-size: 1.1em;
+    background: rgba(16, 185, 129, 0.05);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 8px;
+}
+
+.obs-alert {
+    padding: 12px;
+    margin-bottom: 8px;
+    border-left: 4px solid;
+    border-radius: 4px;
+    background: #1e293b;
+}
+
+.obs-alert.alert-error {
+    border-left-color: #ef4444;
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.obs-alert.alert-warning {
+    border-left-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.05);
+}
+
+.obs-alert.alert-info {
+    border-left-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.obs-alert-title {
+    font-weight: 600;
+    color: #e2e8f0;
+    margin-bottom: 4px;
+}
+
+.obs-alert-message {
+    color: #cbd5e1;
+    font-size: 0.9em;
+    margin-bottom: 4px;
+}
+
+.obs-alert-time {
+    font-size: 0.8em;
+    color: #94a3b8;
+}
+
+/* Observability Filters */
+.obs-filter-group {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    padding: 12px;
+    background: #1e293b;
+    border-radius: 6px;
+}
+
+.obs-filter-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #cbd5e1;
+}
+
+/* Auto-Refresh Toggle */
+.auto-refresh-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #cbd5e1;
+}
+
+.auto-refresh-toggle input[type="checkbox"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .obs-stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+
+    .obs-charts-section {
+        grid-template-columns: 1fr;
+    }
+
+    .activity-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .observability-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .observability-controls label,
+    .observability-controls select {
+        width: 100%;
+    }
+}
