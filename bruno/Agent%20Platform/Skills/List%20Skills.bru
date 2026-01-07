@@ -1,0 +1,59 @@
+meta {
+  name: List Skills
+  type: http
+  seq: 7
+  tags: @skills, @discovery, @api, @fast
+}
+
+get {
+  url: {{api_base_url}}{{agent_base_path}}/skills
+}
+
+assert {
+  res.status: eq 200
+  res.body.total: isNumber
+  res.body.skills: isArray
+  res.body.total: gte 5
+}
+
+tests {
+  test("Should return list of skills", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("Should have skills array", function() {
+    expect(res.body).to.have.property("skills");
+    expect(res.body.skills).to.be.an("array");
+  });
+
+  test("Should have at least 5 built-in skills", function() {
+    expect(res.body.total).to.be.at.least(5);
+    expect(res.body.skills.length).to.equal(res.body.total);
+  });
+
+  test("Each skill should have required fields", function() {
+    res.body.skills.forEach(skill => {
+      expect(skill).to.have.property("name");
+      expect(skill).to.have.property("description");
+      expect(skill).to.have.property("input_schema");
+      expect(skill).to.have.property("output_schema");
+      expect(skill).to.have.property("required_config");
+    });
+  });
+
+  test("Should include all core skills", function() {
+    const skillNames = res.body.skills.map(s => s.name);
+    expect(skillNames).to.include("search");
+    expect(skillNames).to.include("code_analysis");
+    expect(skillNames).to.include("report");
+    expect(skillNames).to.include("llm");
+    expect(skillNames).to.include("sql");
+  });
+
+  test("Schemas should be valid objects", function() {
+    res.body.skills.forEach(skill => {
+      expect(skill.input_schema).to.be.an("object");
+      expect(skill.output_schema).to.be.an("object");
+    });
+  });
+}

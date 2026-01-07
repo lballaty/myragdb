@@ -1,0 +1,56 @@
+meta {
+  name: Get Template Info
+  type: http
+  seq: 5
+  tags: @templates, @discovery, @api, @fast
+}
+
+get {
+  url: {{api_base_url}}{{agent_base_path}}/templates/code_search
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: eq "code_search"
+  res.body.parameters: isObject
+  res.body.step_count: isNumber
+}
+
+tests {
+  test("Should return template details", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("Should have correct template ID", function() {
+    expect(res.body.id).to.equal("code_search");
+  });
+
+  test("Should have template metadata", function() {
+    expect(res.body).to.have.property("name");
+    expect(res.body).to.have.property("description");
+    expect(res.body).to.have.property("category");
+  });
+
+  test("Should have parameters specification", function() {
+    expect(res.body).to.have.property("parameters");
+    expect(res.body.parameters).to.be.an("object");
+  });
+
+  test("Should have query parameter defined", function() {
+    expect(res.body.parameters).to.have.property("query");
+    expect(res.body.parameters.query).to.have.property("type");
+    expect(res.body.parameters.query).to.have.property("required");
+  });
+
+  test("Should have step count", function() {
+    expect(res.body.step_count).to.be.a("number");
+    expect(res.body.step_count).to.be.at.least(1);
+  });
+
+  test("Should return 404 for unknown template", async function() {
+    const response = await fetch(
+      "{{api_base_url}}{{agent_base_path}}/templates/unknown_template_xyz"
+    );
+    expect(response.status).to.equal(404);
+  });
+}

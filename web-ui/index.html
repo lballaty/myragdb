@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.07.2.55.1">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.07.2.71.2">
 </head>
 <body>
     <div class="container">
@@ -66,6 +66,7 @@
             <button class="tab-button active" data-tab="search">Search</button>
             <button class="tab-button" data-tab="activity">Activity Monitor</button>
             <button class="tab-button" data-tab="repositories">Repositories</button>
+            <button class="tab-button" data-tab="directories">Directories</button>
             <button class="tab-button" data-tab="observability">Observability</button>
             <button class="tab-button" data-tab="llm-manager">LLM Manager</button>
         </div>
@@ -98,6 +99,25 @@
                             <option value="">All Repositories</option>
                         </select>
                     </label>
+                    <label>
+                        <span>Directories:</span>
+                        <button id="directory-filter-button" class="secondary-button" style="padding: 6px 12px; font-size: 0.95em;">
+                            📁 Select Directories
+                        </button>
+                    </label>
+                    <div id="directory-filter-dropdown" class="directory-filter-dropdown" style="display: none;">
+                        <div class="directory-filter-header">
+                            <input type="text" id="directory-filter-search" placeholder="Search directories..." style="width: 100%; padding: 8px; margin-bottom: 8px;">
+                            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                                <button id="dir-filter-select-all" class="icon-button">✓ All</button>
+                                <button id="dir-filter-clear-all" class="icon-button">✗ None</button>
+                            </div>
+                        </div>
+                        <div id="directory-filter-list" class="directory-filter-list" style="max-height: 300px; overflow-y: auto;">
+                            <!-- Directories will be populated here -->
+                        </div>
+                    </div>
+                    <input type="hidden" id="directory-filter-values">
                     <label>
                         <span>Results:</span>
                         <select id="result-limit">
@@ -358,6 +378,85 @@
                     <div class="stat-card">
                         <div class="stat-label">Current Status</div>
                         <div class="stat-value" id="stat-index-status">Ready</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Directories Tab -->
+        <div id="directories-tab" class="tab-content">
+            <div class="directories-section">
+                <!-- Add Directory Section -->
+                <div class="add-directory-section">
+                    <h3>➕ Add Directory</h3>
+                    <p class="section-description">Index non-repository directories for searching alongside repositories</p>
+                    <div class="add-directory-form" style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="dir-path-input" placeholder="Absolute path (e.g., /Users/user/projects/docs)" style="flex: 1; min-width: 300px;">
+                            <button id="browse-dir-button" class="secondary-button" style="padding: 6px 12px;">📂 Browse</button>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="dir-name-input" placeholder="Directory name" style="flex: 1; min-width: 200px;">
+                            <select id="dir-priority-input" style="flex: 0 0 120px;">
+                                <option value="0">Priority: Normal</option>
+                                <option value="10">Priority: High</option>
+                                <option value="-10">Priority: Low</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="dir-notes-input" placeholder="Optional notes about this directory" style="flex: 1;">
+                            <button id="add-directory-button" class="primary-button" style="flex: 0 0 auto;">Add Directory</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bulk Actions Section -->
+                <div class="bulk-actions-section" style="margin-top: 20px;">
+                    <h3>⚡ Bulk Actions</h3>
+                    <p class="section-description">Apply actions to all directories at once</p>
+                    <div class="bulk-actions">
+                        <button id="enable-dirs-button" class="bulk-btn enable-all">✅ Enable All</button>
+                        <button id="disable-dirs-button" class="bulk-btn disable-all">❌ Disable All</button>
+                        <button id="reindex-all-dirs-button" class="bulk-btn primary">🔄 Reindex All</button>
+                    </div>
+                </div>
+
+                <!-- Directories Management Section -->
+                <div class="reindex-section" style="margin-top: 20px;">
+                    <h3>📁 Managed Directories</h3>
+                    <div class="directory-selection">
+                        <div class="directory-header">
+                            <label>
+                                <input type="checkbox" id="select-all-dirs">
+                                <strong>Select All</strong>
+                            </label>
+                        </div>
+                        <div id="directories-list" class="directories-list">
+                            <div class="loading">Loading directories...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Directory Statistics -->
+                <div class="directory-stats-section" style="margin-top: 20px;">
+                    <h3>📊 Directory Statistics</h3>
+                    <div class="stats-grid" id="directory-stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Directories</div>
+                            <div class="stat-value" id="stat-total-dirs">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Enabled Directories</div>
+                            <div class="stat-value" id="stat-enabled-dirs">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Files Indexed</div>
+                            <div class="stat-value" id="stat-total-dir-files">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Size</div>
+                            <div class="stat-value" id="stat-dir-size">0 MB</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -649,6 +748,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
-    <script src="static/js/app.js?v=2026.01.07.2.55.1"></script>
+    <script src="static/js/app.js?v=2026.01.07.2.71.2"></script>
 </body>
 </html>

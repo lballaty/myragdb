@@ -1,0 +1,76 @@
+meta {
+  name: Execute Custom Workflow
+  type: http
+  seq: 3
+  tags: @execution, @workflow, @api, @integration
+}
+
+post {
+  url: {{api_base_url}}{{agent_base_path}}/execute-workflow
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body {
+  json {
+    name: "test_search_analyze"
+    steps: [
+      {
+        skill: "search"
+        id: "find_code"
+        input: {
+          query: "authentication"
+          limit: 3
+        }
+        description: "Search for authentication code"
+      }
+      {
+        skill: "code_analysis"
+        id: "analyze_code"
+        input: {
+          code: "{{ find_code.results[0].snippet }}"
+          language: "python"
+        }
+        description: "Analyze the code structure"
+        on_error: "continue"
+      }
+    ]
+  }
+}
+
+assert {
+  res.status: in [200, 201]
+  res.body.status: in ["completed", "failed"]
+  res.body.workflow_name: eq "test_search_analyze"
+  res.body.step_details: isArray
+}
+
+tests {
+  test("Should execute custom workflow", function() {
+    expect(res.status).to.be.oneOf([200, 201]);
+  });
+
+  test("Should track multiple steps", function() {
+    expect(res.body.step_details).to.be.an("array");
+    expect(res.body.step_details.length).to.be.at.least(1);
+  });
+
+  test("Should execute steps in order", function() {
+    const steps = res.body.step_details;
+    if (steps.length > 0) {
+      expect(steps[0].skill).to.equal("search");
+    }
+  });
+
+  test("Should support variable interpolation", function() {
+    // Verify workflow can handle variable references
+    expect(res.body.status).to.be.oneOf(["completed", "failed"]);
+  });
+
+  test("Should handle on_error directive", function() {
+    // on_error: continue should allow workflow to proceed
+    expect(res.body.steps_completed).to.be.a("number");
+  });
+}

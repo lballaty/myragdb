@@ -1,0 +1,51 @@
+meta {
+  name: List Templates
+  type: http
+  seq: 4
+  tags: @templates, @discovery, @api, @fast
+}
+
+get {
+  url: {{api_base_url}}{{agent_base_path}}/templates
+}
+
+assert {
+  res.status: eq 200
+  res.body.total: isNumber
+  res.body.templates: isArray
+}
+
+tests {
+  test("Should return list of templates", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("Should have total count", function() {
+    expect(res.body).to.have.property("total");
+    expect(res.body.total).to.be.a("number");
+    expect(res.body.total).to.be.at.least(1);
+  });
+
+  test("Should have templates array", function() {
+    expect(res.body).to.have.property("templates");
+    expect(res.body.templates).to.be.an("array");
+  });
+
+  test("Each template should have required fields", function() {
+    res.body.templates.forEach(template => {
+      expect(template).to.have.property("id");
+      expect(template).to.have.property("name");
+      expect(template).to.have.property("description");
+      expect(template).to.have.property("category");
+      expect(template).to.have.property("parameters");
+      expect(template).to.have.property("step_count");
+    });
+  });
+
+  test("Should have at least built-in templates", function() {
+    const templateIds = res.body.templates.map(t => t.id);
+    expect(templateIds).to.include("code_search");
+    expect(templateIds).to.include("code_analysis");
+    expect(templateIds).to.include("code_review");
+  });
+}

@@ -1,0 +1,42 @@
+meta {
+  name: Execute Invalid Workflow
+  type: http
+  seq: 12
+  tags: @error-handling, @validation, @api, @integration
+}
+
+post {
+  url: {{api_base_url}}{{agent_base_path}}/execute-workflow
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body {
+  json {
+    name: "invalid_workflow"
+    steps: [
+      {
+        skill: "nonexistent_skill_xyz"
+        input: {
+          data: "test"
+        }
+      }
+    ]
+  }
+}
+
+assert {
+  res.status: in [400, 500]
+}
+
+tests {
+  test("Should reject workflow with invalid skill", function() {
+    expect([400, 500]).to.include(res.status);
+  });
+
+  test("Should provide error details", function() {
+    expect(res.body).to.have.property("detail");
+  });
+}

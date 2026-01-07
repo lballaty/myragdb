@@ -186,21 +186,25 @@ class HybridSearchEngine:
         rewrite_query: bool = True,
         repository_filter: Optional[str] = None,
         folder_filter: Optional[str] = None,
-        extension_filter: Optional[str] = None
+        extension_filter: Optional[str] = None,
+        directories: Optional[List[int]] = None
     ) -> List[HybridSearchResult]:
         """
         Execute hybrid search combining keyword and semantic search with RRF fusion.
 
         Business Purpose: Provides intelligent search that understands both exact
         keyword matches and semantic meaning, returning most relevant results based
-        on combined ranking from both approaches.
+        on combined ranking from both approaches. Supports filtering by repositories
+        and managed directories.
 
         Args:
             query: User query (natural language or keywords)
             limit: Maximum number of results to return
             rewrite_query: Use LLM to rewrite query for optimization (default: True)
+            repository_filter: Optional repository name filter
             folder_filter: Optional folder name filter (overrides query rewriter)
             extension_filter: Optional extension filter (overrides query rewriter)
+            directories: Optional list of directory IDs to search (None = all)
 
         Returns:
             List of HybridSearchResult sorted by RRF score (descending)
@@ -242,7 +246,8 @@ class HybridSearchEngine:
                     limit=fetch_limit,
                     repository_filter=repository_filter,
                     folder_filter=folder_filter,
-                    extension_filter=extension_filter
+                    extension_filter=extension_filter,
+                    directories=directories
                 )
                 print(f"[HybridSearch] Meilisearch returned {len(results)} results")
                 return results
@@ -253,10 +258,31 @@ class HybridSearchEngine:
         async def fetch_chromadb() -> tuple[List[str], List[float]]:
             """Fetch semantic results from ChromaDB."""
             try:
-                # Build where clause for repository filter
+                # Build where clause for filters
+                # ChromaDB supports: single filter as dict, or multiple filters with $and
                 where_clause = None
+                filters_list = []
+
                 if repository_filter:
-                    where_clause = {"repository": repository_filter}
+                    filters_list.append({"repository": repository_filter})
+
+                if directories:
+                    # Directory IDs are stored as strings in metadata
+                    directory_ids_str = [str(d) for d in directories]
+                    # Create OR condition for multiple directories
+                    dir_conditions = [{"source_id": str(d)} for d in directories]
+                    if len(dir_conditions) == 1:
+                        filters_list.append(dir_conditions[0])
+                    else:
+                        filters_list.append({"$or": dir_conditions})
+
+                # Combine all filters with AND if multiple
+                if len(filters_list) == 0:
+                    where_clause = None
+                elif len(filters_list) == 1:
+                    where_clause = filters_list[0]
+                else:
+                    where_clause = {"$and": filters_list}
 
                 results = self.vector.collection.query(
                     query_texts=[semantic_intent],

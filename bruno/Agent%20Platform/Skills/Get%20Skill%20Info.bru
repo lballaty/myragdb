@@ -1,0 +1,66 @@
+meta {
+  name: Get Skill Info
+  type: http
+  seq: 8
+  tags: @skills, @discovery, @api, @fast
+}
+
+get {
+  url: {{api_base_url}}{{agent_base_path}}/skills/search
+}
+
+assert {
+  res.status: eq 200
+  res.body.name: eq "search"
+  res.body.input_schema: isObject
+  res.body.output_schema: isObject
+}
+
+tests {
+  test("Should return skill information", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("Should have correct skill name", function() {
+    expect(res.body.name).to.equal("search");
+  });
+
+  test("Should have skill description", function() {
+    expect(res.body).to.have.property("description");
+    expect(res.body.description).to.not.be.empty;
+  });
+
+  test("Should have input schema", function() {
+    expect(res.body).to.have.property("input_schema");
+    expect(res.body.input_schema).to.be.an("object");
+  });
+
+  test("Should have output schema", function() {
+    expect(res.body).to.have.property("output_schema");
+    expect(res.body.output_schema).to.be.an("object");
+  });
+
+  test("Should have required_config field", function() {
+    expect(res.body).to.have.property("required_config");
+    expect(res.body.required_config).to.be.an("array");
+  });
+
+  test("Input schema should define query parameter", function() {
+    expect(res.body.input_schema).to.have.property("query");
+  });
+
+  test("Query parameter should be required", function() {
+    expect(res.body.input_schema.query.required).to.be.true;
+  });
+
+  test("Output schema should have results", function() {
+    expect(res.body.output_schema).to.have.property("results");
+  });
+
+  test("Should return 404 for unknown skill", async function() {
+    const response = await fetch(
+      "{{api_base_url}}{{agent_base_path}}/skills/unknown_skill_xyz"
+    );
+    expect(response.status).to.equal(404);
+  });
+}

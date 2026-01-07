@@ -1,0 +1,60 @@
+# File: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb/templates/search_analyze_report.yaml
+# Description: Search, analyze code, and generate a comprehensive report
+# Author: Libor Ballaty <libor@arionetworks.com>
+# Created: 2026-01-07
+
+name: "search_analyze_report"
+description: "Complete workflow: search for code, analyze structure, generate report"
+category: "analysis"
+
+parameters:
+  query:
+    type: "string"
+    required: true
+    description: "Code search query"
+  limit:
+    type: "integer"
+    required: false
+    default: 5
+    description: "Number of search results to process"
+  report_format:
+    type: "string"
+    required: false
+    default: "markdown"
+    description: "Report format: markdown, json, or text"
+
+steps:
+  - skill: "search"
+    id: "search_results"
+    description: "Search for code across repositories"
+    input:
+      query: "{{ query }}"
+      limit: "{{ limit }}"
+
+  - skill: "code_analysis"
+    id: "first_analysis"
+    description: "Analyze first search result"
+    input:
+      code: "{{ search_results.results[0].snippet }}"
+      language: "python"
+      analysis_type: "structure"
+    on_error: "continue"
+
+  - skill: "report"
+    id: "generate_report"
+    description: "Generate comprehensive analysis report"
+    input:
+      title: "Code Analysis Report: {{ query }}"
+      format: "{{ report_format }}"
+      content:
+        - section: "Search Results"
+          data:
+            results: "{{ search_results.results }}"
+        - section: "Code Structure Analysis"
+          data:
+            structures: "{{ first_analysis.structures }}"
+            imports: "{{ first_analysis.imports }}"
+            patterns: "{{ first_analysis.patterns }}"
+        - section: "Complexity Assessment"
+          data:
+            text: "Estimated complexity: {{ first_analysis.complexity_estimate }}"

@@ -1,0 +1,62 @@
+meta {
+  name: Register Custom Template
+  type: http
+  seq: 6
+  tags: @templates, @create, @api, @integration
+}
+
+post {
+  url: {{api_base_url}}{{agent_base_path}}/templates
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body {
+  json {
+    template_id: "test_custom_{{$timestamp}}"
+    name: "Test Custom Template"
+    description: "Custom template for testing"
+    steps: [
+      {
+        skill: "search"
+        input: {
+          query: "{{ query }}"
+        }
+      }
+    ]
+    parameters: {
+      query: {
+        type: "string"
+        required: true
+        description: "Search query"
+      }
+    }
+  }
+}
+
+assert {
+  res.status: in [200, 201]
+  res.body.status: eq "success"
+  res.body.template_id: isNotEmpty
+}
+
+tests {
+  test("Should register custom template", function() {
+    expect(res.status).to.be.oneOf([200, 201]);
+  });
+
+  test("Should return success status", function() {
+    expect(res.body.status).to.equal("success");
+  });
+
+  test("Should return template ID", function() {
+    expect(res.body).to.have.property("template_id");
+    expect(res.body.template_id).to.not.be.empty;
+  });
+
+  test("Should have confirmation message", function() {
+    expect(res.body).to.have.property("message");
+  });
+}

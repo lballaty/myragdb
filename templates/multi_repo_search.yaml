@@ -1,0 +1,56 @@
+# File: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb/templates/multi_repo_search.yaml
+# Description: Search the same query across multiple repositories
+# Author: Libor Ballaty <libor@arionetworks.com>
+# Created: 2026-01-07
+
+name: "multi_repo_search"
+description: "Search for code across multiple specified repositories"
+category: "search"
+
+parameters:
+  query:
+    type: "string"
+    required: true
+    description: "Code search query"
+  repositories:
+    type: "array"
+    required: true
+    description: "List of repository names to search in"
+  limit:
+    type: "integer"
+    required: false
+    default: 5
+    description: "Results per repository"
+
+steps:
+  - skill: "search"
+    id: "repo1_search"
+    description: "Search in first repository"
+    input:
+      query: "{{ query }}"
+      repository_filter: "{{ repositories[0] }}"
+      limit: "{{ limit }}"
+    on_error: "continue"
+
+  - skill: "search"
+    id: "repo2_search"
+    description: "Search in second repository"
+    input:
+      query: "{{ query }}"
+      repository_filter: "{{ repositories[1] }}"
+      limit: "{{ limit }}"
+    on_error: "continue"
+
+  - skill: "report"
+    id: "comparison_report"
+    description: "Generate comparison report of results"
+    input:
+      title: "Multi-Repository Search: {{ query }}"
+      format: "markdown"
+      content:
+        - section: "Results from {{ repositories[0] }}"
+          data:
+            results: "{{ repo1_search.results }}"
+        - section: "Results from {{ repositories[1] }}"
+          data:
+            results: "{{ repo2_search.results }}"

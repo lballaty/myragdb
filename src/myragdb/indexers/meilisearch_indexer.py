@@ -138,7 +138,9 @@ class MeilisearchIndexer:
                 'extension',      # File type (.py, .md, .js, etc.)
                 'last_modified',  # Timestamp for incremental indexing
                 'size',           # File size in bytes
-                'repository',     # Repository name
+                'repository',     # Repository name (for backward compatibility)
+                'source_type',    # Source type: 'repository' or 'directory'
+                'source_id',      # Source ID: repository name or directory ID
                 'folder_name'     # Folder name (also searchable)
             ])
 
@@ -162,7 +164,8 @@ class MeilisearchIndexer:
         Create Meilisearch document from scanned file.
 
         Business Purpose: Transforms file metadata into Meilisearch document format
-        with deterministic Base64 ID matching ChromaDB for perfect parity.
+        with deterministic Base64 ID matching ChromaDB for perfect parity. Supports
+        both repository and directory sources via source_type and source_id fields.
 
         Args:
             scanned_file: Scanned file with metadata and content
@@ -177,6 +180,8 @@ class MeilisearchIndexer:
             #     'file_path': '/path/to/file.py',
             #     'file_name': 'file.py',
             #     'folder_name': 'to',
+            #     'source_type': 'repository' or 'directory',
+            #     'source_id': 'MyProject' or '1',
             #     'content': 'def main()...',
             #     ...
             # }
@@ -202,6 +207,14 @@ class MeilisearchIndexer:
             last_modified = int(time.time())
             size = len(scanned_file.content) if scanned_file.content else 0
 
+        # Determine source type and source ID
+        if scanned_file.repository_name:
+            source_type = 'repository'
+            source_id = scanned_file.repository_name
+        else:
+            source_type = 'directory'
+            source_id = str(scanned_file.directory_id)
+
         return {
             'id': doc_id,
             'file_path': scanned_file.file_path,
@@ -209,7 +222,9 @@ class MeilisearchIndexer:
             'folder_name': folder_name,
             'directory_path': str(file_path_obj.parent),
             'extension': scanned_file.file_type,
-            'repository': scanned_file.repository_name,
+            'repository': scanned_file.repository_name,  # Kept for backward compatibility
+            'source_type': source_type,                  # New: 'repository' or 'directory'
+            'source_id': source_id,                      # New: repo name or directory ID
             'relative_path': scanned_file.relative_path,
             'content': content_truncated,
             'last_modified': last_modified,
@@ -330,20 +345,66 @@ class MeilisearchIndexer:
 
         return indexed
 
+    def index_directory(
+        self,
+        directory_path: str,
+        directory_id: int,
+        incremental: bool = True,
+        batch_size: int = 50000
+    ) -> int:
+        """
+        Index all files in a non-repository directory.
+
+        Business Purpose: Scans a managed directory for indexable files and
+        indexes them with source_type='directory' and source_id=directory_id.
+        Supports incremental indexing to only update changed files.
+
+        Args:
+            directory_path: Absolute path to directory
+            directory_id: Database ID of the managed directory
+            incremental: Only index files modified since last indexing
+            batch_size: Documents per batch (default: 50,000)
+
+        Returns:
+            Number of files successfully indexed
+
+        Example:
+            count = indexer.index_directory("/path/to/docs", directory_id=1)
+            print(f"Indexed {count} files from directory")
+        """
+        from myragdb.indexers.file_scanner import DirectoryScanner
+
+        print(f"[Meilisearch] Starting directory indexing: {directory_path} (ID={directory_id})")
+
+        # Scan directory for files
+        scanner = DirectoryScanner(directory_path, directory_id)
+        files = list(scanner.scan())
+
+        if not files:
+            print(f"[Meilisearch] No files found in directory: {directory_path}")
+            return 0
+
+        print(f"[Meilisearch] Found {len(files)} files in directory, indexing...")
+
+        # Use batch indexing for performance
+        return self.index_files_batch(files, batch_size=batch_size, incremental=incremental)
+
     def search(
         self,
         query: str,
         limit: int = 10,
         folder_filter: Optional[str] = None,
         extension_filter: Optional[str] = None,
-        repository_filter: Optional[str] = None
+        repository_filter: Optional[str] = None,
+        directories: Optional[List[int]] = None
     ) -> List[MeilisearchResult]:
         """
         Search indexed files using keyword search with optional filters.
 
         Business Purpose: Finds files matching query using typo-tolerant keyword search.
-        Supports scoped searching (filter by folder/extension first, then search within
-        that subset) for instant searches even with 2M+ files.
+        Supports scoped searching (filter by folder/extension/source first, then search within
+        that subset) for instant searches even with 2M+ files. Can filter by repositories
+        or managed directories.
 
         Args:
             query: Search query string
@@ -351,6 +412,7 @@ class MeilisearchIndexer:
             folder_filter: Filter to specific folder name (e.g., "src/auth")
             extension_filter: Filter by file extension (e.g., ".py")
             repository_filter: Filter by repository name
+            directories: Optional list of directory IDs to search (None = all)
 
         Returns:
             List of MeilisearchResult objects sorted by relevance
@@ -359,11 +421,11 @@ class MeilisearchIndexer:
             # Basic search
             results = indexer.search("authentication flow", limit=10)
 
-            # Scoped search (folder filter)
+            # Directory-scoped search
             results = indexer.search(
                 "config",
-                folder_filter="src/components",
-                extension_filter=".tsx"
+                directories=[1, 2],  # Search only in directories 1 and 2
+                extension_filter=".py"
             )
 
             # Repository-specific search
@@ -382,6 +444,15 @@ class MeilisearchIndexer:
                 filters.append(f'extension = "{extension_filter}"')
             if repository_filter:
                 filters.append(f'repository = "{repository_filter}"')
+
+            # Add directory filtering (multiple directories with OR logic)
+            if directories:
+                dir_filters = [f'source_id = "{d}"' for d in directories]
+                if len(dir_filters) == 1:
+                    filters.append(dir_filters[0])
+                else:
+                    # Multiple directories: (dir1 OR dir2 OR dir3)
+                    filters.append(f"({' OR '.join(dir_filters)})")
 
             filter_str = ' AND '.join(filters) if filters else None
 
