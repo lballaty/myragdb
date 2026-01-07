@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.07.2.71.1">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.07.2.71.2">
 </head>
 <body>
     <div class="container">
@@ -388,36 +388,52 @@
             <div class="directories-section">
                 <!-- Add Directory Section -->
                 <div class="add-directory-section">
-                    <h3>➕ Add New Directory</h3>
-                    <p class="section-description">Index non-repository directories for searching</p>
-                    <div class="add-directory-form">
-                        <input type="text" id="dir-path-input" placeholder="Absolute path (e.g., /Users/user/projects/docs)" style="flex: 1; min-width: 300px;">
-                        <input type="text" id="dir-name-input" placeholder="Directory name (e.g., Documentation)" style="flex: 0 0 200px;">
-                        <select id="dir-priority-input" style="flex: 0 0 120px;">
-                            <option value="0">Priority: Normal</option>
-                            <option value="10">Priority: High</option>
-                            <option value="-10">Priority: Low</option>
-                        </select>
-                        <button id="add-directory-button" class="primary-button">Add Directory</button>
+                    <h3>➕ Add Directory</h3>
+                    <p class="section-description">Index non-repository directories for searching alongside repositories</p>
+                    <div class="add-directory-form" style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="dir-path-input" placeholder="Absolute path (e.g., /Users/user/projects/docs)" style="flex: 1; min-width: 300px;">
+                            <button id="browse-dir-button" class="secondary-button" style="padding: 6px 12px;">📂 Browse</button>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="dir-name-input" placeholder="Directory name" style="flex: 1; min-width: 200px;">
+                            <select id="dir-priority-input" style="flex: 0 0 120px;">
+                                <option value="0">Priority: Normal</option>
+                                <option value="10">Priority: High</option>
+                                <option value="-10">Priority: Low</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="dir-notes-input" placeholder="Optional notes about this directory" style="flex: 1;">
+                            <button id="add-directory-button" class="primary-button" style="flex: 0 0 auto;">Add Directory</button>
+                        </div>
                     </div>
-                    <input type="text" id="dir-notes-input" placeholder="Optional notes about this directory" style="width: 100%; margin-top: 8px;">
                 </div>
 
-                <!-- Directories List Section -->
-                <div class="directories-list-section">
+                <!-- Bulk Actions Section -->
+                <div class="bulk-actions-section" style="margin-top: 20px;">
+                    <h3>⚡ Bulk Actions</h3>
+                    <p class="section-description">Apply actions to all directories at once</p>
+                    <div class="bulk-actions">
+                        <button id="enable-dirs-button" class="bulk-btn enable-all">✅ Enable All</button>
+                        <button id="disable-dirs-button" class="bulk-btn disable-all">❌ Disable All</button>
+                        <button id="reindex-all-dirs-button" class="bulk-btn primary">🔄 Reindex All</button>
+                    </div>
+                </div>
+
+                <!-- Directories Management Section -->
+                <div class="reindex-section" style="margin-top: 20px;">
                     <h3>📁 Managed Directories</h3>
-                    <div id="directories-list" class="directories-list">
-                        <div class="loading">Loading directories...</div>
-                    </div>
-                </div>
-
-                <!-- Directory Operations Section -->
-                <div class="directory-operations-section" style="display: none;">
-                    <h3>⚡ Bulk Operations</h3>
-                    <div class="directory-bulk-actions">
-                        <button id="enable-dirs-button" class="secondary-button">✅ Enable All</button>
-                        <button id="disable-dirs-button" class="secondary-button">❌ Disable All</button>
-                        <button id="reindex-all-dirs-button" class="primary-button">🔄 Reindex All</button>
+                    <div class="directory-selection">
+                        <div class="directory-header">
+                            <label>
+                                <input type="checkbox" id="select-all-dirs">
+                                <strong>Select All</strong>
+                            </label>
+                        </div>
+                        <div id="directories-list" class="directories-list">
+                            <div class="loading">Loading directories...</div>
+                        </div>
                     </div>
                 </div>
 
@@ -435,7 +451,7 @@
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">Total Files Indexed</div>
-                            <div class="stat-value" id="stat-dir-files">0</div>
+                            <div class="stat-value" id="stat-total-dir-files">0</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">Total Size</div>
@@ -732,6 +748,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
-    <script src="static/js/app.js?v=2026.01.07.2.71.1"></script>
+    <script src="static/js/app.js?v=2026.01.07.2.71.2"></script>
 </body>
 </html>

@@ -3057,6 +3057,7 @@ function initializeDirectories() {
     const enableAllButton = document.getElementById('enable-dirs-button');
     const disableAllButton = document.getElementById('disable-dirs-button');
     const reindexAllButton = document.getElementById('reindex-all-dirs-button');
+    const selectAllCheckbox = document.getElementById('select-all-dirs');
 
     if (addButton) {
         addButton.addEventListener('click', handleAddDirectory);
@@ -3069,6 +3070,13 @@ function initializeDirectories() {
     }
     if (reindexAllButton) {
         reindexAllButton.addEventListener('click', handleReindexAllDirectories);
+    }
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', (e) => {
+            document.querySelectorAll('.directory-checkbox').forEach(cb => {
+                cb.checked = e.target.checked;
+            });
+        });
     }
 
     // Load directories on initialization
@@ -3109,13 +3117,13 @@ async function loadDirectories() {
     }
 }
 
-// Render directories list
+// Render directories list with checkboxes (similar to repositories)
 function renderDirectories() {
     const directoriesList = document.getElementById('directories-list');
     if (!directoriesList) return;
 
     if (state.directories.length === 0) {
-        directoriesList.innerHTML = '<div style="color: var(--text-muted);">No managed directories. Add one above to get started.</div>';
+        directoriesList.innerHTML = '<div style="color: var(--text-muted); padding: 20px; text-align: center;">No directories configured yet. Add one above to get started.</div>';
         return;
     }
 
@@ -3127,7 +3135,7 @@ function renderDirectories() {
 
     const dirsHtml = sortedDirs.map(dir => {
         const enabledClass = dir.enabled ? 'enabled' : 'disabled';
-        const priorityClass = `priority-${dir.priority > 5 ? 'high' : dir.priority < 0 ? 'low' : 'normal'}`;
+        const priorityDisplay = dir.priority > 5 ? '🔴 High' : dir.priority < 0 ? '🟡 Low' : '⚪ Normal';
 
         // Calculate total files indexed
         let totalFilesIndexed = 0;
@@ -3140,37 +3148,56 @@ function renderDirectories() {
         }
 
         const formattedSize = formatBytes(totalSizeBytes);
-        const lastIndexed = dir.last_indexed
-            ? new Date(dir.last_indexed * 1000).toLocaleString()
-            : 'Never';
+        const statusBadge = dir.enabled
+            ? '<span style="background: #10b981; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.85em;">✓ Enabled</span>'
+            : '<span style="background: #ef4444; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.85em;">✗ Disabled</span>';
 
         return `
-            <div class="directory-card ${enabledClass} ${priorityClass}">
-                <div class="directory-header">
-                    <div class="directory-info">
-                        <h4>${escapeHtml(dir.name)}</h4>
-                        <p class="directory-path">${escapeHtml(dir.path)}</p>
-                        ${dir.notes ? `<p class="directory-notes">${escapeHtml(dir.notes)}</p>` : ''}
-                    </div>
-                    <div class="directory-badge ${enabledClass}">
-                        ${dir.enabled ? '✓ Enabled' : '✗ Disabled'}
-                    </div>
+            <div class="repository-card ${enabledClass}">
+                <div class="repository-header">
+                    <label>
+                        <input type="checkbox" class="directory-checkbox" value="${dir.id}" onchange="updateDirectorySelection()">
+                        <strong>${escapeHtml(dir.name)}</strong>
+                        <span class="repo-priority">${priorityDisplay}</span>
+                    </label>
                 </div>
-                <div class="directory-stats">
-                    <span class="stat">📄 ${totalFilesIndexed} files</span>
-                    <span class="stat">💾 ${formattedSize}</span>
-                    <span class="stat">🔄 ${lastIndexed}</span>
+                <div class="repository-details">
+                    <p class="repo-path">📁 ${escapeHtml(dir.path)}</p>
+                    ${dir.notes ? `<p class="repo-description">📝 ${escapeHtml(dir.notes)}</p>` : ''}
                 </div>
-                <div class="directory-actions">
-                    <button class="icon-button" title="Edit directory" onclick="editDirectory(${dir.id})">✏️</button>
-                    <button class="icon-button" title="Reindex directory" onclick="reindexDirectory(${dir.id})">🔄</button>
-                    <button class="icon-button danger" title="Delete directory" onclick="deleteDirectory(${dir.id})">🗑️</button>
+                <div class="repository-stats">
+                    <span>📄 ${totalFilesIndexed} files</span>
+                    <span>💾 ${formattedSize}</span>
+                    ${statusBadge}
+                </div>
+                <div class="repository-actions">
+                    <button class="action-button" title="Edit" onclick="editDirectory(${dir.id})">✏️ Edit</button>
+                    <button class="action-button" title="Reindex" onclick="reindexDirectory(${dir.id})">🔄 Reindex</button>
+                    <button class="action-button danger" title="Delete" onclick="deleteDirectory(${dir.id})">🗑️ Delete</button>
                 </div>
             </div>
         `;
     }).join('');
 
     directoriesList.innerHTML = dirsHtml;
+
+    // Update select-all checkbox
+    const selectAllCheckbox = document.getElementById('select-all-dirs');
+    if (selectAllCheckbox) {
+        const allChecked = document.querySelectorAll('.directory-checkbox').length ===
+                          document.querySelectorAll('.directory-checkbox:checked').length;
+        selectAllCheckbox.checked = allChecked && state.directories.length > 0;
+    }
+}
+
+function updateDirectorySelection() {
+    const selectAllCheckbox = document.getElementById('select-all-dirs');
+    const checkboxes = document.querySelectorAll('.directory-checkbox');
+    const checkedCount = document.querySelectorAll('.directory-checkbox:checked').length;
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = checkedCount === checkboxes.length && checkedCount > 0;
+    }
 }
 
 // Format bytes to human readable format
@@ -3519,7 +3546,7 @@ function updateDirectoryStatistics() {
     const totalDirsElement = document.getElementById('stat-total-dirs');
     const enabledDirsElement = document.getElementById('stat-enabled-dirs');
     const totalFilesElement = document.getElementById('stat-total-dir-files');
-    const totalSizeElement = document.getElementById('stat-total-dir-size');
+    const totalSizeElement = document.getElementById('stat-dir-size');
 
     if (totalDirsElement) {
         totalDirsElement.textContent = state.directories.length;
