@@ -290,16 +290,11 @@ function renderSearchResults(data, responseTime) {
 
     // Build repositories searched message
     let reposSearchedHtml = '';
-    console.log('Search response data:', data);
-    console.log('repositories_searched:', data.repositories_searched);
     if (data.repositories_searched && data.repositories_searched.length > 0) {
         const repoCount = data.repositories_searched.length;
         const repoList = data.repositories_searched.slice(0, 3).join(', ');
         const moreRepos = repoCount > 3 ? ` and ${repoCount - 3} more` : '';
         reposSearchedHtml = `<div class="repos-searched">📚 Searched ${repoCount} repositories: ${repoList}${moreRepos}</div>`;
-        console.log('Generated reposSearchedHtml:', reposSearchedHtml);
-    } else {
-        console.log('repositories_searched is empty or undefined');
     }
 
     const metaHtml = `
