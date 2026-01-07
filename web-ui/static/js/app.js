@@ -288,9 +288,19 @@ function renderSearchResults(data, responseTime) {
         return;
     }
 
+    // Build repositories searched message
+    let reposSearchedHtml = '';
+    if (data.repositories_searched && data.repositories_searched.length > 0) {
+        const repoCount = data.repositories_searched.length;
+        const repoList = data.repositories_searched.slice(0, 3).join(', ');
+        const moreRepos = repoCount > 3 ? ` and ${repoCount - 3} more` : '';
+        reposSearchedHtml = `<div class="repos-searched">📚 Searched ${repoCount} repositories: ${repoList}${moreRepos}</div>`;
+    }
+
     const metaHtml = `
         <div class="search-meta">
             Found ${data.total_results} results in ${responseTime.toFixed(0)}ms
+            ${reposSearchedHtml}
         </div>
     `;
 

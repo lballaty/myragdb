@@ -460,6 +460,16 @@ body {
     font-size: 0.95rem;
 }
 
+.repos-searched {
+    margin-top: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(59, 130, 246, 0.1);
+    border-left: 3px solid var(--primary-color);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    color: var(--text-color);
+}
+
 .result-card {
     background: var(--bg-color);
     padding: 1.5rem;

@@ -146,7 +146,8 @@ class SearchResponse(BaseModel):
             total_results=7,
             search_time_ms=234.5,
             results=[...],
-            directories=[...]
+            directories=[...],
+            repositories_searched=["xLLMArionComply", "RepoDot"]
         )
     """
     query: str = Field(..., description="Original search query")
@@ -154,6 +155,7 @@ class SearchResponse(BaseModel):
     search_time_ms: float = Field(..., description="Search duration in milliseconds")
     results: List[SearchResultItem] = Field(..., description="Search results")
     directories: Optional[List[DirectorySummary]] = Field(None, description="Summary of directories containing results (if applicable)")
+    repositories_searched: Optional[List[str]] = Field(None, description="List of repository names that were searched")
 
     class Config:
         json_schema_extra = {

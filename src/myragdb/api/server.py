@@ -1109,12 +1109,25 @@ async def search_hybrid(request: SearchRequest):
         # Extract unique directories if query seems to be asking for directories
         directories = _extract_directories(request.query, results) if results else None
 
+        # Determine which repositories were actually searched
+        if multi_repo_filter:
+            # Specific repositories requested
+            repositories_searched = multi_repo_filter
+        elif repo_filter:
+            # Single repository filter
+            repositories_searched = [repo_filter]
+        else:
+            # All enabled repositories
+            enabled_repos = repos_config.get_enabled_repositories()
+            repositories_searched = [repo.name for repo in enabled_repos]
+
         return SearchResponse(
             query=request.query,
             total_results=len(result_items),
             search_time_ms=search_time_ms,
             results=result_items,
-            directories=directories
+            directories=directories,
+            repositories_searched=repositories_searched
         )
 
     except Exception as e:
@@ -1198,11 +1211,22 @@ async def search_keyword(request: SearchRequest):
                    results_count=len(result_items),
                    search_time_ms=search_time_ms)
 
+        # Determine which repositories were actually searched
+        if request.repositories:
+            repositories_searched = request.repositories
+        elif request.repository_filter:
+            repositories_searched = [request.repository_filter]
+        else:
+            # All enabled repositories
+            enabled_repos = repos_config.get_enabled_repositories()
+            repositories_searched = [repo.name for repo in enabled_repos]
+
         return SearchResponse(
             query=request.query,
             total_results=len(result_items),
             search_time_ms=search_time_ms,
-            results=result_items
+            results=result_items,
+            repositories_searched=repositories_searched
         )
 
     except Exception as e:
@@ -1278,11 +1302,22 @@ async def search_semantic(request: SearchRequest):
         except Exception as e:
             logger.warning("Failed to record search metric", error=str(e))
 
+        # Determine which repositories were actually searched
+        if request.repositories:
+            repositories_searched = request.repositories
+        elif request.repository_filter:
+            repositories_searched = [request.repository_filter]
+        else:
+            # All enabled repositories
+            enabled_repos = repos_config.get_enabled_repositories()
+            repositories_searched = [repo.name for repo in enabled_repos]
+
         return SearchResponse(
             query=request.query,
             total_results=len(result_items),
             search_time_ms=search_time_ms,
-            results=result_items
+            results=result_items,
+            repositories_searched=repositories_searched
         )
 
     except Exception as e:

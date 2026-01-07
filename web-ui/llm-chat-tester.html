@@ -785,7 +785,14 @@
                     },
                     body: JSON.stringify(args)
                 });
-                return await response.json();
+                const data = await response.json();
+
+                // Add human-readable summary at the top of the response
+                if (data.repositories_searched && data.repositories_searched.length > 0) {
+                    data._search_info = `Searched ${data.repositories_searched.length} repositories: ${data.repositories_searched.join(', ')}`;
+                }
+
+                return data;
             }
             return { error: 'Unknown tool' };
         }

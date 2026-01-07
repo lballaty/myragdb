@@ -134,6 +134,7 @@ class SearchResponse(BaseModel):
     search_time_ms: float
     results: List[SearchResult]
     directories: Optional[List[DirectorySummary]] = None
+    repositories_searched: Optional[List[str]] = None
 
 
 class RepositoryInfo(BaseModel):
@@ -268,6 +269,8 @@ async def search(request_body: SearchRequest, request: Request):
             print(f"✅ SEARCH COMPLETE")
             print(f"Total Results: {data['total_results']}")
             print(f"Search Time: {data['search_time_ms']:.2f}ms")
+            if data.get('repositories_searched'):
+                print(f"Repositories Searched: {', '.join(data['repositories_searched'])}")
             if data['results']:
                 print(f"Top Result: {data['results'][0].get('file_path', 'N/A')}")
             print(f"{'='*60}\n")
@@ -279,7 +282,8 @@ async def search(request_body: SearchRequest, request: Request):
                 total_results=data["total_results"],
                 search_time_ms=data["search_time_ms"],
                 results=[SearchResult(**r) for r in data["results"]],
-                directories=[DirectorySummary(**d) for d in data.get("directories", [])] if data.get("directories") else None
+                directories=[DirectorySummary(**d) for d in data.get("directories", [])] if data.get("directories") else None,
+                repositories_searched=data.get("repositories_searched")
             )
 
     except httpx.HTTPStatusError as e:
