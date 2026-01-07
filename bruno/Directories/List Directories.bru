@@ -1,0 +1,59 @@
+meta {
+  name: List Directories
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{api_base_url}}/directories
+  body: none
+}
+
+tests {
+  // Status code test
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  // Response is array
+  test("Response is array", function() {
+    expect(res.body).to.be.an('array');
+  });
+
+  // Check array structure if not empty
+  test("Directory objects have required fields", function() {
+    if (res.body.length > 0) {
+      const dir = res.body[0];
+      expect(dir).to.have.property('id');
+      expect(dir).to.have.property('path');
+      expect(dir).to.have.property('name');
+      expect(dir).to.have.property('enabled');
+      expect(dir).to.have.property('priority');
+      expect(dir).to.have.property('created_at');
+      expect(dir).to.have.property('updated_at');
+    }
+  });
+
+  // Verify field types
+  test("Directory fields have correct types", function() {
+    if (res.body.length > 0) {
+      const dir = res.body[0];
+      expect(dir.id).to.be.a('number');
+      expect(dir.path).to.be.a('string');
+      expect(dir.name).to.be.a('string');
+      expect(dir.enabled).to.be.a('boolean');
+      expect(dir.priority).to.be.a('number');
+      expect(dir.created_at).to.be.a('number');
+      expect(dir.updated_at).to.be.a('number');
+    }
+  });
+
+  // Test is tagged for batch execution
+  test("@api @directories @fast", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+vars:
+  - name: response_count
+    value: res.body.length
