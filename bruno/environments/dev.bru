@@ -1,0 +1,35 @@
+vars {
+  # Backend API Configuration
+  api_base_url: http://localhost:3002
+  api_version: v1
+
+  # Agent Platform Endpoints
+  agent_base_path: /api/{{api_version}}/agent
+
+  # Test Data
+  test_query: authentication
+  test_limit: 5
+  test_language: python
+  test_repository: xLLMArionComply
+
+  # Template IDs
+  template_code_search: code_search
+  template_code_analysis: code_analysis
+  template_code_review: code_review
+
+  # Skill Names
+  skill_search: search
+  skill_code_analysis: code_analysis
+  skill_report: report
+  skill_llm: llm
+  skill_sql: sql
+}
+
+# Assertions and helper scripts
+scripts {
+  post-response {
+    # Common assertion helpers
+    bru.setVar("response_status", res.getStatus());
+    bru.setVar("response_body", res.getBody());
+  }
+}

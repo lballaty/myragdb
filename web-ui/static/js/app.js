@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeActivityMonitor();
     initializeReindex();
     initializeDiscovery();
+    initializeDirectories();
     checkHealthStatus();
     updateIndexingProgress();
     loadStatistics();
@@ -67,6 +68,8 @@ function initializeTabs() {
                 loadStatistics();
             } else if (tabName === 'activity') {
                 renderActivityLog();
+            } else if (tabName === 'directories') {
+                loadDirectories();
             }
         });
     });
@@ -216,6 +219,16 @@ async function performSearch() {
     const repositorySelect = document.getElementById('repository-filter');
     const selectedRepo = repositorySelect.value;
     const selectedRepos = selectedRepo ? [selectedRepo] : []; // Convert single selection to array for API
+
+    // Handle directories filter - multi-select
+    const directorySelect = document.getElementById('directory-filter');
+    let selectedDirs = [];
+    if (directorySelect) {
+        selectedDirs = Array.from(directorySelect.selectedOptions)
+            .map(option => parseInt(option.value))
+            .filter(id => !isNaN(id)); // Filter out non-numeric values
+    }
+
     const folderFilter = document.getElementById('folder-filter').value.trim();
     const extensionFilter = document.getElementById('extension-filter').value.trim();
     const resultsDiv = document.getElementById('search-results');
@@ -238,6 +251,10 @@ async function performSearch() {
     // Use repositories array if specific repos selected, otherwise omit (search all)
     if (selectedRepos.length > 0) {
         requestBody.repositories = selectedRepos;
+    }
+    // Use directories array if specific directories selected, otherwise omit (search all)
+    if (selectedDirs.length > 0) {
+        requestBody.directories = selectedDirs;
     }
     if (folderFilter) requestBody.folder_filter = folderFilter;
     if (extensionFilter) requestBody.extension_filter = extensionFilter;
@@ -659,6 +676,48 @@ function populateRepositoryFilter() {
     });
 
     addActivityLog('info', `Repository filter populated with ${state.repositories.length} options (alphabetically sorted)`);
+}
+
+function populateDirectoryFilter() {
+    const filterSelect = document.getElementById('directory-filter');
+    if (!filterSelect) return;
+
+    // Keep the "All Directories" option
+    filterSelect.innerHTML = '<option value="">All Directories</option>';
+
+    // Return early if no directories
+    if (state.directories.length === 0) {
+        // Hide the directory filter label if no directories available
+        const dirLabel = filterSelect.closest('label');
+        if (dirLabel) {
+            dirLabel.style.display = 'none';
+        }
+        return;
+    }
+
+    // Show the directory filter label
+    const dirLabel = filterSelect.closest('label');
+    if (dirLabel) {
+        dirLabel.style.display = 'flex';
+    }
+
+    // Sort directories by priority (higher first), then by name
+    const sortedDirs = [...state.directories].sort((a, b) => {
+        if (b.priority !== a.priority) return b.priority - a.priority;
+        return a.name.localeCompare(b.name);
+    });
+
+    // Add each enabled directory as an option
+    sortedDirs.forEach(dir => {
+        if (dir.enabled) {
+            const option = document.createElement('option');
+            option.value = dir.id;
+            option.textContent = `${dir.name}`;
+            filterSelect.appendChild(option);
+        }
+    });
+
+    addActivityLog('info', `Directory filter populated with ${state.directories.filter(d => d.enabled).length} options`);
 }
 
 function renderRepositories() {
@@ -2900,4 +2959,525 @@ document.addEventListener('keydown', (e) => {
 // Make functions globally available
 window.openUserManual = openUserManual;
 window.closeUserManual = closeUserManual;
+
+// ============================================================================
+// DIRECTORIES MANAGEMENT FUNCTIONALITY (Phase F)
+// ============================================================================
+
+// Add directories to state if not already present
+if (!state.directories) {
+    state.directories = [];
+}
+
+// Initialize directories on application load
+function initializeDirectories() {
+    const addButton = document.getElementById('add-directory-button');
+    const enableAllButton = document.getElementById('enable-dirs-button');
+    const disableAllButton = document.getElementById('disable-dirs-button');
+    const reindexAllButton = document.getElementById('reindex-all-dirs-button');
+
+    if (addButton) {
+        addButton.addEventListener('click', handleAddDirectory);
+    }
+    if (enableAllButton) {
+        enableAllButton.addEventListener('click', handleEnableAllDirectories);
+    }
+    if (disableAllButton) {
+        disableAllButton.addEventListener('click', handleDisableAllDirectories);
+    }
+    if (reindexAllButton) {
+        reindexAllButton.addEventListener('click', handleReindexAllDirectories);
+    }
+
+    // Load directories on initialization
+    loadDirectories();
+}
+
+// Load directories from API
+async function loadDirectories() {
+    const directoriesList = document.getElementById('directories-list');
+    if (!directoriesList) return;
+
+    directoriesList.innerHTML = '<div class="loading">Loading directories...</div>';
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/directories`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const directories = await response.json();
+        state.directories = directories;
+
+        renderDirectories();
+        updateDirectoryStatistics();
+        populateDirectoryFilter(); // Update search filter with directories
+
+        // Log directory names explicitly
+        const dirNames = directories.map(d => d.name).join(', ');
+        if (directories.length > 0) {
+            addActivityLog('info', `Loaded ${directories.length} ${directories.length === 1 ? 'directory' : 'directories'}: ${dirNames}`);
+        } else {
+            addActivityLog('info', 'No managed directories configured');
+        }
+
+    } catch (error) {
+        directoriesList.innerHTML = `<div class="error">Failed to load directories: ${error.message}</div>`;
+        addActivityLog('error', `Failed to load directories: ${error.message}`);
+    }
+}
+
+// Render directories list
+function renderDirectories() {
+    const directoriesList = document.getElementById('directories-list');
+    if (!directoriesList) return;
+
+    if (state.directories.length === 0) {
+        directoriesList.innerHTML = '<div style="color: var(--text-muted);">No managed directories. Add one above to get started.</div>';
+        return;
+    }
+
+    // Sort by priority (higher first), then by name
+    const sortedDirs = [...state.directories].sort((a, b) => {
+        if (b.priority !== a.priority) return b.priority - a.priority;
+        return a.name.localeCompare(b.name);
+    });
+
+    const dirsHtml = sortedDirs.map(dir => {
+        const enabledClass = dir.enabled ? 'enabled' : 'disabled';
+        const priorityClass = `priority-${dir.priority > 5 ? 'high' : dir.priority < 0 ? 'low' : 'normal'}`;
+
+        // Calculate total files indexed
+        let totalFilesIndexed = 0;
+        let totalSizeBytes = 0;
+        if (dir.stats && Array.isArray(dir.stats)) {
+            dir.stats.forEach(stat => {
+                totalFilesIndexed += stat.total_files_indexed || 0;
+                totalSizeBytes += stat.total_size_bytes || 0;
+            });
+        }
+
+        const formattedSize = formatBytes(totalSizeBytes);
+        const lastIndexed = dir.last_indexed
+            ? new Date(dir.last_indexed * 1000).toLocaleString()
+            : 'Never';
+
+        return `
+            <div class="directory-card ${enabledClass} ${priorityClass}">
+                <div class="directory-header">
+                    <div class="directory-info">
+                        <h4>${escapeHtml(dir.name)}</h4>
+                        <p class="directory-path">${escapeHtml(dir.path)}</p>
+                        ${dir.notes ? `<p class="directory-notes">${escapeHtml(dir.notes)}</p>` : ''}
+                    </div>
+                    <div class="directory-badge ${enabledClass}">
+                        ${dir.enabled ? '✓ Enabled' : '✗ Disabled'}
+                    </div>
+                </div>
+                <div class="directory-stats">
+                    <span class="stat">📄 ${totalFilesIndexed} files</span>
+                    <span class="stat">💾 ${formattedSize}</span>
+                    <span class="stat">🔄 ${lastIndexed}</span>
+                </div>
+                <div class="directory-actions">
+                    <button class="icon-button" title="Edit directory" onclick="editDirectory(${dir.id})">✏️</button>
+                    <button class="icon-button" title="Reindex directory" onclick="reindexDirectory(${dir.id})">🔄</button>
+                    <button class="icon-button danger" title="Delete directory" onclick="deleteDirectory(${dir.id})">🗑️</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    directoriesList.innerHTML = dirsHtml;
+}
+
+// Format bytes to human readable format
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Handle add directory form submission
+async function handleAddDirectory() {
+    const pathInput = document.getElementById('dir-path-input');
+    const nameInput = document.getElementById('dir-name-input');
+    const priorityInput = document.getElementById('dir-priority-input');
+    const notesInput = document.getElementById('dir-notes-input');
+
+    const path = pathInput.value.trim();
+    const name = nameInput.value.trim();
+    const priority = parseInt(priorityInput.value) || 0;
+    const notes = notesInput.value.trim();
+
+    // Validation
+    if (!path) {
+        alert('Please enter a directory path');
+        return;
+    }
+    if (!name) {
+        alert('Please enter a directory name');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/directories`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                path,
+                name,
+                enabled: true,
+                priority,
+                notes: notes || null
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `HTTP ${response.status}`);
+        }
+
+        const newDir = await response.json();
+        addActivityLog('success', `Added directory: ${name}`);
+
+        // Clear form
+        pathInput.value = '';
+        nameInput.value = '';
+        priorityInput.value = '0';
+        notesInput.value = '';
+
+        // Reload directories
+        await loadDirectories();
+
+    } catch (error) {
+        addActivityLog('error', `Failed to add directory: ${error.message}`);
+        alert(`Failed to add directory: ${error.message}`);
+    }
+}
+
+// Edit directory (load in form for editing)
+async function editDirectory(directoryId) {
+    const directory = state.directories.find(d => d.id === directoryId);
+    if (!directory) return;
+
+    const pathInput = document.getElementById('dir-path-input');
+    const nameInput = document.getElementById('dir-name-input');
+    const priorityInput = document.getElementById('dir-priority-input');
+    const notesInput = document.getElementById('dir-notes-input');
+
+    // Load directory data into form
+    pathInput.value = directory.path;
+    nameInput.value = directory.name;
+    priorityInput.value = directory.priority || 0;
+    notesInput.value = directory.notes || '';
+
+    // Change button to update mode
+    const addButton = document.getElementById('add-directory-button');
+    const originalText = addButton.textContent;
+    const originalOnclick = addButton.onclick;
+
+    addButton.textContent = 'Update Directory';
+    addButton.onclick = async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/directories/${directoryId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    path: pathInput.value.trim(),
+                    name: nameInput.value.trim(),
+                    enabled: directory.enabled,
+                    priority: parseInt(priorityInput.value) || 0,
+                    notes: notesInput.value.trim() || null
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || `HTTP ${response.status}`);
+            }
+
+            addActivityLog('success', `Updated directory: ${nameInput.value}`);
+
+            // Reset button
+            addButton.textContent = originalText;
+            addButton.onclick = originalOnclick;
+
+            // Clear form
+            pathInput.value = '';
+            nameInput.value = '';
+            priorityInput.value = '0';
+            notesInput.value = '';
+
+            // Reload directories
+            await loadDirectories();
+
+        } catch (error) {
+            addActivityLog('error', `Failed to update directory: ${error.message}`);
+            alert(`Failed to update directory: ${error.message}`);
+        }
+    };
+
+    // Scroll to form
+    document.getElementById('add-directory-button').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Delete directory
+async function deleteDirectory(directoryId) {
+    const directory = state.directories.find(d => d.id === directoryId);
+    if (!directory) return;
+
+    if (!confirm(`Are you sure you want to delete "${directory.name}"? Indexed files will remain until next reindex.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/directories/${directoryId}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `HTTP ${response.status}`);
+        }
+
+        addActivityLog('success', `Deleted directory: ${directory.name}`);
+        await loadDirectories();
+
+    } catch (error) {
+        addActivityLog('error', `Failed to delete directory: ${error.message}`);
+        alert(`Failed to delete directory: ${error.message}`);
+    }
+}
+
+// Reindex single directory
+async function reindexDirectory(directoryId) {
+    const directory = state.directories.find(d => d.id === directoryId);
+    if (!directory) return;
+
+    if (!confirm(`Reindex "${directory.name}"? This will update the search indexes.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/directories/${directoryId}/reindex?index_keyword=true&index_vector=true&full_rebuild=false`,
+            {
+                method: 'POST'
+            }
+        );
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+        addActivityLog('success', `${result.message}`);
+        await loadDirectories();
+
+    } catch (error) {
+        addActivityLog('error', `Failed to reindex directory: ${error.message}`);
+        alert(`Failed to reindex directory: ${error.message}`);
+    }
+}
+
+// Enable all directories
+async function handleEnableAllDirectories() {
+    if (state.directories.length === 0) {
+        alert('No directories to enable');
+        return;
+    }
+
+    const disabledDirs = state.directories.filter(d => !d.enabled);
+    if (disabledDirs.length === 0) {
+        alert('All directories are already enabled');
+        return;
+    }
+
+    if (!confirm(`Enable ${disabledDirs.length} disabled directory(ies)?`)) {
+        return;
+    }
+
+    let successCount = 0;
+    let failureCount = 0;
+
+    for (const dir of disabledDirs) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/directories/${dir.id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    path: dir.path,
+                    name: dir.name,
+                    enabled: true,
+                    priority: dir.priority,
+                    notes: dir.notes
+                })
+            });
+
+            if (response.ok) {
+                successCount++;
+            } else {
+                failureCount++;
+            }
+        } catch (error) {
+            failureCount++;
+        }
+    }
+
+    addActivityLog('info', `Enabled ${successCount} directory(ies)${failureCount > 0 ? `, ${failureCount} failed` : ''}`);
+    await loadDirectories();
+}
+
+// Disable all directories
+async function handleDisableAllDirectories() {
+    if (state.directories.length === 0) {
+        alert('No directories to disable');
+        return;
+    }
+
+    const enabledDirs = state.directories.filter(d => d.enabled);
+    if (enabledDirs.length === 0) {
+        alert('All directories are already disabled');
+        return;
+    }
+
+    if (!confirm(`Disable ${enabledDirs.length} enabled directory(ies)?`)) {
+        return;
+    }
+
+    let successCount = 0;
+    let failureCount = 0;
+
+    for (const dir of enabledDirs) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/directories/${dir.id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    path: dir.path,
+                    name: dir.name,
+                    enabled: false,
+                    priority: dir.priority,
+                    notes: dir.notes
+                })
+            });
+
+            if (response.ok) {
+                successCount++;
+            } else {
+                failureCount++;
+            }
+        } catch (error) {
+            failureCount++;
+        }
+    }
+
+    addActivityLog('info', `Disabled ${successCount} directory(ies)${failureCount > 0 ? `, ${failureCount} failed` : ''}`);
+    await loadDirectories();
+}
+
+// Reindex all directories
+async function handleReindexAllDirectories() {
+    if (state.directories.length === 0) {
+        alert('No directories to reindex');
+        return;
+    }
+
+    if (!confirm(`Reindex all ${state.directories.length} directory(ies)? This may take several minutes.`)) {
+        return;
+    }
+
+    let successCount = 0;
+    let failureCount = 0;
+
+    for (const dir of state.directories) {
+        try {
+            const response = await fetch(
+                `${API_BASE_URL}/directories/${dir.id}/reindex?index_keyword=true&index_vector=true&full_rebuild=false`,
+                {
+                    method: 'POST'
+                }
+            );
+
+            if (response.ok) {
+                successCount++;
+            } else {
+                failureCount++;
+            }
+        } catch (error) {
+            failureCount++;
+        }
+    }
+
+    addActivityLog('info', `Reindexing started for ${successCount} directory(ies)${failureCount > 0 ? `, ${failureCount} failed` : ''}`);
+    await loadDirectories();
+}
+
+// Update directory statistics
+function updateDirectoryStatistics() {
+    const totalDirsElement = document.getElementById('stat-total-dirs');
+    const enabledDirsElement = document.getElementById('stat-enabled-dirs');
+    const totalFilesElement = document.getElementById('stat-total-dir-files');
+    const totalSizeElement = document.getElementById('stat-total-dir-size');
+
+    if (totalDirsElement) {
+        totalDirsElement.textContent = state.directories.length;
+    }
+
+    if (enabledDirsElement) {
+        const enabledCount = state.directories.filter(d => d.enabled).length;
+        enabledDirsElement.textContent = enabledCount;
+    }
+
+    if (totalFilesElement || totalSizeElement) {
+        let totalFiles = 0;
+        let totalSize = 0;
+
+        state.directories.forEach(dir => {
+            if (dir.stats && Array.isArray(dir.stats)) {
+                dir.stats.forEach(stat => {
+                    totalFiles += stat.total_files_indexed || 0;
+                    totalSize += stat.total_size_bytes || 0;
+                });
+            }
+        });
+
+        if (totalFilesElement) {
+            totalFilesElement.textContent = totalFiles;
+        }
+
+        if (totalSizeElement) {
+            totalSizeElement.textContent = formatBytes(totalSize);
+        }
+    }
+}
+
+// Make directories functions globally available
+window.loadDirectories = loadDirectories;
+window.editDirectory = editDirectory;
+window.deleteDirectory = deleteDirectory;
+window.reindexDirectory = reindexDirectory;
+window.handleAddDirectory = handleAddDirectory;
+window.handleEnableAllDirectories = handleEnableAllDirectories;
+window.handleDisableAllDirectories = handleDisableAllDirectories;
+window.handleReindexAllDirectories = handleReindexAllDirectories;
 window.searchManual = searchManual;
