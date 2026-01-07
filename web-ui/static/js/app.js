@@ -1680,12 +1680,19 @@ async function toggleRepositoryExcluded(repoName, excludedValue) {
 // Bulk Repository Actions
 // ============================================================================
 
-async function bulkUpdateRepositories(action, actionName) {
+async function bulkUpdateRepositories(action, actionName, buttonElement) {
     // Confirm action with user
     const confirmMessage = `Are you sure you want to ${actionName} ALL repositories?`;
     if (!confirm(confirmMessage)) {
         return;
     }
+
+    // Store original button content and disable it
+    const originalContent = buttonElement.innerHTML;
+    buttonElement.disabled = true;
+    buttonElement.innerHTML = '<span class="spinner"></span> Processing...';
+    buttonElement.style.opacity = '0.7';
+    buttonElement.style.cursor = 'not-allowed';
 
     try {
         const response = await fetch(`/repositories/bulk-update?action=${action}`, {
@@ -1699,34 +1706,57 @@ async function bulkUpdateRepositories(action, actionName) {
             const result = await response.json();
             addActivityLog('success', result.message);
 
+            // Show success state briefly
+            buttonElement.innerHTML = '✓ Done!';
+            buttonElement.style.opacity = '1';
+
             // Just refresh the repository list (reindex section)
             // No need to rescan - bulk actions only affect existing config repos
             await loadRepositories();
+
+            // Restore button after a short delay
+            setTimeout(() => {
+                buttonElement.innerHTML = originalContent;
+                buttonElement.disabled = false;
+                buttonElement.style.cursor = 'pointer';
+            }, 1000);
         } else {
             const error = await response.json();
             addActivityLog('error', `Failed to perform bulk update: ${error.detail || 'Unknown error'}`);
             alert(`Failed to perform bulk update: ${error.detail || 'Unknown error'}`);
+
+            // Restore button on error
+            buttonElement.innerHTML = originalContent;
+            buttonElement.disabled = false;
+            buttonElement.style.opacity = '1';
+            buttonElement.style.cursor = 'pointer';
         }
     } catch (error) {
         addActivityLog('error', `Failed to perform bulk update: ${error.message}`);
         alert(`Failed to perform bulk update: ${error.message}`);
+
+        // Restore button on error
+        buttonElement.innerHTML = originalContent;
+        buttonElement.disabled = false;
+        buttonElement.style.opacity = '1';
+        buttonElement.style.cursor = 'pointer';
     }
 }
 
-async function enableAllRepositories() {
-    await bulkUpdateRepositories('enable_all', 'enable');
+async function enableAllRepositories(event) {
+    await bulkUpdateRepositories('enable_all', 'enable', event.target);
 }
 
-async function disableAllRepositories() {
-    await bulkUpdateRepositories('disable_all', 'disable');
+async function disableAllRepositories(event) {
+    await bulkUpdateRepositories('disable_all', 'disable', event.target);
 }
 
-async function unlockAllRepositories() {
-    await bulkUpdateRepositories('unlock_all', 'unlock');
+async function unlockAllRepositories(event) {
+    await bulkUpdateRepositories('unlock_all', 'unlock', event.target);
 }
 
-async function lockAllRepositories() {
-    await bulkUpdateRepositories('lock_all', 'lock');
+async function lockAllRepositories(event) {
+    await bulkUpdateRepositories('lock_all', 'lock', event.target);
 }
 
 // Make bulk action functions globally available
