@@ -2659,3 +2659,68 @@ document.addEventListener('keydown', (e) => {
 // Make functions globally available
 window.openReadmeModal = openReadmeModal;
 window.closeReadmeModal = closeReadmeModal;
+
+// ============================================================================
+// User Manual
+// ============================================================================
+
+async function openUserManual() {
+    const modal = document.getElementById('user-manual-modal');
+    const loadingDiv = document.getElementById('user-manual-loading');
+    const errorDiv = document.getElementById('user-manual-error');
+    const contentDiv = document.getElementById('user-manual-content');
+
+    // Show modal and loading state
+    modal.style.display = 'flex';
+    loadingDiv.style.display = 'flex';
+    errorDiv.style.display = 'none';
+    contentDiv.style.display = 'none';
+
+    try {
+        // Fetch the user manual markdown file
+        const response = await fetch('/docs/USER_MANUAL.md');
+
+        if (!response.ok) {
+            throw new Error(`Failed to load manual: ${response.statusText}`);
+        }
+
+        const markdown = await response.text();
+
+        // Convert markdown to HTML using marked.js
+        const html = marked.parse(markdown);
+
+        // Display content
+        contentDiv.innerHTML = html;
+        loadingDiv.style.display = 'none';
+        contentDiv.style.display = 'block';
+
+        // Smooth scroll to top of content
+        contentDiv.scrollTop = 0;
+
+    } catch (error) {
+        console.error('Error loading user manual:', error);
+        loadingDiv.style.display = 'none';
+        errorDiv.style.display = 'block';
+        document.getElementById('user-manual-error-message').textContent =
+            `Failed to load user manual: ${error.message}`;
+    }
+}
+
+function closeUserManual() {
+    const modal = document.getElementById('user-manual-modal');
+    modal.style.display = 'none';
+}
+
+// Close manual on Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('user-manual-modal');
+        if (modal && modal.style.display === 'flex') {
+            closeUserManual();
+        }
+    }
+});
+
+// Make functions globally available
+window.openUserManual = openUserManual;
+window.closeUserManual = closeUserManual;

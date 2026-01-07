@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.07.2.49.1">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.07.2.50.0">
 </head>
 <body>
     <div class="container">
@@ -24,6 +24,9 @@
                     <span class="llm-badge-icon">🤖</span>
                     <span class="llm-badge-text">No LLM Running</span>
                 </span>
+                <button onclick="openUserManual()" style="color: white; text-decoration: none; font-size: 0.95em; font-weight: 600; padding: 8px 16px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 8px; display: inline-block; transition: all 0.2s; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3); border: 2px solid rgba(255, 255, 255, 0.2); cursor: pointer;">
+                    📖 User Manual
+                </button>
                 <a href="llm-chat-tester.html" style="color: white; text-decoration: none; font-size: 0.95em; font-weight: 600; padding: 8px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; display: inline-block; transition: all 0.2s; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); border: 2px solid rgba(255, 255, 255, 0.2);">
                     💬 LLM Chat Tester
                 </a>
@@ -596,8 +599,32 @@
         </div>
     </div>
 
+    <!-- User Manual Modal -->
+    <div id="user-manual-modal" class="modal-overlay" style="display: none;">
+        <div class="readme-modal-content">
+            <div class="readme-modal-header">
+                <h2>📖 MyRAGDB User Manual</h2>
+                <button class="readme-modal-close" onclick="closeUserManual()">&times;</button>
+            </div>
+            <div class="readme-modal-body">
+                <div id="user-manual-loading" class="readme-loading">
+                    <div class="spinner"></div>
+                    <p>Loading manual...</p>
+                </div>
+                <div id="user-manual-error" class="readme-error" style="display: none;">
+                    <p id="user-manual-error-message"></p>
+                </div>
+                <div id="user-manual-content" class="readme-content" style="display: none;"></div>
+            </div>
+            <div class="readme-modal-footer">
+                <span class="readme-file-path">docs/USER_MANUAL.md</span>
+                <button class="btn btn-secondary" onclick="closeUserManual()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
-    <script src="static/js/app.js?v=2026.01.07.2.49.1"></script>
+    <script src="static/js/app.js?v=2026.01.07.2.50.0"></script>
 </body>
 </html>

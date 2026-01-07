@@ -197,6 +197,11 @@ web_ui_path = Path(__file__).parent.parent.parent.parent / "web-ui"
 if web_ui_path.exists():
     app.mount("/static", StaticFiles(directory=str(web_ui_path / "static")), name="static")
 
+# Mount docs directory for user manual access
+docs_path = Path(__file__).parent.parent.parent.parent / "docs"
+if docs_path.exists():
+    app.mount("/docs", StaticFiles(directory=str(docs_path)), name="docs")
+
 
 # Application lifecycle events
 @app.on_event("startup")
