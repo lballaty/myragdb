@@ -1118,6 +1118,8 @@ async def search_hybrid(request: SearchRequest):
             repositories_searched = [repo_filter]
         else:
             # All enabled repositories
+            config_path = "config/repositories.yaml"
+            repos_config = load_repositories_config(config_path)
             enabled_repos = repos_config.get_enabled_repositories()
             repositories_searched = [repo.name for repo in enabled_repos]
 
@@ -1218,6 +1220,8 @@ async def search_keyword(request: SearchRequest):
             repositories_searched = [request.repository_filter]
         else:
             # All enabled repositories
+            config_path = "config/repositories.yaml"
+            repos_config = load_repositories_config(config_path)
             enabled_repos = repos_config.get_enabled_repositories()
             repositories_searched = [repo.name for repo in enabled_repos]
 
@@ -1309,6 +1313,8 @@ async def search_semantic(request: SearchRequest):
             repositories_searched = [request.repository_filter]
         else:
             # All enabled repositories
+            config_path = "config/repositories.yaml"
+            repos_config = load_repositories_config(config_path)
             enabled_repos = repos_config.get_enabled_repositories()
             repositories_searched = [repo.name for repo in enabled_repos]
 
