@@ -157,7 +157,12 @@
 - [x] Add extension filtering (SearchRequest.extension_filter)
 - [x] Add folder filtering (SearchRequest.folder_filter)
 - [x] Add date range filtering (date_from, date_to in ISO 8601 format)
+  - [x] Backend implementation in Meilisearch indexer
+  - [x] Frontend UI with date picker inputs
+  - [x] QueryBuilder support (from_date, to_date, between_dates)
 - [x] Implement min score threshold (SearchRequest.min_score)
+  - [x] Backend support in search request model
+  - [x] Frontend UI with number input
 - [x] Add configurable result limits (SearchRequest.limit, 1-100)
 - [x] Enhance snippet extraction with context (hybrid_search.py)
 - [x] Commit: "feat: implement advanced search filters"
@@ -171,9 +176,10 @@
 - [ ] Commit: "feat: add production-grade logging and error handling"
 
 ### 2.6 Agent Library Enhancements
-- [ ] Create QueryBuilder class (agent_library/query_builder.py)
-- [ ] Add retry logic with exponential backoff
-- [ ] Add timeout handling
+- [x] Create QueryBuilder class (agent_library/query_builder.py)
+- [x] Add date range filtering to QueryBuilder (from_date, to_date, between_dates methods)
+- [ ] Add retry logic with exponential backoff to SearchClient
+- [ ] Add timeout handling to SearchClient
 - [ ] Create documentation sync example (agent_library/examples/documentation_sync.py)
 - [ ] Create pattern finder example (agent_library/examples/pattern_finder.py)
 - [ ] Commit: "feat: enhance agent library with QueryBuilder and examples"
