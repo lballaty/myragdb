@@ -42,6 +42,10 @@ class SearchRequest(BaseModel):
         default=None,
         description="Filter by single repository name"
     )
+    directories: Optional[List[int]] = Field(
+        default=None,
+        description="Filter by specific directory IDs (None = all)"
+    )
     folder_filter: Optional[str] = Field(
         default=None,
         description="Filter by folder path (e.g., 'src/components')"
@@ -73,6 +77,7 @@ class SearchRequest(BaseModel):
                 "query": "how to implement authentication",
                 "search_type": "hybrid",
                 "repositories": ["xLLMArionComply"],
+                "directories": [1, 2],
                 "file_types": [".md", ".py"],
                 "limit": 10,
                 "min_score": 0.0
@@ -288,6 +293,185 @@ class RepositoryInfo(BaseModel):
                 ]
             }
         }
+
+
+class DirectoryStatsInfo(BaseModel):
+    """
+    Indexing statistics for a directory.
+
+    Business Purpose: Tracks performance metrics for directory indexing
+    operations, enabling time estimates and health monitoring.
+
+    Example:
+        stats = DirectoryStatsInfo(
+            total_files_indexed=245,
+            total_size_bytes=2048576,
+            index_type="keyword",
+            initial_index_time_seconds=12.5,
+            last_reindex_time_seconds=3.2,
+            last_reindex_timestamp=1735948800
+        )
+    """
+    index_type: str = Field(..., description="Index type: 'keyword' or 'vector'")
+    total_files_indexed: int = Field(..., description="Total number of files indexed in this directory")
+    total_size_bytes: int = Field(..., description="Total size of all indexed files (bytes)")
+    initial_index_time_seconds: Optional[float] = Field(None, description="Time taken for initial full index (seconds)")
+    initial_index_timestamp: Optional[int] = Field(None, description="Unix timestamp when initial index completed")
+    last_reindex_time_seconds: Optional[float] = Field(None, description="Time taken for most recent reindex (seconds)")
+    last_reindex_timestamp: Optional[int] = Field(None, description="Unix timestamp when last reindex completed")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "index_type": "keyword",
+                "total_files_indexed": 245,
+                "total_size_bytes": 2048576,
+                "initial_index_time_seconds": 12.5,
+                "initial_index_timestamp": 1735948800,
+                "last_reindex_time_seconds": 3.2,
+                "last_reindex_timestamp": 1735962400
+            }
+        }
+
+
+class DirectoryInfo(BaseModel):
+    """
+    Directory information and metadata.
+
+    Business Purpose: Provides complete details about a managed directory
+    including status, configuration, and indexing statistics for UI display
+    and API consumers.
+
+    Example:
+        directory = DirectoryInfo(
+            id=1,
+            path="/Users/user/documents/research",
+            name="Research Papers",
+            enabled=True,
+            priority=1,
+            created_at=1735948800,
+            updated_at=1735948800,
+            last_indexed=1735949000,
+            notes="PDF research papers for analysis",
+            stats=[...]
+        )
+    """
+    id: int = Field(..., description="Directory ID (unique)")
+    path: str = Field(..., description="Absolute directory path")
+    name: str = Field(..., description="User-friendly name for the directory")
+    enabled: bool = Field(..., description="Whether directory is included in search")
+    priority: int = Field(..., description="Sort priority in UI (higher = appears first)")
+    created_at: int = Field(..., description="Unix timestamp when directory was added")
+    updated_at: int = Field(..., description="Unix timestamp when record was last updated")
+    last_indexed: Optional[int] = Field(None, description="Unix timestamp of last indexing (None = never indexed)")
+    notes: Optional[str] = Field(None, description="Optional user notes about this directory")
+    stats: Optional[List[DirectoryStatsInfo]] = Field(None, description="Indexing statistics for keyword and vector indexes")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "path": "/Users/user/documents/research",
+                "name": "Research Papers",
+                "enabled": True,
+                "priority": 1,
+                "created_at": 1735948800,
+                "updated_at": 1735948800,
+                "last_indexed": 1735949000,
+                "notes": "PDF research papers for analysis",
+                "stats": [
+                    {
+                        "index_type": "keyword",
+                        "total_files_indexed": 245,
+                        "total_size_bytes": 2048576,
+                        "initial_index_time_seconds": 12.5,
+                        "last_reindex_time_seconds": 3.2
+                    }
+                ]
+            }
+        }
+
+
+class DirectoryRequest(BaseModel):
+    """
+    Request to add or update a directory.
+
+    Business Purpose: Defines input validation for directory creation
+    and modification operations via API.
+
+    Example:
+        request = DirectoryRequest(
+            path="/Users/user/documents",
+            name="Documents",
+            enabled=True,
+            notes="Project documentation"
+        )
+    """
+    path: str = Field(..., min_length=1, description="Absolute directory path")
+    name: str = Field(..., min_length=1, description="User-friendly name for the directory")
+    enabled: bool = Field(default=True, description="Whether to include directory in search")
+    priority: int = Field(default=0, description="Sort priority (higher = appears first)")
+    notes: Optional[str] = Field(None, description="Optional user notes about this directory")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "path": "/Users/user/documents/research",
+                "name": "Research Papers",
+                "enabled": True,
+                "priority": 1,
+                "notes": "PDF research papers for analysis"
+            }
+        }
+
+
+class DirectoryDiscoveryInfo(BaseModel):
+    """
+    Directory discovery information for tree picker UI.
+
+    Business Purpose: Represents a directory in a hierarchical tree structure
+    for UI components allowing users to browse and select directories.
+
+    Example:
+        item = DirectoryDiscoveryInfo(
+            path="/Users/user/documents",
+            name="documents",
+            is_directory=True,
+            children=[...]
+        )
+    """
+    path: str = Field(..., description="Absolute directory path")
+    name: str = Field(..., description="Directory name (basename)")
+    is_directory: bool = Field(..., description="Whether this is a directory (True) or file (False)")
+    children: Optional[List["DirectoryDiscoveryInfo"]] = Field(None, description="Child directories/files in tree structure")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "path": "/Users/user",
+                "name": "user",
+                "is_directory": True,
+                "children": [
+                    {
+                        "path": "/Users/user/documents",
+                        "name": "documents",
+                        "is_directory": True,
+                        "children": [
+                            {
+                                "path": "/Users/user/documents/research",
+                                "name": "research",
+                                "is_directory": True,
+                                "children": None
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+
+
+# Enable forward references for DirectoryDiscoveryInfo
+DirectoryDiscoveryInfo.update_forward_refs()
 
 
 class ReindexRequest(BaseModel):
