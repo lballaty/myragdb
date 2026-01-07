@@ -1699,18 +1699,9 @@ async function bulkUpdateRepositories(action, actionName) {
             const result = await response.json();
             addActivityLog('success', result.message);
 
-            // Refresh repository displays without full page reload
+            // Just refresh the repository list (reindex section)
+            // No need to rescan - bulk actions only affect existing config repos
             await loadRepositories();
-
-            // If on discovery tab, refresh that too
-            const discoveredReposContainer = document.getElementById('discovered-repos-container');
-            if (discoveredReposContainer && discoveredReposContainer.children.length > 0) {
-                // Re-trigger the last scan to refresh discovery view
-                const scanButton = document.getElementById('scan-repositories-button');
-                if (scanButton) {
-                    scanButton.click();
-                }
-            }
         } else {
             const error = await response.json();
             addActivityLog('error', `Failed to perform bulk update: ${error.detail || 'Unknown error'}`);
