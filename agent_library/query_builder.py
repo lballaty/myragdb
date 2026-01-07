@@ -38,6 +38,8 @@ class QueryBuilder:
     _folder_filter: Optional[str] = None
     _min_score: float = 0.0
     _limit: int = 10
+    _date_from: Optional[str] = None
+    _date_to: Optional[str] = None
 
     def search(self, query: str) -> 'QueryBuilder':
         """
@@ -226,6 +228,56 @@ class QueryBuilder:
         self._limit = max(1, min(100, limit))
         return self
 
+    def from_date(self, date: str) -> 'QueryBuilder':
+        """
+        Filter results from this date (inclusive).
+
+        Args:
+            date: Start date in ISO 8601 format (YYYY-MM-DD)
+
+        Returns:
+            Self for chaining
+
+        Example:
+            QueryBuilder().search("release").from_date("2025-01-01")
+        """
+        self._date_from = date
+        return self
+
+    def to_date(self, date: str) -> 'QueryBuilder':
+        """
+        Filter results up to this date (inclusive).
+
+        Args:
+            date: End date in ISO 8601 format (YYYY-MM-DD)
+
+        Returns:
+            Self for chaining
+
+        Example:
+            QueryBuilder().search("changes").to_date("2026-01-07")
+        """
+        self._date_to = date
+        return self
+
+    def between_dates(self, date_from: str, date_to: str) -> 'QueryBuilder':
+        """
+        Filter results within a date range (inclusive).
+
+        Args:
+            date_from: Start date in ISO 8601 format (YYYY-MM-DD)
+            date_to: End date in ISO 8601 format (YYYY-MM-DD)
+
+        Returns:
+            Self for chaining
+
+        Example:
+            QueryBuilder().search("update").between_dates("2025-06-01", "2025-12-31")
+        """
+        self._date_from = date_from
+        self._date_to = date_to
+        return self
+
     def build(self) -> Dict[str, Any]:
         """
         Build the final query payload.
@@ -259,6 +311,12 @@ class QueryBuilder:
         if self._folder_filter:
             payload["folder_filter"] = self._folder_filter
 
+        if self._date_from:
+            payload["date_from"] = self._date_from
+
+        if self._date_to:
+            payload["date_to"] = self._date_to
+
         return payload
 
     def to_string(self) -> str:
@@ -286,6 +344,13 @@ class QueryBuilder:
             filters.append(f"*{self._extension_filter}")
         if self._folder_filter:
             filters.append(f"folder:{self._folder_filter}")
+        if self._date_from or self._date_to:
+            if self._date_from and self._date_to:
+                filters.append(f"dates:{self._date_from}..{self._date_to}")
+            elif self._date_from:
+                filters.append(f"from:{self._date_from}")
+            else:
+                filters.append(f"until:{self._date_to}")
 
         if filters:
             parts.append(f"({', '.join(filters)})")
