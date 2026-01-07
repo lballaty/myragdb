@@ -1677,6 +1677,68 @@ async function toggleRepositoryExcluded(repoName, excludedValue) {
 }
 
 // ============================================================================
+// Bulk Repository Actions
+// ============================================================================
+
+async function bulkUpdateRepositories(action, actionName) {
+    // Confirm action with user
+    const confirmMessage = `Are you sure you want to ${actionName} ALL repositories?`;
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/repositories/bulk-update?action=${action}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            addActivityLog('success', result.message);
+
+            // Refresh both discovered repos and regular repos lists
+            const scanButton = document.getElementById('scan-repositories-button');
+            if (scanButton) {
+                scanButton.click();
+            }
+            loadRepositories();
+        } else {
+            const error = await response.json();
+            addActivityLog('error', `Failed to perform bulk update: ${error.detail || 'Unknown error'}`);
+            alert(`Failed to perform bulk update: ${error.detail || 'Unknown error'}`);
+        }
+    } catch (error) {
+        addActivityLog('error', `Failed to perform bulk update: ${error.message}`);
+        alert(`Failed to perform bulk update: ${error.message}`);
+    }
+}
+
+async function enableAllRepositories() {
+    await bulkUpdateRepositories('enable_all', 'enable');
+}
+
+async function disableAllRepositories() {
+    await bulkUpdateRepositories('disable_all', 'disable');
+}
+
+async function unlockAllRepositories() {
+    await bulkUpdateRepositories('unlock_all', 'unlock');
+}
+
+async function lockAllRepositories() {
+    await bulkUpdateRepositories('lock_all', 'lock');
+}
+
+// Make bulk action functions globally available
+window.enableAllRepositories = enableAllRepositories;
+window.disableAllRepositories = disableAllRepositories;
+window.unlockAllRepositories = unlockAllRepositories;
+window.lockAllRepositories = lockAllRepositories;
+
+// ============================================================================
 // LLM Manager
 // ============================================================================
 
