@@ -265,8 +265,8 @@ async function performSearch() {
         // Add to activity log
         addActivityLog('search', `Query: "${query}" | Type: ${searchType} | Results: ${data.results.length} | Time: ${responseTime.toFixed(0)}ms`);
 
-        // Render results
-        renderSearchResults(data, responseTime);
+        // Render results with request info
+        renderSearchResults(data, responseTime, requestBody, searchType);
 
         // Save to local storage
         saveToLocalStorage();
@@ -280,12 +280,36 @@ async function performSearch() {
     }
 }
 
-function renderSearchResults(data, responseTime) {
+function renderSearchResults(data, responseTime, requestBody, searchType) {
     const resultsDiv = document.getElementById('search-results');
 
     if (data.results.length === 0) {
         resultsDiv.innerHTML = '<div class="search-meta">No results found</div>';
         return;
+    }
+
+    // Build API call info
+    let apiCallHtml = '';
+    if (requestBody) {
+        const endpoint = `/search/${searchType}`;
+        const requestJson = JSON.stringify(requestBody, null, 2);
+        apiCallHtml = `
+            <div class="api-call-info">
+                <div class="api-call-header" onclick="this.parentElement.classList.toggle('expanded')">
+                    <span>🔍 API Call Details</span>
+                    <span class="api-call-toggle">▼</span>
+                </div>
+                <div class="api-call-body">
+                    <div class="api-call-endpoint">
+                        <strong>Endpoint:</strong> POST ${endpoint}
+                    </div>
+                    <div class="api-call-request">
+                        <strong>Request Body:</strong>
+                        <pre>${escapeHtml(requestJson)}</pre>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     // Build repositories searched message
@@ -298,6 +322,7 @@ function renderSearchResults(data, responseTime) {
     }
 
     const metaHtml = `
+        ${apiCallHtml}
         <div class="search-meta">
             Found ${data.total_results} results in ${responseTime.toFixed(0)}ms
             ${reposSearchedHtml}
