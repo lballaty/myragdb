@@ -123,20 +123,48 @@ MyRAGDB is a **hybrid search system** that combines keyword search (via Meilisea
        priority: high
    ```
 
-2. **Start the server:**
+2. **Start MyRAGDB:**
    ```bash
-   python -m myragdb.api.server
+   ./start.sh
    ```
 
-   Server starts at: http://localhost:3002
+   This single command:
+   - Starts Meilisearch (search engine)
+   - Starts MyRAGDB API server on port 3003
+   - Starts MCP HTTP Middleware (for LLM tool access)
+   - Opens web UI in your browser automatically
 
-3. **Open Web UI:**
+   **What the start script does internally:**
+   ```bash
+   # Step 1: Start Meilisearch on port 7700
+   meilisearch --db-path data/meilisearch \
+     --master-key myragdb_dev_key_2026 \
+     --http-addr 127.0.0.1:7700
 
-   Navigate to http://localhost:3002 in your browser
+   # Step 2: Activate venv and start API server on port 3003
+   source venv/bin/activate
+   python -m myragdb.api.server
+
+   # Step 3: Start MCP middleware on port 8093
+   python -m mcp_server.http_middleware
+   ```
+
+3. **Access Web UI:**
+
+   - Browser opens automatically at http://localhost:3003
+   - Or manually navigate to http://localhost:3003
 
 4. **Index repositories:**
 
    Click "🔄 Reindex" in the Repositories section
+
+5. **Stop MyRAGDB:**
+   ```bash
+   ./stop.sh
+   ```
+
+   Stops all services in reverse dependency order:
+   - MCP Middleware → API Server → Meilisearch
 
 ---
 
@@ -146,78 +174,399 @@ MyRAGDB is a **hybrid search system** that combines keyword search (via Meilisea
 
 The main dashboard consists of four sections:
 
-1. **Search Panel** (top)
-2. **Repositories Panel** (left)
-3. **Activity Log** (right)
-4. **LLM Manager** (bottom)
+1. **Header** (top navigation and status)
+2. **Search Panel** (main content area)
+3. **Repositories Panel** (left sidebar)
+4. **Activity Log** (right sidebar)
+5. **LLM Manager** (bottom section)
 
-### Search Panel
+### Header Elements
 
-**Quick Search:**
-- Type your query in the search box
-- Press Enter or click 🔍 Search
-- Results appear instantly below
+**Left Section:**
+- **🔍 MyRAGDB** - Application logo/title
+- **Version Badge** - Shows current version (e.g., v2026.01.07.2.50.0)
+- **Repository Status Badge** - Shows repository loading/ready status
+  - ⏳ Loading repositories... (gray)
+  - ✅ X repositories ready (green)
+- **LLM Status Badge** - Shows LLM running status
+  - 🤖 No LLM Running (gray)
+  - 🤖 [Model Name] Running (green)
 
-**Search Modes:**
-- **Hybrid** (default): Combines keyword + semantic search
-- **Keyword**: Fast exact/fuzzy text matching
-- **Vector**: Semantic similarity search
+**Center Section:**
+- **📖 User Manual** - Opens this manual in a modal viewer
+- **💬 LLM Chat Tester** - Link to LLM testing interface
+- **Status Indicator** - Server health check
+  - 🟢 Connected (green) - Server responsive
+  - 🔴 Disconnected (red) - Server not responding
+  - 🟡 Checking... (yellow) - Connection test in progress
 
-**Filters:**
-- **Repositories**: Filter by one or more repositories
-- **File Types**: Filter by file extension (.py, .md, .ts, etc.)
-- **Result Limit**: Control number of results (1-100)
+**Startup/Stop Commands:**
+Displays the actual commands to start/stop the system:
+```
+Start: /Users/.../myragdb/start.sh
+Stop: /Users/.../myragdb/stop.sh
+```
 
-**Search Tips:**
-- Use quotes for exact phrases: `"user authentication"`
-- Include file extensions: `login .py`
-- Use technical terms: `JWT token validation`
-- Ask questions: `how does caching work?`
+### Search Panel (Main Content)
 
-### Repositories Panel
+#### Search Input Section
 
-**Repository Cards** show:
-- 📁 **Available**: Files found on disk
-- ✓ **Indexed**: Files in search index (percentage)
-- 🔴/🟡/🟢 **Priority**: Search result ranking
-- ✅/❌ **Enabled**: Active for indexing
-- 🔒/🔓 **Lock Status**: Protected from reindexing
+**Search Box:**
+- Large text input field for search queries
+- Placeholder text guides query format
+- **Keyboard shortcut**: Press `Enter` to search
+- Supports natural language and technical queries
 
-**Actions:**
-- **🔓/🔒**: Lock/unlock repository
-- **🗑️ Remove**: Remove from configuration
-- **⚙️ Configure**: Open settings modal
-- **📄 README**: View repository README
+**Search Mode Selector:**
+Three radio button options:
+- **🔀 Hybrid** (recommended)
+  - Combines keyword + semantic search
+  - Best for general queries
+  - Default selection
+- **🔤 Keyword**
+  - Fast BM25 text matching
+  - Best for exact terms/code
+- **🧠 Vector**
+  - Semantic similarity search
+  - Best for conceptual queries
 
-### Activity Log
+**Search Filters:**
 
-Real-time stream of all system operations:
-- ✅ **Success**: Operations completed successfully
-- ⚠️ **Warning**: Non-critical issues
-- ❌ **Error**: Failed operations
-- ℹ️ **Info**: General information
+1. **Repository Filter** (Multi-select dropdown)
+   - Shows all configured repositories
+   - Select one or more to narrow search
+   - Unselect all to search across everything
+   - Disabled repos shown grayed out with "(disabled)" label
 
-**Features:**
-- Auto-scroll (toggleable)
-- Severity filter
-- Export to file
-- Clear log
+2. **File Type Filter** (Multi-select dropdown)
+   - Common extensions: .py, .js, .ts, .md, .dart, etc.
+   - Select specific types to filter results
+   - Leave empty to search all file types
 
-### LLM Manager
+3. **Result Limit Slider**
+   - Range: 1-100 results
+   - Default: 10 results
+   - Drag slider or click track to adjust
+   - Current value displayed below slider
 
-Manage local LLMs for function calling:
+**🔍 Search Button:**
+- Large blue button
+- Triggers search with current parameters
+- Shows loading state during search
+- Alternative to pressing Enter
 
-**Columns:**
-- Model name and path
-- File size
-- Status (Running/Stopped)
-- Actions (Start/Stop/Restart)
+#### Search Results Section
 
-**Modes:**
-- **Basic**: Standard chat (no function calling)
-- **Tools**: Function calling with --jinja
-- **Performance**: Parallel processing enabled
-- **Extended**: 32k context window
+**Result Cards:**
+
+Each result shows:
+
+1. **File Header**
+   - **File path** - Full path to file (clickable to copy)
+   - **Repository name** - Which repo contains this file
+   - **File type icon** - Visual indicator (.py, .md, etc.)
+
+2. **Content Preview**
+   - 3-5 lines of matching content
+   - **Highlighted matches** - Search terms highlighted in yellow
+   - Ellipsis (...) for truncated content
+
+3. **Match Metadata**
+   - **Score** - Relevance percentage (0-100%)
+   - **Match type** - hybrid/keyword/vector
+   - Color-coded score bar:
+     - Green (90-100%) - Excellent match
+     - Blue (70-89%) - Good match
+     - Gray (<70%) - Moderate match
+
+4. **Action Buttons**
+   - **📋 Copy Path** - Copy file path to clipboard
+   - **View Context** - Show more surrounding code
+
+**Results Summary:**
+- Shows "Found X results in Yms" above result list
+- Empty state message if no results
+- Pagination controls if > limit results
+
+### Repositories Panel (Left Sidebar)
+
+#### Panel Header
+
+**🔄 Reindex Button:**
+- Large button at top of panel
+- Opens reindex modal
+- Shows repository selection checklist
+- Locked repos unchecked by default
+
+**🔍 Scan for Repositories:**
+- Button to discover new git repos
+- Opens repository discovery interface
+- Scans directories for git repositories
+
+#### Repository Cards
+
+Each card displays comprehensive information:
+
+**Card Header:**
+- Repository name (large, bold text)
+- Repository path (small, gray text, truncated if long)
+
+**Status Badges:**
+
+1. **Priority Badge** (🔴/🟡/🟢)
+   - 🔴 High Priority - Red background
+   - 🟡 Medium Priority - Yellow background
+   - 🟢 Low Priority - Green background
+   - Affects search result ranking
+
+2. **Enabled/Disabled Badge**
+   - ✅ Enabled - Green background
+   - ❌ Disabled - Gray background
+   - Controls whether repo participates in indexing
+
+3. **Lock Status Badge**
+   - 🔒 Locked - Red background
+   - 🔓 Unlocked - Green background
+   - Prevents/allows reindexing
+
+**File Statistics:**
+- **📁 Available: X files (Y MB)** - Files on disk
+- **✓ Indexed: Z files (N%)** - Files in search index
+  - Green if > 0% indexed
+  - Gray if 0% indexed
+  - Percentage shows coverage
+
+**Indexing Statistics Table:**
+(If repository has been indexed)
+
+Shows for each index type (keyword/vector):
+- **Type** - keyword or vector
+- **Files** - Count of indexed files
+- **Time** - Last index time (seconds)
+- **When** - Relative time (e.g., "2 hours ago")
+
+**Action Buttons:**
+
+1. **🔓 Unlock / 🔒 Lock**
+   - Toggles exclusion status
+   - Locked repos can't be reindexed
+   - Protects production/stable repos
+
+2. **🗑️ Remove from Config**
+   - Removes repo from configuration
+   - Does NOT delete files from disk
+   - Confirmation dialog shown
+
+3. **⚙️ Configure**
+   - Opens configuration modal
+   - Edit enabled status
+   - Set priority level
+   - Configure exclude patterns
+   - Toggle lock status
+
+4. **📄 README** (if available)
+   - Opens README viewer modal
+   - Renders markdown with syntax highlighting
+   - Shows file path at bottom
+
+### Activity Log (Right Sidebar)
+
+#### Log Header
+
+**Activity Log Title**
+- Shows current log count
+- Example: "Activity Log (45 entries)"
+
+**Filter Buttons:**
+- **All** - Show all log entries
+- **✅ Success** - Show only successful operations
+- **⚠️ Warning** - Show only warnings
+- **❌ Error** - Show only errors
+- **ℹ️ Info** - Show only informational messages
+
+**Action Buttons:**
+- **🗑️ Clear Log** - Remove all entries
+- **📥 Export** - Download log as text file
+- **⏸️ Auto-scroll** toggle - Enable/disable automatic scrolling
+
+#### Log Entries
+
+Each entry shows:
+
+1. **Timestamp** - Precise time (HH:MM:SS)
+2. **Icon** - Type indicator (✅⚠️❌ℹ️)
+3. **Message** - Description of operation
+4. **Details** - Additional context (expandable)
+
+**Entry Color Coding:**
+- Green border - Success
+- Yellow border - Warning
+- Red border - Error
+- Blue border - Info
+
+**Entry Actions:**
+- Click to expand/collapse details
+- Copy message to clipboard
+- Filter by similar messages
+
+### LLM Manager (Bottom Section)
+
+#### LLM Table
+
+**Table Columns:**
+
+1. **Model**
+   - Model filename
+   - Full path shown on hover
+   - Color-coded by status:
+     - Green text - Running
+     - Gray text - Stopped
+
+2. **Size**
+   - File size in GB/MB
+   - Format: "4.2 GB"
+
+3. **Status**
+   - **🟢 Running** - Green badge
+     - Shows process PID
+     - Shows port number
+   - **⚪ Stopped** - Gray badge
+     - "Not started" message
+
+4. **Mode**
+   - Dropdown selector
+   - Options:
+     - **Basic** - No function calling
+     - **Tools** - Function calling enabled (--jinja)
+     - **Performance** - Parallel processing
+     - **Extended** - 32k context
+   - Disabled while LLM is running
+
+5. **Actions**
+   - **▶️ Start** button (when stopped)
+     - Launches llama-server process
+     - Changes to Stop button when running
+   - **⏹️ Stop** button (when running)
+     - Gracefully stops llama-server
+     - Changes back to Start button
+   - **🔄 Restart** button (when running)
+     - Stop then start in one action
+
+#### LLM Status Indicators
+
+**Starting:**
+- Button shows "Starting..."
+- Spinner animation
+- Status badge shows "⏳ Starting"
+
+**Running:**
+- Status badge shows port and PID
+- Example: "🟢 Running on :57291 (PID: 12345)"
+- Stop/Restart buttons enabled
+
+**Stopping:**
+- Button shows "Stopping..."
+- Status badge shows "⏳ Stopping"
+
+**Error:**
+- Status badge shows "❌ Failed to start"
+- Error message displayed below table
+- Check logs link provided
+
+#### LLM Configuration
+
+**Auto-detected Models:**
+- Scans `/Users/liborballaty/llms/` directory
+- Finds all .gguf files
+- Automatically populates table
+
+**Model Path Format:**
+```
+/Users/username/llms/model-name/filename.gguf
+```
+
+**Supported Quantizations:**
+- Q4_K_M - 4-bit (fastest, least accurate)
+- Q5_K_M - 5-bit (balanced)
+- Q6_K - 6-bit (good quality)
+- Q8_0 - 8-bit (high quality, slower)
+
+### Configure Repository Modal
+
+Opens when clicking **⚙️ Configure** on a repository card.
+
+**Modal Sections:**
+
+1. **Status (Enabled/Disabled)**
+   - Radio button toggle
+   - ✅ Enabled - Repository active for indexing
+   - ❌ Disabled - Repository ignored
+
+2. **Priority**
+   - Dropdown selector
+   - 🔴 High Priority - Ranked first in results
+   - 🟡 Medium Priority - Standard ranking
+   - 🟢 Low Priority - Ranked last
+
+3. **Protection (Locked/Unlocked)**
+   - Radio button toggle
+   - 🔓 Unlocked - Can be reindexed
+   - 🔒 Locked - Protected from reindexing
+
+4. **Exclude Patterns**
+   - Multi-line textarea
+   - One glob pattern per line
+   - Example patterns shown as placeholder
+   - Syntax: `**/directory/**`, `**/*.ext`
+
+**Modal Actions:**
+- **Cancel** - Close without saving
+- **💾 Save Changes** - Apply configuration
+  - Saves to config/repositories.yaml
+  - Refreshes repository list
+  - Shows success message in Activity Log
+
+### User Manual Modal
+
+Opens when clicking **📖 User Manual** in header.
+
+**Modal Features:**
+- Full-screen overlay
+- Markdown rendering with syntax highlighting
+- Table of contents with anchor links
+- Smooth scrolling navigation
+- **✕ Close** button (top-right)
+- **ESC key** to close
+- Scrollable content area
+
+### Reindex Modal
+
+Opens when clicking **🔄 Reindex** button.
+
+**Modal Content:**
+
+1. **Repository Selection Checklist**
+   - Shows all repositories
+   - Checkboxes for each repository
+   - Locked repos unchecked by default
+   - Shows estimated file counts
+
+2. **Reindex Options**
+   - **Force Full Reindex** checkbox
+     - If unchecked: Incremental (only changed files)
+     - If checked: Full reindex (all files)
+
+3. **Warning Messages**
+   - Shows if large number of files selected
+   - Estimates processing time
+   - Warns about locked repositories
+
+**Modal Actions:**
+- **Cancel** - Close without reindexing
+- **Proceed** - Start reindexing
+  - Background process starts
+  - Progress shown in Activity Log
+  - Notification when complete
 
 ---
 
@@ -826,21 +1175,46 @@ Dimensions: 384
 #### Server won't start
 
 **Possible causes:**
-1. Port 3002 already in use
+1. Port 3003 already in use
 2. Meilisearch not running
 3. Missing dependencies
+4. Virtual environment not activated
 
 **Solutions:**
-1. Check for conflicting processes:
+1. **Use the stop script first:**
    ```bash
-   lsof -i :3002
+   ./stop.sh
    ```
-2. Start Meilisearch manually:
+   Then try starting again:
    ```bash
-   meilisearch --http-addr 127.0.0.1:7700
+   ./start.sh
    ```
-3. Reinstall dependencies:
+
+2. **Check for conflicting processes:**
    ```bash
+   lsof -i :3003  # MyRAGDB API
+   lsof -i :7700  # Meilisearch
+   lsof -i :8093  # MCP Middleware
+   ```
+
+3. **Check logs for errors:**
+   ```bash
+   tail -f /tmp/myragdb_server.log       # API server logs
+   tail -f /tmp/meilisearch.log          # Meilisearch logs
+   tail -f /tmp/mcp_middleware.log       # MCP middleware logs
+   ```
+
+4. **Manual cleanup (if stop.sh fails):**
+   ```bash
+   # Kill processes on specific ports
+   kill $(lsof -ti:3003)  # API server
+   kill $(lsof -ti:7700)  # Meilisearch
+   kill $(lsof -ti:8093)  # MCP middleware
+   ```
+
+5. **Reinstall dependencies:**
+   ```bash
+   source venv/bin/activate
    pip install -e .
    ```
 
