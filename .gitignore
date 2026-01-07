@@ -36,6 +36,7 @@ venv.bak/
 *.swp
 *.swo
 *~
+.claude/settings.local.json
 
 # MyRAGDB specific
 data/
@@ -43,6 +44,7 @@ data/
 *.sqlite
 *.sqlite3
 .env
+*.pid
 
 # OS
 .DS_Store

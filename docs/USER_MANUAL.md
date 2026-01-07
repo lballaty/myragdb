@@ -1378,12 +1378,27 @@ Choose models based on your use case:
 
 **Memory Requirements:**
 
-| Model Size | Quantization | RAM Required | VRAM Required (GPU) |
-|-----------|--------------|--------------|---------------------|
-| 7B-8B     | Q4_K_M       | 6-8 GB       | 4-6 GB             |
-| 13B       | Q4_K_M       | 10-12 GB     | 8-10 GB            |
-| 24B-32B   | Q4_K_M       | 20-24 GB     | 16-20 GB           |
-| 32B       | Q8_0         | 35-40 GB     | 32-36 GB           |
+Memory usage depends on **both model size and context window**. The table below shows approximate RAM/VRAM requirements at different context window sizes.
+
+**Formula:** Memory ≈ Model Size + (Context Window × Layers × Hidden Dim × Bytes per Token)
+
+| Model Size | Quant | Context | Base Model | Context Overhead | Total RAM/VRAM |
+|-----------|-------|---------|-----------|------------------|----------------|
+| 7B-8B     | Q4_K_M | 4K     | 4-5 GB    | +1-2 GB         | 6-8 GB        |
+| 7B-8B     | Q4_K_M | 8K     | 4-5 GB    | +2-3 GB         | 7-9 GB        |
+| 7B-8B     | Q4_K_M | 16K    | 4-5 GB    | +4-5 GB         | 9-11 GB       |
+| 13B       | Q4_K_M | 4K     | 8-9 GB    | +1-2 GB         | 10-12 GB      |
+| 13B       | Q4_K_M | 8K     | 8-9 GB    | +2-4 GB         | 11-14 GB      |
+| 24B-32B   | Q4_K_M | 8K     | 16-18 GB  | +3-5 GB         | 20-24 GB      |
+| 24B-32B   | Q4_K_M | 16K    | 16-18 GB  | +6-10 GB        | 24-30 GB      |
+| 32B       | Q8_0   | 8K     | 32-34 GB  | +4-6 GB         | 36-40 GB      |
+| 32B       | Q8_0   | 16K    | 32-34 GB  | +8-12 GB        | 42-48 GB      |
+
+**Key Takeaways:**
+- Larger context windows require significantly more memory
+- GPU memory (VRAM) and system RAM requirements are similar
+- Use smaller context (4K-8K) if memory is limited
+- 16K+ context is useful when processing many search results at once
 
 ---
 
