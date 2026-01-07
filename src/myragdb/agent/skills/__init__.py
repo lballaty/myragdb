@@ -5,6 +5,7 @@
 
 from myragdb.agent.skills.base import Skill, SkillExecutionError, SkillInfo, SkillValidationError
 from myragdb.agent.skills.registry import SkillRegistry
+from myragdb.agent.skills.search_skill import SearchSkill
 
 __all__ = [
     "Skill",
@@ -12,4 +13,5 @@ __all__ = [
     "SkillExecutionError",
     "SkillValidationError",
     "SkillRegistry",
+    "SearchSkill",
 ]

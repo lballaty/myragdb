@@ -395,14 +395,16 @@ class MeilisearchIndexer:
         limit: int = 10,
         folder_filter: Optional[str] = None,
         extension_filter: Optional[str] = None,
-        repository_filter: Optional[str] = None
+        repository_filter: Optional[str] = None,
+        directories: Optional[List[int]] = None
     ) -> List[MeilisearchResult]:
         """
         Search indexed files using keyword search with optional filters.
 
         Business Purpose: Finds files matching query using typo-tolerant keyword search.
-        Supports scoped searching (filter by folder/extension first, then search within
-        that subset) for instant searches even with 2M+ files.
+        Supports scoped searching (filter by folder/extension/source first, then search within
+        that subset) for instant searches even with 2M+ files. Can filter by repositories
+        or managed directories.
 
         Args:
             query: Search query string
@@ -410,6 +412,7 @@ class MeilisearchIndexer:
             folder_filter: Filter to specific folder name (e.g., "src/auth")
             extension_filter: Filter by file extension (e.g., ".py")
             repository_filter: Filter by repository name
+            directories: Optional list of directory IDs to search (None = all)
 
         Returns:
             List of MeilisearchResult objects sorted by relevance
@@ -418,11 +421,11 @@ class MeilisearchIndexer:
             # Basic search
             results = indexer.search("authentication flow", limit=10)
 
-            # Scoped search (folder filter)
+            # Directory-scoped search
             results = indexer.search(
                 "config",
-                folder_filter="src/components",
-                extension_filter=".tsx"
+                directories=[1, 2],  # Search only in directories 1 and 2
+                extension_filter=".py"
             )
 
             # Repository-specific search
@@ -441,6 +444,15 @@ class MeilisearchIndexer:
                 filters.append(f'extension = "{extension_filter}"')
             if repository_filter:
                 filters.append(f'repository = "{repository_filter}"')
+
+            # Add directory filtering (multiple directories with OR logic)
+            if directories:
+                dir_filters = [f'source_id = "{d}"' for d in directories]
+                if len(dir_filters) == 1:
+                    filters.append(dir_filters[0])
+                else:
+                    # Multiple directories: (dir1 OR dir2 OR dir3)
+                    filters.append(f"({' OR '.join(dir_filters)})")
 
             filter_str = ' AND '.join(filters) if filters else None
 
