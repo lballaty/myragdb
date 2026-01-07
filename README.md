@@ -28,7 +28,26 @@ MyRAGDB is a **laptop-wide hybrid search service** that combines Meilisearch key
 
 ## Quick Start
 
-### One-Command Startup
+### macOS App Bundle (Easiest)
+
+**Just double-click MyRAGDB.app!**
+
+The app bundle provides the easiest way to start MyRAGDB on macOS:
+
+1. **First time**: Double-click `MyRAGDB.app` in the project folder (or add to Applications/Dock)
+2. App starts all services and opens browser automatically
+3. App stays in Dock while services are running
+4. **To stop**: Right-click app in Dock → Quit (or use `./stop.sh`)
+5. **To reopen UI**: Double-click app again (services stay running, just opens browser)
+
+**Troubleshooting**: If the app doesn't work, check logs with:
+```bash
+./view-app-logs.sh
+# Or view live:
+tail -f /tmp/myragdb_app_bundle.log
+```
+
+### One-Command Startup (Terminal)
 
 ```bash
 ./start.sh
@@ -87,9 +106,32 @@ cp config/repositories.yaml.example config/repositories.yaml
 
 # 5. Start the system
 ./start.sh
+
+# 6. (Optional) Add app to Dock for easy access
+# Drag MyRAGDB.app to your Dock or Applications folder
 ```
 
 The web UI will open automatically at http://localhost:3003
+
+### Adding to Applications/Dock (macOS)
+
+For easy access from anywhere:
+
+**Option 1: Add to Dock**
+- Drag `MyRAGDB.app` from the project folder to your Dock
+- Click the icon to start/open MyRAGDB anytime
+
+**Option 2: Add to Applications**
+```bash
+# Create symlink in Applications folder
+ln -s "$(pwd)/MyRAGDB.app" ~/Applications/MyRAGDB.app
+# Or copy it:
+cp -R MyRAGDB.app ~/Applications/
+```
+
+**Option 3: Spotlight Search**
+- Just type "MyRAGDB" in Spotlight (Cmd+Space)
+- Press Enter to launch
 
 ---
 
@@ -601,6 +643,40 @@ source venv/bin/activate
 # Reinstall package
 pip install -e .
 ```
+
+#### **macOS App Bundle Not Working**
+
+If double-clicking MyRAGDB.app doesn't work:
+
+1. **Check the logs**:
+   ```bash
+   ./view-app-logs.sh
+   # Or view live:
+   tail -f /tmp/myragdb_app_bundle.log
+   ```
+
+2. **Common causes**:
+   - **PATH issues**: App can't find `meilisearch` or `python3`
+     - Solution: App automatically adds Homebrew paths
+     - Check log shows: "Meilisearch: /opt/homebrew/bin/meilisearch"
+
+   - **Permission issues**: App can't execute
+     ```bash
+     chmod +x MyRAGDB.app/Contents/MacOS/MyRAGDB
+     ```
+
+   - **Gatekeeper blocking**: macOS security blocking unsigned app
+     ```bash
+     # Remove quarantine attribute
+     xattr -dr com.apple.quarantine MyRAGDB.app
+     # Or: Right-click app → Open → Click "Open" in dialog
+     ```
+
+3. **Fallback to terminal**:
+   ```bash
+   # Always works as fallback
+   ./start.sh
+   ```
 
 #### **Browser Cache Issues**
 

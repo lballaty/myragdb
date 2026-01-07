@@ -123,6 +123,41 @@ MyRAGDB is a **hybrid search system** that combines keyword search (via Meilisea
 
 ### Quick Start
 
+#### Option 1: macOS App Bundle (Easiest)
+
+**Just double-click MyRAGDB.app!**
+
+1. **First time**: Double-click `MyRAGDB.app` in the project folder
+2. App starts all services and opens browser automatically
+3. App stays in Dock while services are running
+4. **To stop**: Right-click app in Dock → Quit (or use `./stop.sh`)
+5. **To reopen UI**: Double-click app again (services stay running)
+
+**Adding to Applications/Dock:**
+
+- **Option 1 - Create Alias:**
+  ```bash
+  cd /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb
+  ln -s "$(pwd)/MyRAGDB.app" ~/Applications/MyRAGDB.app
+  ```
+
+- **Option 2 - Copy to Applications:**
+  ```bash
+  cp -R MyRAGDB.app ~/Applications/
+  ```
+
+- **Option 3 - Drag and Drop:**
+  - Open Finder, navigate to project folder
+  - Drag `MyRAGDB.app` to Applications folder
+  - Hold ⌥ Option to copy, ⌘ Command to create alias
+
+- **Add to Dock:**
+  1. Open the app once
+  2. Right-click the icon in Dock
+  3. Options → Keep in Dock
+
+#### Option 2: Terminal Script
+
 1. **Configure repositories:**
 
    Edit `config/repositories.yaml`:
@@ -1348,6 +1383,110 @@ Dimensions: 384
 ---
 
 ## Troubleshooting
+
+### macOS App Bundle Issues
+
+#### App won't start
+
+**Check logs:**
+```bash
+./view-app-logs.sh
+```
+
+This shows:
+- App bundle launcher log
+- Server log
+- Middleware log
+
+**Common causes:**
+
+1. **PATH issues** - Python or Meilisearch not found
+   - Check app bundle log: `tail -f /tmp/myragdb_app_bundle.log`
+   - Look for: `Python: /opt/homebrew/bin/python3`
+   - Look for: `Meilisearch: /opt/homebrew/bin/meilisearch`
+   - If "not found", verify installations:
+     ```bash
+     which python3
+     which meilisearch
+     brew install meilisearch  # if missing
+     ```
+
+2. **Permission denied** - App not executable
+   ```bash
+   chmod +x MyRAGDB.app/Contents/MacOS/MyRAGDB
+   chmod +x start.sh
+   chmod +x stop.sh
+   ```
+
+3. **Gatekeeper blocking** - macOS quarantine attribute
+   ```bash
+   xattr -d com.apple.quarantine MyRAGDB.app
+   ```
+
+#### Browser opens but page won't load
+
+**Wait for services to start:**
+- First launch takes 10-15 seconds
+- Check app bundle log for "Server is ready on port 3003!"
+- Look for "Opening web UI in browser..."
+
+**Verify server is running:**
+```bash
+lsof -i :3003
+# Should show Python process listening on port 3003
+```
+
+**Check for errors:**
+```bash
+tail -f /tmp/myragdb_server.log
+```
+
+#### Services won't stop
+
+**Use Force Quit:**
+1. Right-click app icon in Dock
+2. Select "Force Quit"
+3. App bundle cleanup automatically stops services
+
+**Manual cleanup (if needed):**
+```bash
+./stop.sh
+
+# If stop.sh fails:
+pkill -f "python.*myragdb"
+pkill -f meilisearch
+rm -f .server.pid .middleware.pid .meilisearch.pid
+```
+
+#### App restarts services when reopened
+
+This is normal behavior:
+- **If services running**: Opens browser only
+- **If services stopped**: Starts everything and opens browser
+
+To verify:
+```bash
+lsof -i :3003  # Check if server running
+```
+
+#### Logs location
+
+All logs are in `/tmp/`:
+- `/tmp/myragdb_app_bundle.log` - App launcher
+- `/tmp/myragdb_server.log` - API server
+- `/tmp/mcp_middleware.log` - MCP middleware
+
+**View all logs:**
+```bash
+./view-app-logs.sh
+```
+
+**Follow logs in real-time:**
+```bash
+tail -f /tmp/myragdb_app_bundle.log
+tail -f /tmp/myragdb_server.log
+tail -f /tmp/mcp_middleware.log
+```
 
 ### Common Issues
 
