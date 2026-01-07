@@ -193,6 +193,11 @@ function initializeSearch() {
     const searchButton = document.getElementById('search-button');
     const toggleAdvanced = document.getElementById('toggle-advanced-filters');
     const advancedFilters = document.getElementById('advanced-filters');
+    const directoryFilterButton = document.getElementById('directory-filter-button');
+    const directoryFilterDropdown = document.getElementById('directory-filter-dropdown');
+    const dirFilterSearch = document.getElementById('directory-filter-search');
+    const dirFilterSelectAll = document.getElementById('dir-filter-select-all');
+    const dirFilterClearAll = document.getElementById('dir-filter-clear-all');
 
     searchButton.addEventListener('click', performSearch);
 
@@ -210,6 +215,56 @@ function initializeSearch() {
             toggleAdvanced.textContent = isVisible ? '🔽 Advanced Filters' : '🔼 Advanced Filters';
         });
     }
+
+    // Toggle directory filter dropdown
+    if (directoryFilterButton) {
+        directoryFilterButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isVisible = directoryFilterDropdown.style.display !== 'none';
+            directoryFilterDropdown.style.display = isVisible ? 'none' : 'block';
+        });
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (directoryFilterDropdown && directoryFilterButton) {
+            if (!directoryFilterButton.contains(e.target) && !directoryFilterDropdown.contains(e.target)) {
+                directoryFilterDropdown.style.display = 'none';
+            }
+        }
+    });
+
+    // Search in directory filter
+    if (dirFilterSearch) {
+        dirFilterSearch.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const items = document.querySelectorAll('.directory-filter-item');
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(query) ? 'block' : 'none';
+            });
+        });
+    }
+
+    // Select all directories
+    if (dirFilterSelectAll) {
+        dirFilterSelectAll.addEventListener('click', () => {
+            document.querySelectorAll('.directory-filter-checkbox').forEach(cb => {
+                cb.checked = true;
+            });
+            updateDirectoryFilterValues();
+        });
+    }
+
+    // Clear all directories
+    if (dirFilterClearAll) {
+        dirFilterClearAll.addEventListener('click', () => {
+            document.querySelectorAll('.directory-filter-checkbox').forEach(cb => {
+                cb.checked = false;
+            });
+            updateDirectoryFilterValues();
+        });
+    }
 }
 
 async function performSearch() {
@@ -220,13 +275,14 @@ async function performSearch() {
     const selectedRepo = repositorySelect.value;
     const selectedRepos = selectedRepo ? [selectedRepo] : []; // Convert single selection to array for API
 
-    // Handle directories filter - multi-select
-    const directorySelect = document.getElementById('directory-filter');
+    // Handle directories filter - from hidden input
+    const directoriesInput = document.getElementById('directory-filter-values');
     let selectedDirs = [];
-    if (directorySelect) {
-        selectedDirs = Array.from(directorySelect.selectedOptions)
-            .map(option => parseInt(option.value))
-            .filter(id => !isNaN(id)); // Filter out non-numeric values
+    if (directoriesInput && directoriesInput.value) {
+        selectedDirs = directoriesInput.value
+            .split(',')
+            .map(id => parseInt(id.trim()))
+            .filter(id => !isNaN(id));
     }
 
     const folderFilter = document.getElementById('folder-filter').value.trim();
@@ -679,26 +735,24 @@ function populateRepositoryFilter() {
 }
 
 function populateDirectoryFilter() {
-    const filterSelect = document.getElementById('directory-filter');
-    if (!filterSelect) return;
+    const filterButton = document.getElementById('directory-filter-button');
+    const filterList = document.getElementById('directory-filter-list');
+    const filterLabel = filterButton ? filterButton.closest('label') : null;
 
-    // Keep the "All Directories" option
-    filterSelect.innerHTML = '<option value="">All Directories</option>';
+    if (!filterList) return;
 
     // Return early if no directories
     if (state.directories.length === 0) {
-        // Hide the directory filter label if no directories available
-        const dirLabel = filterSelect.closest('label');
-        if (dirLabel) {
-            dirLabel.style.display = 'none';
+        filterList.innerHTML = '<div style="padding: 12px; color: var(--text-muted);">No directories available</div>';
+        if (filterLabel) {
+            filterLabel.style.display = 'none';
         }
         return;
     }
 
     // Show the directory filter label
-    const dirLabel = filterSelect.closest('label');
-    if (dirLabel) {
-        dirLabel.style.display = 'flex';
+    if (filterLabel) {
+        filterLabel.style.display = 'flex';
     }
 
     // Sort directories by priority (higher first), then by name
@@ -707,17 +761,45 @@ function populateDirectoryFilter() {
         return a.name.localeCompare(b.name);
     });
 
-    // Add each enabled directory as an option
-    sortedDirs.forEach(dir => {
-        if (dir.enabled) {
-            const option = document.createElement('option');
-            option.value = dir.id;
-            option.textContent = `${dir.name}`;
-            filterSelect.appendChild(option);
-        }
-    });
+    // Create checkbox list for enabled directories
+    const enabledDirs = sortedDirs.filter(d => d.enabled);
 
-    addActivityLog('info', `Directory filter populated with ${state.directories.filter(d => d.enabled).length} options`);
+    if (enabledDirs.length === 0) {
+        filterList.innerHTML = '<div style="padding: 12px; color: var(--text-muted);">No enabled directories</div>';
+        return;
+    }
+
+    const html = enabledDirs.map(dir => `
+        <div class="directory-filter-item" style="padding: 8px; border-bottom: 1px solid var(--border-color); cursor: pointer;">
+            <label style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
+                <input type="checkbox" class="directory-filter-checkbox" value="${dir.id}" onchange="updateDirectoryFilterValues()">
+                <span style="flex: 1;">
+                    <strong>${escapeHtml(dir.name)}</strong>
+                    <br>
+                    <small style="color: var(--text-muted);">${escapeHtml(dir.path)}</small>
+                </span>
+            </label>
+        </div>
+    `).join('');
+
+    filterList.innerHTML = html;
+    addActivityLog('info', `Directory filter populated with ${enabledDirs.length} directories`);
+}
+
+function updateDirectoryFilterValues() {
+    const checkboxes = document.querySelectorAll('.directory-filter-checkbox:checked');
+    const values = Array.from(checkboxes).map(cb => cb.value).join(',');
+    document.getElementById('directory-filter-values').value = values;
+
+    // Update button text to show selected count
+    const filterButton = document.getElementById('directory-filter-button');
+    if (filterButton) {
+        if (checkboxes.length === 0) {
+            filterButton.textContent = '📁 Select Directories';
+        } else {
+            filterButton.textContent = `📁 ${checkboxes.length} selected`;
+        }
+    }
 }
 
 function renderRepositories() {

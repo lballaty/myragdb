@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.07.2.71.0">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.07.2.71.1">
 </head>
 <body>
     <div class="container">
@@ -100,11 +100,24 @@
                         </select>
                     </label>
                     <label>
-                        <span>Directory:</span>
-                        <select id="directory-filter" style="min-width: 200px;" multiple title="Select directories to search. Hold Ctrl/Cmd to select multiple.">
-                            <option value="">All Directories</option>
-                        </select>
+                        <span>Directories:</span>
+                        <button id="directory-filter-button" class="secondary-button" style="padding: 6px 12px; font-size: 0.95em;">
+                            📁 Select Directories
+                        </button>
                     </label>
+                    <div id="directory-filter-dropdown" class="directory-filter-dropdown" style="display: none;">
+                        <div class="directory-filter-header">
+                            <input type="text" id="directory-filter-search" placeholder="Search directories..." style="width: 100%; padding: 8px; margin-bottom: 8px;">
+                            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                                <button id="dir-filter-select-all" class="icon-button">✓ All</button>
+                                <button id="dir-filter-clear-all" class="icon-button">✗ None</button>
+                            </div>
+                        </div>
+                        <div id="directory-filter-list" class="directory-filter-list" style="max-height: 300px; overflow-y: auto;">
+                            <!-- Directories will be populated here -->
+                        </div>
+                    </div>
+                    <input type="hidden" id="directory-filter-values">
                     <label>
                         <span>Results:</span>
                         <select id="result-limit">
@@ -719,6 +732,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
-    <script src="static/js/app.js?v=2026.01.07.2.71.0"></script>
+    <script src="static/js/app.js?v=2026.01.07.2.71.1"></script>
 </body>
 </html>

@@ -445,6 +445,52 @@ body {
     flex: 1;
 }
 
+/* Directory Filter Dropdown */
+.directory-filter-dropdown {
+    position: absolute;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+    min-width: 300px;
+    max-width: 500px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    margin-top: 8px;
+}
+
+.directory-filter-header {
+    padding: 0 0 8px 0;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 8px;
+}
+
+.directory-filter-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0px;
+}
+
+.directory-filter-item {
+    transition: background-color 0.2s ease;
+}
+
+.directory-filter-item:hover {
+    background-color: var(--hover-color);
+}
+
+.directory-filter-item label {
+    cursor: pointer;
+    user-select: none;
+}
+
+.directory-filter-checkbox {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
 .search-filters-advanced input[type="text"] {
     width: 100%;
 }
