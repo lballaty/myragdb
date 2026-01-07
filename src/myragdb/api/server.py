@@ -1211,6 +1211,7 @@ def run_keyword_index(
         if not indexing_state["vector"]["is_indexing"]:
             indexing_state["current_phase"] = "Keyword"
             indexing_state["mode"] = indexing_state["keyword"]["mode"]
+            indexing_state["files_total"] = 0  # Reset files_total for new indexing run
 
         # Add to active index types
         if "Keyword" not in indexing_state["index_types"]:
@@ -1449,6 +1450,7 @@ def run_vector_index(
         if not indexing_state["keyword"]["is_indexing"]:
             indexing_state["current_phase"] = "Vector"
             indexing_state["mode"] = indexing_state["vector"]["mode"]
+            indexing_state["files_total"] = 0  # Reset files_total for new indexing run
 
         # Add to active index types
         if "Vector" not in indexing_state["index_types"]:

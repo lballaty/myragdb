@@ -2097,23 +2097,23 @@ async function loadObservabilityStats() {
 
         const data = await response.json();
 
-        // Update stats cards
-        document.getElementById('obs-total-searches').textContent = data.search_stats.total_searches.toLocaleString();
-        document.getElementById('obs-avg-response-time').textContent = data.search_stats.avg_response_time_ms.toFixed(1);
-        document.getElementById('obs-min-response-time').textContent = `${data.search_stats.min_response_time_ms.toFixed(1)}ms`;
-        document.getElementById('obs-max-response-time').textContent = data.search_stats.max_response_time_ms.toFixed(1);
+        // Update stats cards - add null checks to prevent errors
+        document.getElementById('obs-total-searches').textContent = data.search_stats.total_searches ? data.search_stats.total_searches.toLocaleString() : '0';
+        document.getElementById('obs-avg-response-time').textContent = data.search_stats.avg_response_time_ms != null ? data.search_stats.avg_response_time_ms.toFixed(1) : '0.0';
+        document.getElementById('obs-min-response-time').textContent = data.search_stats.min_response_time_ms != null ? `${data.search_stats.min_response_time_ms.toFixed(1)}ms` : '0.0ms';
+        document.getElementById('obs-max-response-time').textContent = data.search_stats.max_response_time_ms != null ? data.search_stats.max_response_time_ms.toFixed(1) : '0.0';
 
-        document.getElementById('obs-total-errors').textContent = data.error_stats.total_errors.toLocaleString();
+        document.getElementById('obs-total-errors').textContent = data.error_stats.total_errors ? data.error_stats.total_errors.toLocaleString() : '0';
         document.getElementById('obs-critical-errors').textContent = data.error_stats.by_severity.CRITICAL || 0;
         document.getElementById('obs-error-errors').textContent = data.error_stats.by_severity.ERROR || 0;
 
-        document.getElementById('obs-db-size').textContent = `${data.database_info.size_mb.toFixed(2)} MB`;
-        document.getElementById('obs-total-rows').textContent = data.database_info.total_rows.toLocaleString();
+        document.getElementById('obs-db-size').textContent = data.database_info.size_mb != null ? `${data.database_info.size_mb.toFixed(2)} MB` : '0.00 MB';
+        document.getElementById('obs-total-rows').textContent = data.database_info.total_rows ? data.database_info.total_rows.toLocaleString() : '0';
 
-        logActivity('info', 'Loaded observability statistics', 'Observability');
+        addActivityLog('info', 'Loaded observability statistics');
     } catch (error) {
         console.error('Failed to load observability stats:', error);
-        logActivity('error', `Failed to load stats: ${error.message}`, 'Observability');
+        addActivityLog('error', `Failed to load stats: ${error.message}`);
     }
 }
 
