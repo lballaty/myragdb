@@ -9,6 +9,7 @@ from myragdb.agent.skills.search_skill import SearchSkill
 from myragdb.agent.skills.llm_skill import LLMSkill
 from myragdb.agent.skills.code_analysis_skill import CodeAnalysisSkill
 from myragdb.agent.skills.report_skill import ReportSkill
+from myragdb.agent.skills.sql_skill import SQLSkill
 
 __all__ = [
     "Skill",
@@ -20,4 +21,5 @@ __all__ = [
     "LLMSkill",
     "CodeAnalysisSkill",
     "ReportSkill",
+    "SQLSkill",
 ]
