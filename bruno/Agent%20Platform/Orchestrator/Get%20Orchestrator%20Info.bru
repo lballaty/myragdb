@@ -1,0 +1,69 @@
+meta {
+  name: Get Orchestrator Info
+  type: http
+  seq: 9
+  tags: @orchestrator, @discovery, @api, @fast
+}
+
+get {
+  url: {{api_base_url}}{{agent_base_path}}/info
+}
+
+assert {
+  res.status: eq 200
+  res.body.total_skills: isNumber
+  res.body.total_templates: isNumber
+  res.body.available_skills: isArray
+  res.body.available_templates: isArray
+}
+
+tests {
+  test("Should return orchestrator information", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("Should have skill statistics", function() {
+    expect(res.body).to.have.property("total_skills");
+    expect(res.body.total_skills).to.be.a("number");
+    expect(res.body.total_skills).to.be.at.least(5);
+  });
+
+  test("Should have template statistics", function() {
+    expect(res.body).to.have.property("total_templates");
+    expect(res.body.total_templates).to.be.a("number");
+    expect(res.body.total_templates).to.be.at.least(3);
+  });
+
+  test("Should list available skills", function() {
+    expect(res.body).to.have.property("available_skills");
+    expect(res.body.available_skills).to.be.an("array");
+    expect(res.body.available_skills.length).to.equal(res.body.total_skills);
+  });
+
+  test("Should list available templates", function() {
+    expect(res.body).to.have.property("available_templates");
+    expect(res.body.available_templates).to.be.an("array");
+    expect(res.body.available_templates.length).to.equal(res.body.total_templates);
+  });
+
+  test("Should indicate session manager availability", function() {
+    expect(res.body).to.have.property("has_session_manager");
+    expect(res.body.has_session_manager).to.be.a("boolean");
+  });
+
+  test("Should indicate search engine availability", function() {
+    expect(res.body).to.have.property("has_search_engine");
+    expect(res.body.has_search_engine).to.be.a("boolean");
+  });
+
+  test("Should include core skills in list", function() {
+    expect(res.body.available_skills).to.include("search");
+    expect(res.body.available_skills).to.include("code_analysis");
+    expect(res.body.available_skills).to.include("report");
+  });
+
+  test("Should include core templates in list", function() {
+    expect(res.body.available_templates).to.include("code_search");
+    expect(res.body.available_templates).to.include("code_analysis");
+  });
+}

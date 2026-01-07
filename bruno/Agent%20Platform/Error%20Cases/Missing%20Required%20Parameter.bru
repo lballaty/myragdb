@@ -1,0 +1,40 @@
+meta {
+  name: Execute with Missing Required Parameter
+  type: http
+  seq: 10
+  tags: @error-handling, @validation, @api, @integration
+}
+
+post {
+  url: {{api_base_url}}{{agent_base_path}}/execute
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body {
+  json {
+    request_type: "code_search"
+    parameters: {
+      limit: 5
+    }
+  }
+}
+
+assert {
+  res.status: in [400, 500]
+}
+
+tests {
+  test("Should reject missing required parameter", function() {
+    // Either 400 (bad request) or 500 (execution error) acceptable
+    expect([400, 500]).to.include(res.status);
+  });
+
+  test("Should have error information", function() {
+    if (res.status === 400) {
+      expect(res.body).to.have.property("detail");
+    }
+  });
+}

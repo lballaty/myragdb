@@ -1,0 +1,42 @@
+meta {
+  name: Execute Invalid Template
+  type: http
+  seq: 11
+  tags: @error-handling, @validation, @api, @integration
+}
+
+post {
+  url: {{api_base_url}}{{agent_base_path}}/execute
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body {
+  json {
+    request_type: "nonexistent_template_xyz_12345"
+    parameters: {
+      query: "test"
+    }
+  }
+}
+
+assert {
+  res.status: in [404, 500]
+}
+
+tests {
+  test("Should reject unknown template", function() {
+    expect([404, 500]).to.include(res.status);
+  });
+
+  test("Should provide error details", function() {
+    expect(res.body).to.have.property("detail");
+  });
+
+  test("Error should mention template not found", function() {
+    const detail = JSON.stringify(res.body.detail || res.body);
+    expect(detail.toLowerCase()).to.include("not found");
+  });
+}
