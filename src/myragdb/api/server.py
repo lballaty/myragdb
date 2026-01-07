@@ -62,7 +62,7 @@ from myragdb.search.hybrid_search import HybridSearchEngine, HybridSearchResult
 from myragdb.indexers.meilisearch_indexer import MeilisearchIndexer
 from myragdb.indexers.vector_indexer import VectorIndexer
 from myragdb.llm.query_rewriter import QueryRewriter
-from myragdb.db.metadata import MetadataStore
+from myragdb.db.file_metadata import get_metadata_db
 from myragdb.db.observability import ObservabilityDatabase
 from myragdb.config import settings, load_repositories_config
 from myragdb.utils.repo_discovery import RepositoryDiscovery, DiscoveredRepository
@@ -133,7 +133,7 @@ def get_search_engines():
 
     if metadata_store is None:
         logger.info("Initializing metadata store")
-        metadata_store = MetadataStore()
+        metadata_store = get_metadata_db()
 
         # Load last index time from persistent storage
         last_index_time = metadata_store.get_last_index_time()

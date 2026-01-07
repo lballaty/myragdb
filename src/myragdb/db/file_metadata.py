@@ -483,3 +483,199 @@ class FileMetadataDatabase:
         with self._get_connection() as conn:
             cursor = conn.execute('SELECT * FROM repository_stats')
             return [dict(row) for row in cursor.fetchall()]
+
+    # System-wide metadata methods (replaces metadata.json)
+
+    def get_last_index_time(self) -> Optional[str]:
+        """
+        Get timestamp of last successful indexing run.
+
+        Returns:
+            ISO 8601 timestamp string or None if never indexed
+
+        Example:
+            last_time = db.get_last_index_time()
+            if last_time:
+                print(f"Last indexed: {last_time}")
+            else:
+                print("Never indexed")
+        """
+        with self._get_connection() as conn:
+            cursor = conn.execute(
+                'SELECT value FROM system_metadata WHERE key = ?',
+                ('last_index_time',)
+            )
+            row = cursor.fetchone()
+            return row['value'] if row and row['value'] else None
+
+    def set_last_index_time(self, timestamp: Optional[str] = None):
+        """
+        Record timestamp of successful indexing completion.
+
+        Args:
+            timestamp: ISO 8601 timestamp string or None to use current time
+
+        Example:
+            db.set_last_index_time("2026-01-06T15:59:00Z")
+        """
+        from datetime import datetime
+
+        if timestamp is None:
+            timestamp = datetime.utcnow().isoformat() + "Z"
+
+        now = int(time.time())
+
+        with self._get_connection() as conn:
+            conn.execute('''
+                INSERT INTO system_metadata (key, value, updated_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(key) DO UPDATE SET
+                    value = excluded.value,
+                    updated_at = excluded.updated_at
+            ''', ('last_index_time', timestamp, now))
+            conn.commit()
+
+    def get_search_stats(self) -> Dict[str, int]:
+        """
+        Get cumulative search statistics.
+
+        Returns:
+            Dictionary with total_searches and total_search_time_ms
+
+        Example:
+            stats = db.get_search_stats()
+            if stats["total_searches"] > 0:
+                avg_ms = stats["total_search_time_ms"] / stats["total_searches"]
+                print(f"Average search time: {avg_ms:.2f}ms")
+        """
+        with self._get_connection() as conn:
+            cursor = conn.execute('''
+                SELECT key, value FROM system_metadata
+                WHERE key IN ('total_searches', 'total_search_time_ms')
+            ''')
+
+            stats = {
+                'total_searches': 0,
+                'total_search_time_ms': 0
+            }
+
+            for row in cursor:
+                key = row['key']
+                value = int(row['value']) if row['value'] else 0
+                stats[key] = value
+
+            return stats
+
+    def record_search(self, search_time_ms: float):
+        """
+        Record a search operation and its duration.
+
+        Business Purpose: Track search performance over time to identify
+        degradation or improvements.
+
+        Args:
+            search_time_ms: Search duration in milliseconds
+
+        Example:
+            import time
+            start = time.time()
+            results = search_engine.search("query")
+            duration_ms = (time.time() - start) * 1000
+            db.record_search(duration_ms)
+        """
+        now = int(time.time())
+
+        with self._get_connection() as conn:
+            # Get current values
+            cursor = conn.execute('''
+                SELECT key, value FROM system_metadata
+                WHERE key IN ('total_searches', 'total_search_time_ms')
+            ''')
+
+            current_values = {}
+            for row in cursor:
+                current_values[row['key']] = int(row['value']) if row['value'] else 0
+
+            # Increment values
+            new_total_searches = current_values.get('total_searches', 0) + 1
+            new_total_time = current_values.get('total_search_time_ms', 0) + search_time_ms
+
+            # Update database
+            conn.execute('''
+                INSERT INTO system_metadata (key, value, updated_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(key) DO UPDATE SET
+                    value = excluded.value,
+                    updated_at = excluded.updated_at
+            ''', ('total_searches', str(new_total_searches), now))
+
+            conn.execute('''
+                INSERT INTO system_metadata (key, value, updated_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(key) DO UPDATE SET
+                    value = excluded.value,
+                    updated_at = excluded.updated_at
+            ''', ('total_search_time_ms', str(int(new_total_time)), now))
+
+            conn.commit()
+
+    def clear_system_metadata(self):
+        """
+        Reset all system metadata to defaults.
+
+        Business Purpose: Allow users to reset statistics without
+        deleting the entire database.
+
+        Example:
+            db.clear_system_metadata()  # Reset all stats
+        """
+        now = int(time.time())
+
+        with self._get_connection() as conn:
+            conn.execute('''
+                DELETE FROM system_metadata
+                WHERE key IN ('last_index_time', 'total_searches', 'total_search_time_ms')
+            ''')
+
+            conn.execute('''
+                INSERT INTO system_metadata (key, value, updated_at)
+                VALUES ('last_index_time', NULL, ?)
+            ''', (now,))
+
+            conn.execute('''
+                INSERT INTO system_metadata (key, value, updated_at)
+                VALUES ('total_searches', '0', ?)
+            ''', (now,))
+
+            conn.execute('''
+                INSERT INTO system_metadata (key, value, updated_at)
+                VALUES ('total_search_time_ms', '0', ?)
+            ''', (now,))
+
+            conn.commit()
+
+
+# Singleton instance for easy import (replaces MetadataStore)
+_metadata_db_instance = None
+
+
+def get_metadata_db() -> FileMetadataDatabase:
+    """
+    Get singleton instance of FileMetadataDatabase.
+
+    Business Purpose: Provides a shared database connection across the application
+    to avoid creating multiple connections and ensure consistent state.
+
+    Returns:
+        Singleton FileMetadataDatabase instance
+
+    Example:
+        from myragdb.db.file_metadata import get_metadata_db
+
+        db = get_metadata_db()
+        last_time = db.get_last_index_time()
+    """
+    global _metadata_db_instance
+    if _metadata_db_instance is None:
+        _metadata_db_instance = FileMetadataDatabase()
+    return _metadata_db_instance

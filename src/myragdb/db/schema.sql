@@ -43,6 +43,19 @@ CREATE TABLE IF NOT EXISTS repository_stats (
 -- Index for fast repository lookup
 CREATE INDEX IF NOT EXISTS idx_repo_stats_repository ON repository_stats(repository);
 
+-- Global system metadata tracking
+-- Purpose: Store system-wide statistics and state (replaces metadata.json)
+CREATE TABLE IF NOT EXISTS system_metadata (
+    key TEXT PRIMARY KEY,                 -- Metadata key (e.g., 'last_index_time')
+    value TEXT,                           -- Value (JSON-encoded for complex values)
+    updated_at INTEGER NOT NULL           -- Unix timestamp of last update
+);
+
+-- Initialize default values
+INSERT OR IGNORE INTO system_metadata (key, value, updated_at) VALUES ('last_index_time', NULL, strftime('%s', 'now'));
+INSERT OR IGNORE INTO system_metadata (key, value, updated_at) VALUES ('total_searches', '0', strftime('%s', 'now'));
+INSERT OR IGNORE INTO system_metadata (key, value, updated_at) VALUES ('total_search_time_ms', '0', strftime('%s', 'now'));
+
 -- Metadata version tracking
 CREATE TABLE IF NOT EXISTS schema_version (
     version INTEGER PRIMARY KEY,
