@@ -1,0 +1,32 @@
+# File: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb/templates/basic_code_search.yaml
+# Description: Basic template to search for code across repositories
+# Author: Libor Ballaty <libor@arionetworks.com>
+# Created: 2026-01-07
+
+name: "basic_code_search"
+description: "Search for code across all indexed repositories"
+category: "search"
+
+parameters:
+  query:
+    type: "string"
+    required: true
+    description: "Code search query (e.g., 'authentication', 'JWT token')"
+  limit:
+    type: "integer"
+    required: false
+    default: 10
+    description: "Maximum number of results to return"
+  repository:
+    type: "string"
+    required: false
+    description: "Optional repository name filter"
+
+steps:
+  - skill: "search"
+    id: "search_code"
+    description: "Search for code matching the query"
+    input:
+      query: "{{ query }}"
+      limit: "{{ limit }}"
+      repository_filter: "{{ repository }}"

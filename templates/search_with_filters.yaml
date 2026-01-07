@@ -1,0 +1,59 @@
+# File: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb/templates/search_with_filters.yaml
+# Description: Advanced search with file type, folder, and extension filters
+# Author: Libor Ballaty <libor@arionetworks.com>
+# Created: 2026-01-07
+
+name: "search_with_filters"
+description: "Search with advanced filtering by folder, extension, and directory IDs"
+category: "search"
+
+parameters:
+  query:
+    type: "string"
+    required: true
+    description: "Code search query"
+  folder:
+    type: "string"
+    required: false
+    description: "Folder name filter (e.g., 'src', 'tests')"
+  extension:
+    type: "string"
+    required: false
+    description: "File extension filter (e.g., '.py', '.ts')"
+  limit:
+    type: "integer"
+    required: false
+    default: 10
+    description: "Maximum results to return"
+
+steps:
+  - skill: "search"
+    id: "filtered_search"
+    description: "Search with applied filters"
+    input:
+      query: "{{ query }}"
+      limit: "{{ limit }}"
+      folder_filter: "{{ folder }}"
+      extension_filter: "{{ extension }}"
+
+  - skill: "report"
+    id: "results_report"
+    description: "Format search results as report"
+    input:
+      title: "Filtered Search Results: {{ query }}"
+      format: "markdown"
+      content:
+        - section: "Search Configuration"
+          data:
+            pairs:
+              "Query": "{{ query }}"
+              "Folder Filter": "{{ folder }}"
+              "Extension Filter": "{{ extension }}"
+        - section: "Found Files"
+          data:
+            results: "{{ filtered_search.results }}"
+        - section: "Summary"
+          data:
+            pairs:
+              "Total Results": "{{ filtered_search.total_results }}"
+              "Search Time": "{{ filtered_search.search_time_ms }}ms"

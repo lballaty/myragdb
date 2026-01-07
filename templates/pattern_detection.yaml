@@ -1,0 +1,54 @@
+# File: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb/templates/pattern_detection.yaml
+# Description: Search for code patterns and analyze them
+# Author: Libor Ballaty <libor@arionetworks.com>
+# Created: 2026-01-07
+
+name: "pattern_detection"
+description: "Find code implementing specific patterns and analyze them"
+category: "analysis"
+
+parameters:
+  pattern_name:
+    type: "string"
+    required: true
+    description: "Pattern to search for (e.g., 'singleton', 'decorator', 'factory')"
+  language:
+    type: "string"
+    required: false
+    default: "python"
+    description: "Programming language to analyze"
+
+steps:
+  - skill: "search"
+    id: "find_patterns"
+    description: "Search for code implementing the pattern"
+    input:
+      query: "{{ pattern_name }} pattern"
+      limit: 5
+
+  - skill: "code_analysis"
+    id: "analyze_pattern"
+    description: "Analyze code structure to understand pattern implementation"
+    input:
+      code: "{{ find_patterns.results[0].snippet }}"
+      language: "{{ language }}"
+      analysis_type: "patterns"
+    on_error: "continue"
+
+  - skill: "report"
+    id: "pattern_report"
+    description: "Generate pattern analysis report"
+    input:
+      title: "{{ pattern_name }} Pattern Analysis"
+      format: "markdown"
+      content:
+        - section: "Pattern Locations"
+          data:
+            results: "{{ find_patterns.results }}"
+        - section: "Implementation Details"
+          data:
+            structures: "{{ analyze_pattern.structures }}"
+            patterns: "{{ analyze_pattern.patterns }}"
+        - section: "Code Example"
+          data:
+            text: "{{ find_patterns.results[0].snippet }}"

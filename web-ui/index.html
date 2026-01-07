@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.07.2.69.0">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.07.2.70.0">
 </head>
 <body>
     <div class="container">
@@ -66,6 +66,7 @@
             <button class="tab-button active" data-tab="search">Search</button>
             <button class="tab-button" data-tab="activity">Activity Monitor</button>
             <button class="tab-button" data-tab="repositories">Repositories</button>
+            <button class="tab-button" data-tab="directories">Directories</button>
             <button class="tab-button" data-tab="observability">Observability</button>
             <button class="tab-button" data-tab="llm-manager">LLM Manager</button>
         </div>
@@ -363,6 +364,69 @@
             </div>
         </div>
 
+        <!-- Directories Tab -->
+        <div id="directories-tab" class="tab-content">
+            <div class="directories-section">
+                <!-- Add Directory Section -->
+                <div class="add-directory-section">
+                    <h3>➕ Add New Directory</h3>
+                    <p class="section-description">Index non-repository directories for searching</p>
+                    <div class="add-directory-form">
+                        <input type="text" id="dir-path-input" placeholder="Absolute path (e.g., /Users/user/projects/docs)" style="flex: 1; min-width: 300px;">
+                        <input type="text" id="dir-name-input" placeholder="Directory name (e.g., Documentation)" style="flex: 0 0 200px;">
+                        <select id="dir-priority-input" style="flex: 0 0 120px;">
+                            <option value="0">Priority: Normal</option>
+                            <option value="10">Priority: High</option>
+                            <option value="-10">Priority: Low</option>
+                        </select>
+                        <button id="add-directory-button" class="primary-button">Add Directory</button>
+                    </div>
+                    <input type="text" id="dir-notes-input" placeholder="Optional notes about this directory" style="width: 100%; margin-top: 8px;">
+                </div>
+
+                <!-- Directories List Section -->
+                <div class="directories-list-section">
+                    <h3>📁 Managed Directories</h3>
+                    <div id="directories-list" class="directories-list">
+                        <div class="loading">Loading directories...</div>
+                    </div>
+                </div>
+
+                <!-- Directory Operations Section -->
+                <div class="directory-operations-section" style="display: none;">
+                    <h3>⚡ Bulk Operations</h3>
+                    <div class="directory-bulk-actions">
+                        <button id="enable-dirs-button" class="secondary-button">✅ Enable All</button>
+                        <button id="disable-dirs-button" class="secondary-button">❌ Disable All</button>
+                        <button id="reindex-all-dirs-button" class="primary-button">🔄 Reindex All</button>
+                    </div>
+                </div>
+
+                <!-- Directory Statistics -->
+                <div class="directory-stats-section" style="margin-top: 20px;">
+                    <h3>📊 Directory Statistics</h3>
+                    <div class="stats-grid" id="directory-stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Directories</div>
+                            <div class="stat-value" id="stat-total-dirs">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Enabled Directories</div>
+                            <div class="stat-value" id="stat-enabled-dirs">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Files Indexed</div>
+                            <div class="stat-value" id="stat-dir-files">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Size</div>
+                            <div class="stat-value" id="stat-dir-size">0 MB</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Observability Tab -->
         <div id="observability-tab" class="tab-content">
             <div class="observability-section">
@@ -649,6 +713,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
-    <script src="static/js/app.js?v=2026.01.07.2.69.0"></script>
+    <script src="static/js/app.js?v=2026.01.07.2.70.0"></script>
 </body>
 </html>

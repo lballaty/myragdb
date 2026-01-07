@@ -1,0 +1,46 @@
+# File: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb/templates/search_and_analyze.yaml
+# Description: Search for code and analyze its structure
+# Author: Libor Ballaty <libor@arionetworks.com>
+# Created: 2026-01-07
+
+name: "search_and_analyze"
+description: "Search for code and analyze its structure (functions, classes, patterns)"
+category: "analysis"
+
+parameters:
+  query:
+    type: "string"
+    required: true
+    description: "Code search query"
+  language:
+    type: "string"
+    required: false
+    default: "python"
+    description: "Programming language for analysis (python, javascript)"
+  analysis_type:
+    type: "string"
+    required: false
+    default: "structure"
+    description: "Type of analysis: structure, functions, classes, imports, patterns"
+  limit:
+    type: "integer"
+    required: false
+    default: 3
+    description: "Number of search results to analyze"
+
+steps:
+  - skill: "search"
+    id: "find_code"
+    description: "Search for code matching query"
+    input:
+      query: "{{ query }}"
+      limit: "{{ limit }}"
+
+  - skill: "code_analysis"
+    id: "analyze_code"
+    description: "Analyze structure of first search result"
+    input:
+      code: "{{ find_code.results[0].snippet }}"
+      language: "{{ language }}"
+      analysis_type: "{{ analysis_type }}"
+    on_error: "continue"

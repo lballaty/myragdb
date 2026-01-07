@@ -1,0 +1,54 @@
+# File: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb/templates/security_audit.yaml
+# Description: Audit code for security-related patterns and implementations
+# Author: Libor Ballaty <libor@arionetworks.com>
+# Created: 2026-01-07
+
+name: "security_audit"
+description: "Find and analyze security-related code (authentication, encryption, validation)"
+category: "security"
+
+parameters:
+  security_topic:
+    type: "string"
+    required: true
+    description: "Security topic to audit (authentication, encryption, validation, jwt)"
+  limit:
+    type: "integer"
+    required: false
+    default: 10
+    description: "Number of occurrences to find"
+
+steps:
+  - skill: "search"
+    id: "find_security_code"
+    description: "Find security-related implementations"
+    input:
+      query: "{{ security_topic }}"
+      limit: "{{ limit }}"
+
+  - skill: "code_analysis"
+    id: "analyze_security"
+    description: "Analyze security code patterns"
+    input:
+      code: "{{ find_security_code.results[0].snippet }}"
+      language: "python"
+      analysis_type: "structure"
+    on_error: "continue"
+
+  - skill: "report"
+    id: "audit_report"
+    description: "Generate security audit report"
+    input:
+      title: "Security Audit: {{ security_topic }}"
+      format: "markdown"
+      include_metadata: true
+      content:
+        - section: "Findings"
+          data:
+            results: "{{ find_security_code.results }}"
+        - section: "Code Structure"
+          data:
+            structures: "{{ analyze_security.structures }}"
+        - section: "Recommendation"
+          data:
+            text: "Review implementations for security best practices and compliance"
