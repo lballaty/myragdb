@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.06.2.46.0">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.07.2.47.0">
 </head>
 <body>
     <div class="container">
@@ -500,7 +500,32 @@
         </div>
     </div>
 
+    <!-- README Viewer Modal -->
+    <div id="readme-modal" class="modal-overlay" style="display: none;">
+        <div class="readme-modal-content">
+            <div class="readme-modal-header">
+                <h2 id="readme-modal-title">Repository README</h2>
+                <button class="readme-modal-close" onclick="closeReadmeModal()">&times;</button>
+            </div>
+            <div class="readme-modal-body">
+                <div id="readme-loading" class="readme-loading">
+                    <div class="spinner"></div>
+                    <p>Loading README...</p>
+                </div>
+                <div id="readme-error" class="readme-error" style="display: none;">
+                    <p id="readme-error-message"></p>
+                </div>
+                <div id="readme-content" class="readme-content" style="display: none;"></div>
+            </div>
+            <div class="readme-modal-footer">
+                <span id="readme-file-path" class="readme-file-path"></span>
+                <button class="btn btn-secondary" onclick="closeReadmeModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script src="static/js/app.js?v=2026.01.06.2.46.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <script src="static/js/app.js?v=2026.01.07.2.47.0"></script>
 </body>
 </html>

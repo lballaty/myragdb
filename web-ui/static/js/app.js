@@ -720,7 +720,12 @@ function renderRepositories() {
                        ${isExcluded ? 'disabled' : ''}
                        title="${isExcluded ? 'This repository is locked. Click the lock button to unlock it before reindexing.' : ''}">
                 <label for="repo-${escapeHtml(repo.name)}" class="repository-info">
-                    <div class="repository-name">${escapeHtml(repo.name)}</div>
+                    <div class="repository-name">
+                        ${escapeHtml(repo.name)}
+                        <button class="readme-link" onclick="event.preventDefault(); event.stopPropagation(); openReadmeModal('${escapeHtml(repo.name)}');" title="View README">
+                            README
+                        </button>
+                    </div>
                     <div class="repository-path">${escapeHtml(repo.path)}</div>
                     <div>
                         ${excludedBadge}
@@ -1329,7 +1334,12 @@ function renderDiscoveredRepos() {
                 <div class="repo-card-header">
                     ${checkboxHtml}
                     <div class="repo-card-info">
-                        <div class="repo-card-name">${escapeHtml(repo.name)}</div>
+                        <div class="repo-card-name">
+                            ${escapeHtml(repo.name)}
+                            <button class="readme-link" onclick="event.stopPropagation(); openReadmeModal('${escapeHtml(repo.name)}');" title="View README">
+                                README
+                            </button>
+                        </div>
                         <div class="repo-card-path">${escapeHtml(repo.path)}</div>
                         <div class="repo-card-badges">
                             <span class="badge ${badgeClass}">${badgeText}</span>
@@ -2469,3 +2479,92 @@ document.querySelector('[data-tab="observability"]')?.addEventListener('click', 
         refreshObservabilityData();
     }, 100);
 });
+
+// ============================================================================
+// README Viewer Functions
+// ============================================================================
+
+/**
+ * Open README modal and fetch content for a repository.
+ *
+ * @param {string} repositoryName - Name of the repository
+ */
+async function openReadmeModal(repositoryName) {
+    const modal = document.getElementById('readme-modal');
+    const title = document.getElementById('readme-modal-title');
+    const loading = document.getElementById('readme-loading');
+    const error = document.getElementById('readme-error');
+    const content = document.getElementById('readme-content');
+    const filePath = document.getElementById('readme-file-path');
+
+    // Show modal
+    modal.style.display = 'flex';
+
+    // Reset state
+    title.textContent = `${repositoryName} README`;
+    loading.style.display = 'flex';
+    error.style.display = 'none';
+    content.style.display = 'none';
+    content.innerHTML = '';
+    filePath.textContent = '';
+
+    try {
+        // Fetch README content
+        const response = await fetch(`${API_BASE_URL}/repositories/${encodeURIComponent(repositoryName)}/readme`);
+        const data = await response.json();
+
+        loading.style.display = 'none';
+
+        if (data.readme_found && data.content) {
+            // Render markdown content using marked.js
+            const htmlContent = marked.parse(data.content);
+            content.innerHTML = htmlContent;
+            content.style.display = 'block';
+            filePath.textContent = data.readme_path || data.file_name || '';
+        } else {
+            // Show error
+            error.style.display = 'block';
+            document.getElementById('readme-error-message').textContent =
+                data.error || 'README file not found for this repository.';
+        }
+    } catch (err) {
+        console.error('Failed to fetch README:', err);
+        loading.style.display = 'none';
+        error.style.display = 'block';
+        document.getElementById('readme-error-message').textContent =
+            `Failed to load README: ${err.message}`;
+    }
+}
+
+/**
+ * Close the README modal.
+ */
+function closeReadmeModal() {
+    const modal = document.getElementById('readme-modal');
+    modal.style.display = 'none';
+}
+
+/**
+ * Close modal when clicking outside the content area.
+ */
+document.getElementById('readme-modal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'readme-modal') {
+        closeReadmeModal();
+    }
+});
+
+/**
+ * Close modal with Escape key.
+ */
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('readme-modal');
+        if (modal && modal.style.display === 'flex') {
+            closeReadmeModal();
+        }
+    }
+});
+
+// Make functions globally available
+window.openReadmeModal = openReadmeModal;
+window.closeReadmeModal = closeReadmeModal;
