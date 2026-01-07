@@ -746,6 +746,94 @@ async def add_repositories_batch(request: AddRepositoriesRequest):
         raise HTTPException(status_code=500, detail=f"Error adding repositories: {str(e)}")
 
 
+@app.patch("/repositories/bulk-update")
+async def bulk_update_repositories(
+    action: str
+):
+    """
+    Bulk update all repositories with a single action.
+
+    Business Purpose: Allows quickly enabling/disabling or locking/unlocking all repositories
+    at once instead of updating each repository individually.
+
+    Args:
+        action: Bulk action to perform
+            - "enable_all": Set all repositories to enabled=true
+            - "disable_all": Set all repositories to enabled=false
+            - "unlock_all": Set all repositories to excluded=false
+            - "lock_all": Set all repositories to excluded=true
+
+    Returns:
+        Count of updated repositories and success status
+
+    Example:
+        PATCH /repositories/bulk-update?action=enable_all
+        PATCH /repositories/bulk-update?action=unlock_all
+    """
+    try:
+        import yaml
+        config_path = "config/repositories.yaml"
+
+        # Validate action parameter
+        valid_actions = ["enable_all", "disable_all", "unlock_all", "lock_all"]
+        if action not in valid_actions:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid action '{action}'. Must be one of: {', '.join(valid_actions)}"
+            )
+
+        # Load current configuration
+        with open(config_path, 'r') as f:
+            config_data = yaml.safe_load(f)
+
+        repositories = config_data.get('repositories', [])
+        if not repositories:
+            raise HTTPException(status_code=404, detail="No repositories found in configuration")
+
+        # Apply bulk action to all repositories
+        updated_count = 0
+        for repo in repositories:
+            if action == "enable_all":
+                repo['enabled'] = True
+                updated_count += 1
+            elif action == "disable_all":
+                repo['enabled'] = False
+                updated_count += 1
+            elif action == "unlock_all":
+                repo['excluded'] = False
+                updated_count += 1
+            elif action == "lock_all":
+                repo['excluded'] = True
+                updated_count += 1
+
+        # Save updated configuration
+        with open(config_path, 'w') as f:
+            yaml.safe_dump(config_data, f, default_flow_style=False, sort_keys=False)
+
+        # Reload configuration
+        repos_config = load_repositories_config(config_path)
+
+        # Return success with count
+        action_descriptions = {
+            "enable_all": "enabled",
+            "disable_all": "disabled",
+            "unlock_all": "unlocked",
+            "lock_all": "locked"
+        }
+
+        return {
+            "status": "success",
+            "message": f"Successfully {action_descriptions[action]} {updated_count} repositories",
+            "updated_count": updated_count,
+            "action": action
+        }
+
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Configuration file not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error performing bulk update: {str(e)}")
+
+
 @app.patch("/repositories/{repo_name}")
 async def update_repository_settings(
     repo_name: str,
@@ -836,94 +924,6 @@ async def update_repository_settings(
         raise HTTPException(status_code=404, detail="Configuration file not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error updating repository: {str(e)}")
-
-
-@app.patch("/repositories/bulk-update")
-async def bulk_update_repositories(
-    action: str
-):
-    """
-    Bulk update all repositories with a single action.
-
-    Business Purpose: Allows quickly enabling/disabling or locking/unlocking all repositories
-    at once instead of updating each repository individually.
-
-    Args:
-        action: Bulk action to perform
-            - "enable_all": Set all repositories to enabled=true
-            - "disable_all": Set all repositories to enabled=false
-            - "unlock_all": Set all repositories to excluded=false
-            - "lock_all": Set all repositories to excluded=true
-
-    Returns:
-        Count of updated repositories and success status
-
-    Example:
-        PATCH /repositories/bulk-update?action=enable_all
-        PATCH /repositories/bulk-update?action=unlock_all
-    """
-    try:
-        import yaml
-        config_path = "config/repositories.yaml"
-
-        # Validate action parameter
-        valid_actions = ["enable_all", "disable_all", "unlock_all", "lock_all"]
-        if action not in valid_actions:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid action '{action}'. Must be one of: {', '.join(valid_actions)}"
-            )
-
-        # Load current configuration
-        with open(config_path, 'r') as f:
-            config_data = yaml.safe_load(f)
-
-        repositories = config_data.get('repositories', [])
-        if not repositories:
-            raise HTTPException(status_code=404, detail="No repositories found in configuration")
-
-        # Apply bulk action to all repositories
-        updated_count = 0
-        for repo in repositories:
-            if action == "enable_all":
-                repo['enabled'] = True
-                updated_count += 1
-            elif action == "disable_all":
-                repo['enabled'] = False
-                updated_count += 1
-            elif action == "unlock_all":
-                repo['excluded'] = False
-                updated_count += 1
-            elif action == "lock_all":
-                repo['excluded'] = True
-                updated_count += 1
-
-        # Save updated configuration
-        with open(config_path, 'w') as f:
-            yaml.safe_dump(config_data, f, default_flow_style=False, sort_keys=False)
-
-        # Reload configuration
-        repos_config = load_repositories_config(config_path)
-
-        # Return success with count
-        action_descriptions = {
-            "enable_all": "enabled",
-            "disable_all": "disabled",
-            "unlock_all": "unlocked",
-            "lock_all": "locked"
-        }
-
-        return {
-            "status": "success",
-            "message": f"Successfully {action_descriptions[action]} {updated_count} repositories",
-            "updated_count": updated_count,
-            "action": action
-        }
-
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Configuration file not found")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error performing bulk update: {str(e)}")
 
 
 @app.delete("/repositories/{repo_name}")
