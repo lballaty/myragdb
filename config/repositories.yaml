@@ -106,7 +106,7 @@ repositories:
     - '**/archive-*/**'
     - '**/*.lock'
     - '**/coverage/**'
-  excluded: false
+  excluded: true
 - name: gettingThroughTheDay
   path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/gettingThroughTheDay
   enabled: false

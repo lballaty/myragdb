@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.07.2.48.0">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.07.2.49.0">
 </head>
 <body>
     <div class="container">
@@ -579,6 +579,15 @@
                         </label>
                     </div>
                 </div>
+
+                <div class="form-group">
+                    <label for="configure-exclude-patterns">
+                        <strong>Exclude Patterns:</strong>
+                        <span class="help-text">Glob patterns for files to skip during indexing (one per line)</span>
+                    </label>
+                    <textarea id="configure-exclude-patterns" class="form-textarea" placeholder="**/node_modules/**&#10;**/.git/**&#10;**/venv/**&#10;**/__pycache__/**"></textarea>
+                    <span class="help-text" style="margin-top: 0.5rem;">Examples: **/node_modules/**, **/*.log, **/temp/**</span>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeConfigureModal()">Cancel</button>
@@ -594,6 +603,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
-    <script src="static/js/app.js?v=2026.01.07.2.48.0"></script>
+    <script src="static/js/app.js?v=2026.01.07.2.49.0"></script>
 </body>
 </html>

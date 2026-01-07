@@ -1549,8 +1549,99 @@ async function removeRepository(repoName) {
     }
 }
 
-function configureRepository(repoName) {
-    alert(`Configure functionality for: ${repoName}\n\nThis would open a modal to edit:\n- Priority (high/medium/low)\n- Enabled status\n- Excluded patterns`);
+async function configureRepository(repoName) {
+    // Find repository in either discovered repos or regular repos list
+    let repo = state.discoveredRepos.find(r => r.name === repoName);
+    if (!repo) {
+        repo = state.repositories.find(r => r.name === repoName);
+    }
+
+    if (!repo) {
+        alert(`Repository "${repoName}" not found`);
+        return;
+    }
+
+    // Populate modal with current values
+    document.getElementById('configure-repo-name').value = repoName;
+    document.getElementById('configure-priority').value = repo.priority || 'medium';
+
+    // Set enabled status
+    if (repo.enabled) {
+        document.getElementById('configure-enabled-yes').checked = true;
+    } else {
+        document.getElementById('configure-enabled-no').checked = true;
+    }
+
+    // Set excluded status
+    const isExcluded = repo.excluded || false;
+    if (isExcluded) {
+        document.getElementById('configure-excluded-yes').checked = true;
+    } else {
+        document.getElementById('configure-excluded-no').checked = true;
+    }
+
+    // Set exclude patterns (join array into newline-separated string)
+    const excludePatterns = repo.file_patterns?.exclude || [];
+    document.getElementById('configure-exclude-patterns').value = excludePatterns.join('\n');
+
+    // Show modal
+    document.getElementById('configure-modal').style.display = 'flex';
+}
+
+function closeConfigureModal() {
+    document.getElementById('configure-modal').style.display = 'none';
+}
+
+async function saveRepositoryConfiguration() {
+    const repoName = document.getElementById('configure-repo-name').value;
+    const priority = document.getElementById('configure-priority').value;
+    const enabled = document.querySelector('input[name="enabled"]:checked').value === 'true';
+    const excluded = document.querySelector('input[name="excluded"]:checked').value === 'true';
+
+    // Get exclude patterns from textarea, split by newlines, filter empty lines, and join with commas
+    const excludePatternsText = document.getElementById('configure-exclude-patterns').value;
+    const excludePatterns = excludePatternsText
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .join(',');
+
+    try {
+        // Build query params
+        let url = `/repositories/${encodeURIComponent(repoName)}?priority=${priority}&enabled=${enabled}&excluded=${excluded}`;
+        if (excludePatterns) {
+            url += `&exclude_patterns=${encodeURIComponent(excludePatterns)}`;
+        }
+
+        const response = await fetch(url, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            addActivityLog('success', `Repository "${repoName}" configuration updated`);
+
+            // Close modal
+            closeConfigureModal();
+
+            // Refresh both discovered repos and regular repos lists
+            const scanButton = document.getElementById('scan-repositories-button');
+            if (scanButton) {
+                scanButton.click();
+            }
+            loadRepositories();
+        } else {
+            const error = await response.json();
+            addActivityLog('error', `Failed to update repository: ${error.detail || 'Unknown error'}`);
+            alert(`Failed to update repository: ${error.detail || 'Unknown error'}`);
+        }
+    } catch (error) {
+        addActivityLog('error', `Failed to update repository: ${error.message}`);
+        alert(`Failed to update repository: ${error.message}`);
+    }
 }
 
 async function toggleRepositoryExcluded(repoName, excludedValue) {

@@ -742,9 +742,15 @@ async def add_repositories_batch(request: AddRepositoriesRequest):
 
 
 @app.patch("/repositories/{repo_name}")
-async def update_repository_settings(repo_name: str, excluded: Optional[bool] = None, priority: Optional[str] = None, enabled: Optional[bool] = None):
+async def update_repository_settings(
+    repo_name: str,
+    excluded: Optional[bool] = None,
+    priority: Optional[str] = None,
+    enabled: Optional[bool] = None,
+    exclude_patterns: Optional[str] = None
+):
     """
-    Update repository settings (excluded status, priority, enabled).
+    Update repository settings (excluded status, priority, enabled, exclude patterns).
 
     Business Purpose: Allows locking/excluding repositories from indexing and updating
     other repository settings without removing them from configuration.
@@ -754,12 +760,14 @@ async def update_repository_settings(repo_name: str, excluded: Optional[bool] = 
         excluded: Whether to exclude repository from indexing (lock)
         priority: Repository priority (high, medium, low)
         enabled: Whether repository is enabled
+        exclude_patterns: Comma-separated list of file exclude patterns
 
     Returns:
         Updated repository information
 
     Example:
-        PATCH /repositories/myragdb?excluded=true
+        PATCH /repositories/myragdb?excluded=true&priority=high
+        PATCH /repositories/myragdb?exclude_patterns=**/*.log,**/temp/**
     """
     try:
         import yaml
@@ -780,6 +788,13 @@ async def update_repository_settings(repo_name: str, excluded: Optional[bool] = 
                     repo['priority'] = priority
                 if enabled is not None:
                     repo['enabled'] = enabled
+                if exclude_patterns is not None:
+                    # Parse comma-separated patterns into list, filtering out empty strings
+                    patterns_list = [p.strip() for p in exclude_patterns.split(',') if p.strip()]
+                    # Initialize file_patterns if not exists
+                    if 'file_patterns' not in repo:
+                        repo['file_patterns'] = {}
+                    repo['file_patterns']['exclude'] = patterns_list
                 break
 
         if not repo_found:
@@ -803,7 +818,10 @@ async def update_repository_settings(repo_name: str, excluded: Optional[bool] = 
                     "path": updated_repo.path,
                     "enabled": updated_repo.enabled,
                     "priority": updated_repo.priority,
-                    "excluded": getattr(updated_repo, 'excluded', False)
+                    "excluded": getattr(updated_repo, 'excluded', False),
+                    "file_patterns": {
+                        "exclude": updated_repo.file_patterns.exclude if updated_repo.file_patterns else []
+                    }
                 }
             }
         else:
