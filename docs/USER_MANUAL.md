@@ -1378,12 +1378,25 @@ Choose models based on your use case:
 
 **Memory Requirements:**
 
-Memory usage depends on **both model size and context window**. The table below shows approximate RAM/VRAM requirements at different context window sizes.
+Memory usage depends on **model size, context window, and hardware configuration**. The requirements differ significantly between CPU and GPU inference:
+
+**CPU-Only Inference:**
+- Model loads entirely into system RAM
+- Context cache also uses RAM
+- Total RAM = Model Size + Context Overhead
+
+**GPU Inference (CUDA/Metal):**
+- Model loads into VRAM (GPU memory)
+- Context cache uses VRAM
+- System RAM usage is minimal (~1-2 GB)
+- Total VRAM = Model Size + Context Overhead
 
 **Formula:** Memory ≈ Model Size + (Context Window × Layers × Hidden Dim × Bytes per Token)
 
-| Model Size | Quant | Context | Base Model | Context Overhead | Total RAM/VRAM |
-|-----------|-------|---------|-----------|------------------|----------------|
+**Approximate Requirements by Configuration:**
+
+| Model Size | Quant | Context | Base Model | Context Overhead | Total (RAM for CPU / VRAM for GPU) |
+|-----------|-------|---------|-----------|------------------|-------------------------------------|
 | 7B-8B     | Q4_K_M | 4K     | 4-5 GB    | +1-2 GB         | 6-8 GB        |
 | 7B-8B     | Q4_K_M | 8K     | 4-5 GB    | +2-3 GB         | 7-9 GB        |
 | 7B-8B     | Q4_K_M | 16K    | 4-5 GB    | +4-5 GB         | 9-11 GB       |
@@ -1395,10 +1408,12 @@ Memory usage depends on **both model size and context window**. The table below 
 | 32B       | Q8_0   | 16K    | 32-34 GB  | +8-12 GB        | 42-48 GB      |
 
 **Key Takeaways:**
-- Larger context windows require significantly more memory
-- GPU memory (VRAM) and system RAM requirements are similar
-- Use smaller context (4K-8K) if memory is limited
-- 16K+ context is useful when processing many search results at once
+- **Hardware matters**: GPU inference uses VRAM, CPU inference uses system RAM
+- **Context impact**: Larger context windows require significantly more memory
+- **GPU advantage**: With GPU, system RAM is freed up (only ~1-2 GB used)
+- **CPU constraint**: Without GPU, all memory comes from system RAM
+- **Memory limited?**: Use smaller context (4K-8K) and smaller models
+- **Large context use**: 16K+ useful when processing many search results at once
 
 ---
 
