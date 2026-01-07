@@ -397,7 +397,7 @@
 - ✅ Vector semantic search (4.3GB index, 365,232 chunks)
 - ✅ Hybrid search combining both methods
 - ✅ CLI interface working (`myragdb search`, `myragdb stats`)
-- ✅ FastAPI server running on port 3002
+- ✅ FastAPI server running on port 3003 (aligned with port-registry.json)
 - ✅ Python client library for agent integration
 - ✅ All tests passing with relevant search results
 
