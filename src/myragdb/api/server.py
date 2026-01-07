@@ -67,6 +67,7 @@ from myragdb.db.observability import ObservabilityDatabase
 from myragdb.config import settings, load_repositories_config
 from myragdb.utils.repo_discovery import RepositoryDiscovery, DiscoveredRepository
 from myragdb.watcher.repository_watcher import RepositoryWatcherManager
+from myragdb.api.routes.directories import router as directories_router
 import structlog
 
 # Configure structured logging
@@ -201,6 +202,9 @@ if web_ui_path.exists():
 docs_path = Path(__file__).parent.parent.parent.parent / "docs"
 if docs_path.exists():
     app.mount("/docs", StaticFiles(directory=str(docs_path)), name="docs")
+
+# Register directory management routes
+app.include_router(directories_router)
 
 
 # Application lifecycle events
