@@ -1,0 +1,207 @@
+# File: .github/workflows/test.yml
+# Description: Automated testing pipeline
+# Author: Libor Ballaty <libor@arionetworks.com>
+# Created: 2026-01-07
+
+name: Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_myragdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      meilisearch:
+        image: getmeili/meilisearch:v1.6.0
+        env:
+          MEILI_ENV: development
+          MEILI_MASTER_KEY: test-key
+        options: >-
+          --health-cmd "curl -f http://localhost:7700/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 3
+        ports:
+          - 7700:7700
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-cov pytest-asyncio
+
+      - name: Run linting
+        run: |
+          pip install flake8 black isort
+          flake8 src/myragdb tests --max-line-length=120
+          black --check src/myragdb tests
+          isort --check-only src/myragdb tests
+
+      - name: Run backend tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_myragdb
+          MEILISEARCH_URL: http://localhost:7700
+        run: pytest tests/ -v --cov=src/myragdb --cov-report=xml
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['18', '20']
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: 'web-ui/package-lock.json'
+
+      - name: Install dependencies
+        run: |
+          cd web-ui
+          npm install
+
+      - name: Run linting
+        run: |
+          cd web-ui
+          npm run lint
+
+      - name: Build frontend
+        run: |
+          cd web-ui
+          npm run build
+
+  docker-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: false
+          tags: myragdb:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests, docker-build]
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_myragdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      meilisearch:
+        image: getmeili/meilisearch:v1.6.0
+        env:
+          MEILI_ENV: development
+          MEILI_MASTER_KEY: test-key
+        options: >-
+          --health-cmd "curl -f http://localhost:7700/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 3
+        ports:
+          - 7700:7700
+
+      chroma:
+        image: ghcr.io/chroma-core/chroma:latest
+        ports:
+          - 8000:8000
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-asyncio playwright
+
+      - name: Install Playwright browsers
+        run: playwright install
+
+      - name: Run Playwright tests (smoke)
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_myragdb
+          MEILISEARCH_URL: http://localhost:7700
+        run: npx playwright test --grep "@smoke"
+
+  security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run Bandit security scan
+        run: |
+          pip install bandit
+          bandit -r src/myragdb -f json -o bandit-report.json
+        continue-on-error: true
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-scan-report
+          path: bandit-report.json
