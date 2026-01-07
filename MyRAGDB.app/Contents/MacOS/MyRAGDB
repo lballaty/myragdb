@@ -74,24 +74,16 @@ if lsof -Pi :3003 -sTCP:LISTEN -t >/dev/null 2>&1; then
 fi
 
 # Run the startup script (first launch)
+# Trust start.sh to handle everything: starting services, waiting for ready, opening browser
 echo "Starting MyRAGDB via start.sh..."
 echo "Command: $PROJECT_ROOT/start.sh"
+echo ""
 "$PROJECT_ROOT/start.sh"
 
-# Wait for server to be ready
-echo "Waiting for server to be ready..."
-for i in {1..10}; do
-    if lsof -Pi :3003 -sTCP:LISTEN -t >/dev/null 2>&1; then
-        echo "Server is ready on port 3003!"
-        break
-    fi
-    echo "Attempt $i/10..."
-    sleep 1
-done
-
-# Final check
-if ! lsof -Pi :3003 -sTCP:LISTEN -t >/dev/null 2>&1; then
-    echo "ERROR: Server failed to start after 10 attempts"
+# Check if start.sh succeeded
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "ERROR: start.sh failed with exit code $?"
     echo "Check logs:"
     echo "  - /tmp/myragdb_server.log"
     echo "  - /tmp/mcp_middleware.log"
@@ -102,9 +94,8 @@ if ! lsof -Pi :3003 -sTCP:LISTEN -t >/dev/null 2>&1; then
     exit 1
 fi
 
-# Open web UI in default browser
-echo "Opening web UI in browser..."
-open "http://localhost:3003"
+echo ""
+echo "start.sh completed successfully!"
 
 echo "MyRAGDB is running. Entering monitoring loop..."
 echo "To stop: Use 'Force Quit' from Dock, or run: ./stop.sh"
