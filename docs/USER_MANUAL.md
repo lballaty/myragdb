@@ -296,9 +296,54 @@ Three radio button options:
    - Drag slider or click track to adjust
    - Current value displayed below slider
 
+#### Advanced Filters (Optional)
+
+Click **🔽 Advanced Filters** button to expand additional filtering options:
+
+1. **Folder Filter** (Text input)
+   - Filter results by folder path (e.g., `src/components`)
+   - Only shows files in specified folder or subfolders
+   - Leave empty to search all folders
+   - Example: `src/api` returns results from `src/api/`, `src/api/handlers/`, etc.
+
+2. **Extension Filter** (Text input)
+   - Filter by file extension (e.g., `.py`, `.ts`)
+   - Multiple extensions: separate with commas (e.g., `.py, .js`)
+   - Leave empty to search all file types
+   - Only matches exact extensions specified
+
+3. **From Date** (Date picker)
+   - Filter results modified on or after this date
+   - Uses file modification date
+   - Leave empty for no date restriction
+   - Useful for finding recent changes
+
+4. **To Date** (Date picker)
+   - Filter results modified on or before this date
+   - Uses file modification date
+   - Leave empty for no date restriction
+   - Works with "From Date" to create date range
+
+5. **Min Score** (Number input, 0.0-1.0)
+   - Minimum relevance score threshold
+   - Range: 0.0 (least relevant) to 1.0 (most relevant)
+   - Default: 0.0 (no filtering)
+   - Example: Set to 0.7 to show only "good" matches or better
+   - Score interpretation:
+     - 0.9-1.0: Excellent match (green)
+     - 0.7-0.89: Good match (blue)
+     - <0.7: Moderate match (gray)
+
+**Advanced Filter Tips:**
+- All advanced filters are optional and work together
+- Combine folder + extension filters for precise scoping (e.g., "find Python tests in src/tests/")
+- Use date filters to focus on recently modified code
+- Use min score to reduce noise from less relevant matches
+- Advanced filters are sent to backend and applied server-side for efficiency
+
 **🔍 Search Button:**
 - Large blue button
-- Triggers search with current parameters
+- Triggers search with current parameters (including advanced filters if set)
 - Shows loading state during search
 - Alternative to pressing Enter
 
@@ -1439,9 +1484,27 @@ Natural language examples:
 The agent will:
 1. **Understand your question** - Interprets natural language
 2. **Call search tool** - You'll see: 🔧 Tool Call: search_codebase
-3. **Display tool parameters** - Shows query, search_type, limit
+3. **Display tool parameters** - Shows query, search_type, limit, and optional filters
 4. **Show search results** - Formatted JSON with results
 5. **Synthesize response** - LLM explains findings in natural language
+
+**Search Tool Parameters:**
+
+The LLM has access to the following search parameters when calling the search_codebase tool:
+
+- **query** (required) - The search query text
+- **search_type** - Type of search: `hybrid` (default), `semantic`, or `keyword`
+- **limit** - Maximum number of results (1-100, default: 10)
+- **repositories** (optional) - Specific repositories to search in
+- **directories** (optional) - Specific directory IDs to search in
+- **folder_filter** (optional) - Filter by folder path (e.g., `src/components`)
+- **extension_filter** (optional) - Filter by file extension (e.g., `.py`, `.ts`)
+- **min_score** (optional) - Minimum relevance score (0.0-1.0)
+
+The LLM can intelligently use these filters based on your requests:
+- "Find Python files in src/" → Uses folder_filter and extension_filter
+- "Show me recent changes" → Uses date filtering if available
+- "Find high-confidence matches only" → Uses min_score filter
 
 **Example Conversation:**
 
