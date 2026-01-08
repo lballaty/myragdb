@@ -309,7 +309,9 @@ Type: {scanned_file.file_type}
             self.metadata_db.update_file_metadata(
                 scanned_file.file_path,
                 scanned_file.repository_name,
-                'vector'
+                'vector',
+                source_type=source_type,
+                source_id=source_id
             )
 
         except Exception as e:

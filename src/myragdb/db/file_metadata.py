@@ -104,7 +104,9 @@ class FileMetadataDatabase:
         index_type: str,
         last_modified: Optional[int] = None,
         content_hash: Optional[str] = None,
-        file_size: Optional[int] = None
+        file_size: Optional[int] = None,
+        source_type: Optional[str] = None,
+        source_id: Optional[str] = None
     ) -> None:
         """
         Update or insert file metadata after indexing.
@@ -120,6 +122,8 @@ class FileMetadataDatabase:
             last_modified: File's mtime (optional, will fetch if not provided)
             content_hash: SHA256 hash of content (optional)
             file_size: File size in bytes (optional)
+            source_type: 'repository' or 'directory' (defaults to 'repository' if repository is set)
+            source_id: Repository name or directory ID (defaults to repository name)
 
         Example:
             # Repository-sourced file
@@ -127,17 +131,27 @@ class FileMetadataDatabase:
                 '/path/to/file.py',
                 'xLLMArionComply',
                 'keyword',
-                last_modified=1704067200
+                last_modified=1704067200,
+                source_type='repository',
+                source_id='xLLMArionComply'
             )
 
             # Directory-sourced file
             db.update_file_metadata(
                 '/Users/user/Documents/report.md',
                 None,  # No repository
-                'vector'
+                'vector',
+                source_type='directory',
+                source_id='1'  # Directory ID
             )
         """
         now = int(time.time())
+
+        # Determine source_type and source_id
+        if source_type is None:
+            source_type = 'repository' if repository else 'directory'
+        if source_id is None:
+            source_id = repository
 
         # Get file stats if not provided
         if last_modified is None or file_size is None:
@@ -154,12 +168,14 @@ class FileMetadataDatabase:
         with self._get_connection() as conn:
             conn.execute('''
                 INSERT INTO file_metadata (
-                    file_path, repository, last_indexed, last_modified,
+                    file_path, repository, source_type, source_id, last_indexed, last_modified,
                     content_hash, file_size, index_type, created_at, updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(file_path) DO UPDATE SET
                     repository = excluded.repository,
+                    source_type = excluded.source_type,
+                    source_id = excluded.source_id,
                     last_indexed = excluded.last_indexed,
                     last_modified = excluded.last_modified,
                     content_hash = excluded.content_hash,
@@ -167,7 +183,7 @@ class FileMetadataDatabase:
                     index_type = excluded.index_type,
                     updated_at = excluded.updated_at
             ''', (
-                file_path, repository, now, last_modified,
+                file_path, repository, source_type, source_id, now, last_modified,
                 content_hash, file_size, index_type, now, now
             ))
             conn.commit()

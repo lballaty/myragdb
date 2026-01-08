@@ -308,12 +308,22 @@ class MeilisearchIndexer:
                 doc = self._create_document(scanned_file)
                 batch_docs.append(doc)
 
+                # Determine source type and source ID (same logic as _create_document)
+                if scanned_file.repository_name:
+                    source_type = 'repository'
+                    source_id = scanned_file.repository_name
+                else:
+                    source_type = 'directory'
+                    source_id = str(scanned_file.directory_id)
+
                 # Update metadata database
                 # repository can be None for directory-sourced files
                 self.metadata_db.update_file_metadata(
                     scanned_file.file_path,
                     scanned_file.repository_name,
-                    'keyword'
+                    'keyword',
+                    source_type=source_type,
+                    source_id=source_id
                 )
 
                 # Send batch when full
