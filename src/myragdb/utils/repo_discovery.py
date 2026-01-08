@@ -252,9 +252,11 @@ class RepositoryDiscovery:
                     git_remote_url=git_remote_url,
                     clone_group=clone_group
                 ))
-                # Don't recurse into git repositories
-                dirnames.clear()
-                continue
+                # Don't recurse into git repositories, unless it's the root (depth=0)
+                # This allows finding nested repositories in a parent git repository
+                if depth > 0:
+                    dirnames.clear()
+                    continue
 
             # Filter out excluded directories
             dirnames[:] = [
