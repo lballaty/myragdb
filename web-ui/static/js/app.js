@@ -824,7 +824,8 @@ async function loadRepositories() {
     updateRepositoryBadge('loading');
 
     try {
-        const response = await fetch(`${API_BASE_URL}/repositories`);
+        // Add cache-busting timestamp to force fresh data from server
+        const response = await fetch(`${API_BASE_URL}/repositories?timestamp=${Date.now()}`);
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
@@ -1281,6 +1282,13 @@ async function executeReindex(selectedRepos) {
             if (!statsData.is_indexing) {
                 clearInterval(pollInterval);
                 addActivityLog('info', 'Re-indexing completed successfully');
+
+                // Refresh repository list to show updated indexed counts
+                await loadRepositories();
+
+                // Close the indexing status indicator
+                indexingStatus.style.display = 'none';
+                reindexButton.disabled = false;
             }
         }, 5000);
 
@@ -3548,7 +3556,8 @@ async function loadDirectories() {
     directoriesList.innerHTML = '<div class="loading">Loading directories...</div>';
 
     try {
-        const response = await fetch(`${API_BASE_URL}/directories`);
+        // Add cache-busting timestamp to force fresh data from server
+        const response = await fetch(`${API_BASE_URL}/directories?timestamp=${Date.now()}`);
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }

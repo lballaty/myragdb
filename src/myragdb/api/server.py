@@ -81,6 +81,8 @@ from myragdb.config import settings, load_repositories_config
 from myragdb.utils.repo_discovery import RepositoryDiscovery, DiscoveredRepository
 from myragdb.watcher.repository_watcher import RepositoryWatcherManager
 from myragdb.api.routes.directories import router as directories_router
+from myragdb.api.routes.activities import router as activities_router
+from myragdb.api.routes.observability import router as observability_router
 from myragdb.agent.skills import (
     SkillRegistry,
     SearchSkill,
@@ -324,6 +326,10 @@ if docs_path.exists():
 
 # Register directory management routes
 app.include_router(directories_router)
+
+# Register activity and observability routes
+app.include_router(activities_router)
+app.include_router(observability_router)
 
 # Register agent orchestration routes
 try:
