@@ -430,21 +430,104 @@ class CloudLLMManager {
         }
 
         try {
-            this.showAuthStatus('Opening OAuth login...', 'info');
+            this.showAuthStatus('Initiating OAuth login...', 'info');
 
-            // In a real implementation, this would handle OAuth flow
-            // For now, show placeholder
-            const oauthUrl = `https://${this.selected_provider}.example.com/oauth/authorize`;
+            // Call backend to get OAuth URL
+            const response = await fetch(
+                `${this.api_base}/api/v1/auth/oauth/initiate?provider=${this.selected_provider}`,
+                { method: 'POST' }
+            );
+
+            const data = await response.json();
+
+            if (!data.authorization_url) {
+                this.showAuthStatus('❌ Failed to initiate OAuth: No authorization URL returned', 'error');
+                return;
+            }
+
+            // Show popup with instructions
+            const providerName = this.getProviderName(this.selected_provider);
+            const popupWidth = 500;
+            const popupHeight = 600;
+            const left = window.screenX + (window.outerWidth - popupWidth) / 2;
+            const top = window.screenY + (window.outerHeight - popupHeight) / 2;
 
             this.showAuthStatus(
-                'OAuth flow would open at: ' + oauthUrl + '\n' +
-                'Implementation depends on provider-specific OAuth configuration',
+                `📖 OAuth window opening for ${providerName}. Sign in and authorize access.\n` +
+                `You will be redirected back here automatically when complete.`,
                 'info'
             );
+
+            // Open OAuth URL in popup window
+            const oauthWindow = window.open(
+                data.authorization_url,
+                'oauth_login',
+                `width=${popupWidth},height=${popupHeight},left=${left},top=${top}`
+            );
+
+            if (!oauthWindow) {
+                this.showAuthStatus('❌ Popup blocked - Please allow popups for this site', 'error');
+                return;
+            }
+
+            // Poll for OAuth completion
+            this.pollForOAuthCompletion(oauthWindow);
+
         } catch (error) {
             console.error('[CloudLLM] OAuth error:', error);
             this.showAuthStatus('❌ OAuth failed: ' + error.message, 'error');
         }
+    }
+
+    /**
+     * Poll for OAuth completion
+     */
+    async pollForOAuthCompletion(oauthWindow) {
+        let pollCount = 0;
+        const maxPolls = 120; // 2 minutes max (120 * 1 second)
+
+        const pollInterval = setInterval(async () => {
+            pollCount++;
+
+            // Check if window was closed
+            if (oauthWindow.closed) {
+                clearInterval(pollInterval);
+
+                // Try to get session to see if user authorized
+                try {
+                    const response = await fetch(`${this.api_base}/llm/session`);
+                    const session = await response.json();
+
+                    if (session.status === 'configured') {
+                        this.showAuthStatus(
+                            `✅ Successfully authenticated with ${this.getProviderName(session.provider_type)}!`,
+                            'success'
+                        );
+                        setTimeout(() => {
+                            this.loadCurrentSession();
+                            this.loadAuthenticatedProviders();
+                        }, 1000);
+                    } else {
+                        this.showAuthStatus('User closed OAuth window without completing authorization', 'warning');
+                    }
+                } catch (e) {
+                    console.error('[CloudLLM] Error checking OAuth completion:', e);
+                }
+                return;
+            }
+
+            // Stop polling after max attempts
+            if (pollCount >= maxPolls) {
+                clearInterval(pollInterval);
+                this.showAuthStatus('OAuth authorization timed out. Please try again.', 'error');
+                try {
+                    oauthWindow.close();
+                } catch (e) {
+                    // Window already closed
+                }
+                return;
+            }
+        }, 1000); // Poll every 1 second
     }
 
     /**
@@ -460,9 +543,25 @@ class CloudLLMManager {
         try {
             this.showAuthStatus('Generating device code...', 'info');
 
-            // In a real implementation, this would call /llm/device-code endpoint
-            // For now, show placeholder
-            this.showCLILoginUI();
+            // Call backend to initiate device code flow
+            const response = await fetch(
+                `${this.api_base}/api/v1/auth/device-code/initiate?provider=${this.selected_provider}`,
+                { method: 'POST' }
+            );
+
+            const data = await response.json();
+
+            if (!data.device_code || !data.user_code) {
+                this.showAuthStatus('❌ Failed to generate device code', 'error');
+                return;
+            }
+
+            // Store device code for polling
+            this.current_device_code = data.device_code;
+            this.current_device_code_expires = Date.now() + (data.expires_in * 1000);
+
+            // Show CLI login UI with real codes
+            this.showCLILoginUI(data);
         } catch (error) {
             console.error('[CloudLLM] CLI login error:', error);
             this.showAuthStatus('❌ CLI login failed: ' + error.message, 'error');
@@ -472,24 +571,31 @@ class CloudLLMManager {
     /**
      * Display CLI device code polling UI
      */
-    showCLILoginUI() {
+    showCLILoginUI(deviceCodeData) {
         const statusEl = document.getElementById('llm-auth-status');
-
-        // Simulate device code (in real implementation, this comes from API)
-        const deviceCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-        const userCode = 'ABCD-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+        const providerName = this.getProviderName(this.selected_provider);
 
         statusEl.innerHTML = `
             <div class="cli-login-polling">
+                <div class="polling-title">
+                    Device Code Authorization for ${providerName}
+                </div>
                 <div class="polling-instruction">
-                    Visit your provider's verification page and enter the code below:
+                    1. Visit this URL in your browser:<br/>
+                    <strong style="word-break: break-all;">${deviceCodeData.verification_url}</strong>
+                </div>
+                <div class="polling-instruction">
+                    2. Enter this code when prompted:
                 </div>
                 <div class="polling-code-display">
-                    <div class="polling-code">${userCode}</div>
+                    <div class="polling-code">${deviceCodeData.user_code}</div>
+                    <button class="copy-button" onclick="cloudLLMManager.copyUserCode('${deviceCodeData.user_code}')">
+                        📋 Copy Code
+                    </button>
                 </div>
                 <div class="polling-status">
                     <div class="polling-spinner"></div>
-                    <span>Waiting for authorization... (polling)</span>
+                    <span>Waiting for authorization... (you have ${Math.floor(deviceCodeData.expires_in / 60)} minutes)</span>
                 </div>
                 <div class="polling-cancel">
                     <button class="secondary-button" onclick="cloudLLMManager.cancelCLILogin()">Cancel</button>
@@ -499,30 +605,95 @@ class CloudLLMManager {
 
         statusEl.style.display = 'block';
 
-        // Simulate polling (in real implementation, this would call polling API)
-        this.pollForCLIAuthorizaton(deviceCode);
+        // Start polling for authorization
+        this.pollForCLIAuthorization(deviceCodeData.device_code, deviceCodeData.expires_in);
     }
 
     /**
-     * Simulate polling for CLI device code authorization
+     * Copy user code to clipboard
      */
-    async pollForCLIAuthorizaton(deviceCode) {
-        // Simulate polling for demo
-        let pollCount = 0;
-        const maxPolls = 10;
+    copyUserCode(code) {
+        navigator.clipboard.writeText(code).then(() => {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '✅ Copied!';
+            setTimeout(() => {
+                btn.textContent = originalText;
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+        });
+    }
 
-        const pollInterval = setInterval(async () => {
+    /**
+     * Poll for CLI device code authorization
+     */
+    async pollForCLIAuthorization(deviceCode, expiresIn) {
+        let pollCount = 0;
+        const maxPolls = expiresIn / 1; // Poll every second until expiration
+        let pollInterval;
+
+        const doPoll = async () => {
             pollCount++;
 
-            if (pollCount >= maxPolls) {
+            // Check if expired
+            if (Date.now() > this.current_device_code_expires) {
                 clearInterval(pollInterval);
-                this.showAuthStatus('CLI authorization timeout', 'error');
+                this.showAuthStatus('Device code expired. Please try again.', 'error');
                 return;
             }
 
-            // In real implementation, check /llm/device-token/{device_code}
-            console.log(`[CloudLLM] Polling for authorization (${pollCount}/${maxPolls})...`);
-        }, 3000);
+            if (pollCount >= maxPolls) {
+                clearInterval(pollInterval);
+                this.showAuthStatus('Device code authorization timed out', 'error');
+                return;
+            }
+
+            try {
+                // Poll backend for completion
+                const response = await fetch(`${this.api_base}/api/v1/auth/device-code/complete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        device_code: deviceCode,
+                        set_as_default: true
+                    })
+                });
+
+                const data = await response.json();
+
+                // Check if authorization was successful
+                if (response.ok && data.credential_id) {
+                    clearInterval(pollInterval);
+                    this.showAuthStatus(
+                        `✅ Successfully authenticated with ${this.getProviderName(data.provider)}!`,
+                        'success'
+                    );
+
+                    // Refresh session
+                    setTimeout(() => {
+                        this.loadCurrentSession();
+                        this.loadAuthenticatedProviders();
+                        document.getElementById('llm-auth-status').style.display = 'none';
+                    }, 1500);
+                    return;
+                }
+
+                // If not yet authorized, continue polling
+                // 400/pending means still waiting for user
+                console.log(`[CloudLLM] Still waiting for device authorization (attempt ${pollCount}...)`);
+
+            } catch (error) {
+                // Network error or still pending - continue polling
+                console.log(`[CloudLLM] Polling... attempt ${pollCount}`);
+            }
+        };
+
+        // Start polling (check every second)
+        pollInterval = setInterval(doPoll, 1000);
+
+        // Do first poll immediately
+        await doPoll();
     }
 
     /**
@@ -530,6 +701,7 @@ class CloudLLMManager {
      */
     cancelCLILogin() {
         document.getElementById('llm-auth-status').style.display = 'none';
+        this.current_device_code = null;
     }
 
     /**
