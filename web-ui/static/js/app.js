@@ -341,8 +341,18 @@ async function performSearch() {
         state.stats.totalSearches++;
         state.stats.responseTimes.push(responseTime);
 
+        // Build detailed search log message with filters
+        let searchLogMsg = `Query: "${query}" | Type: ${searchType}`;
+        if (selectedRepos.length > 0) {
+            searchLogMsg += ` | Repository: ${selectedRepos.join(', ')}`;
+        }
+        if (selectedDirs.length > 0) {
+            searchLogMsg += ` | Directories: ${selectedDirs.join(', ')}`;
+        }
+        searchLogMsg += ` | Results: ${data.results.length} | Time: ${responseTime.toFixed(0)}ms`;
+
         // Add to activity log
-        addActivityLog('search', `Query: "${query}" | Type: ${searchType} | Results: ${data.results.length} | Time: ${responseTime.toFixed(0)}ms`);
+        addActivityLog('search', searchLogMsg);
 
         // Render results with request info
         renderSearchResults(data, responseTime, requestBody, searchType);

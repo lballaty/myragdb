@@ -1164,6 +1164,7 @@ async def search_hybrid(request: SearchRequest):
             repository_filter=repo_filter,
             folder_filter=request.folder_filter,
             extension_filter=request.extension_filter,
+            directories=request.directories,
             date_from=request.date_from,
             date_to=request.date_to
         )
@@ -1272,7 +1273,10 @@ async def search_keyword(request: SearchRequest):
             limit=request.limit,
             repository_filter=request.repository_filter,
             folder_filter=request.folder_filter,
-            extension_filter=request.extension_filter
+            extension_filter=request.extension_filter,
+            directories=request.directories,
+            date_from=request.date_from,
+            date_to=request.date_to
         )
 
         # Convert to API response format
@@ -1374,7 +1378,8 @@ async def search_semantic(request: SearchRequest):
         results = vector.search(
             query=request.query,
             limit=request.limit,
-            repository=request.repository_filter or (request.repositories[0] if request.repositories else None)
+            repository=request.repository_filter or (request.repositories[0] if request.repositories else None),
+            directories=request.directories
         )
 
         # Convert to API response format

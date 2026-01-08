@@ -112,8 +112,8 @@ class SearchResultItem(BaseModel):
         )
     """
     file_path: str = Field(..., description="Absolute path to file")
-    repository: str = Field(..., description="Repository name")
-    relative_path: str = Field(..., description="Path relative to repository")
+    repository: Optional[str] = Field(default=None, description="Repository name (None for directory-sourced files)")
+    relative_path: str = Field(..., description="Path relative to repository root or directory")
     score: float = Field(..., description="Relevance score (0-1)")
     keyword_score: Optional[float] = Field(None, description="Keyword component score")
     vector_score: Optional[float] = Field(None, description="Vector component score")

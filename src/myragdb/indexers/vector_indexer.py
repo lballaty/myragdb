@@ -23,19 +23,32 @@ class VectorSearchResult:
     Result from vector semantic search.
 
     Business Purpose: Represents a semantically similar document with
-    similarity score and metadata.
+    similarity score and metadata. Supports both repository and directory
+    sourced files.
 
     Example:
+        # Repository file
         result = VectorSearchResult(
             file_path="/path/to/file.py",
             repository="MyProject",
             score=0.92,
             snippet="Authentication implementation...",
-            file_type=".py"
+            file_type=".py",
+            relative_path="src/auth.py"
+        )
+
+        # Directory file (repository=None)
+        result = VectorSearchResult(
+            file_path="/Users/Documents/file.md",
+            repository=None,
+            score=0.85,
+            snippet="Content snippet...",
+            file_type=".md",
+            relative_path="file.md"
         )
     """
     file_path: str
-    repository: str
+    repository: Optional[str]  # None for directory-sourced files
     score: float
     snippet: str
     file_type: str
@@ -269,14 +282,17 @@ Type: {scanned_file.file_type}
 
                 metadata = {
                     "file_path": scanned_file.file_path,
-                    "repository": scanned_file.repository_name,  # Kept for backward compatibility
-                    "source_type": source_type,                  # New: 'repository' or 'directory'
-                    "source_id": source_id,                      # New: repo name or directory ID
+                    "source_type": source_type,                  # 'repository' or 'directory'
+                    "source_id": source_id,                      # repo name or directory ID
                     "file_type": scanned_file.file_type,
                     "relative_path": scanned_file.relative_path,
                     "chunk_index": i,
                     "total_chunks": len(chunks)
                 }
+                # Only add repository field if not None (ChromaDB doesn't accept None values)
+                if scanned_file.repository_name:
+                    metadata["repository"] = scanned_file.repository_name
+
                 metadatas.append(metadata)
                 documents.append(chunk)
 
@@ -397,18 +413,21 @@ Type: {scanned_file.file_type}
         self,
         query: str,
         limit: int = 10,
-        repository: Optional[str] = None
+        repository: Optional[str] = None,
+        directories: Optional[List[int]] = None
     ) -> List[VectorSearchResult]:
         """
         Semantic search using vector similarity.
 
         Business Purpose: Finds documents semantically similar to query,
         even if they don't share exact keywords. Understands meaning and context.
+        Supports filtering by repositories and managed directories.
 
         Args:
             query: Search query (natural language)
             limit: Maximum results to return
             repository: Optional repository filter
+            directories: Optional list of directory IDs to search (None = all)
 
         Returns:
             List of VectorSearchResult sorted by similarity
@@ -418,6 +437,9 @@ Type: {scanned_file.file_type}
             results = indexer.search("secure user login", limit=5)
             for result in results:
                 print(f"{result.relative_path}: {result.score:.2f}")
+
+            # Search only in specific directories
+            results = indexer.search("config", directories=[1, 2], limit=10)
         """
         results = []
 
@@ -427,8 +449,26 @@ Type: {scanned_file.file_type}
 
             # Build where clause for filtering
             where_clause = None
+            filters_list = []
+
             if repository:
-                where_clause = {"repository": repository}
+                filters_list.append({"repository": repository})
+
+            if directories:
+                # Create OR condition for multiple directories
+                dir_conditions = [{"source_id": str(d)} for d in directories]
+                if len(dir_conditions) == 1:
+                    filters_list.append(dir_conditions[0])
+                else:
+                    filters_list.append({"$or": dir_conditions})
+
+            # Combine all filters
+            if len(filters_list) == 0:
+                where_clause = None
+            elif len(filters_list) == 1:
+                where_clause = filters_list[0]
+            else:
+                where_clause = {"$and": filters_list}
 
             # Search ChromaDB
             search_results = self.collection.query(
@@ -460,7 +500,7 @@ Type: {scanned_file.file_type}
 
                     result = VectorSearchResult(
                         file_path=file_path,
-                        repository=metadata['repository'],
+                        repository=metadata.get('repository'),  # Can be None for directory files
                         score=similarity,
                         snippet=snippet,
                         file_type=metadata.get('file_type', ''),
