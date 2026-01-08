@@ -613,22 +613,52 @@ async def reindex_directory(directory_id: int, index_keyword: bool = True, index
             async def perform_indexing():
                 """Background task to perform actual directory indexing."""
                 try:
+                    from pathlib import Path as PathlibPath
+
                     directory_path = dir_data['path']
                     incremental = not full_rebuild
+                    keyword_count = 0
+                    vector_count = 0
+                    keyword_time = 0
+                    vector_time = 0
+                    total_size = 0
 
                     # Index with Keyword (Meilisearch)
                     if index_keyword:
                         try:
+                            start_time = time.time()
                             meilisearch_indexer = MeilisearchIndexer()
                             keyword_count = meilisearch_indexer.index_directory(
                                 directory_path=directory_path,
                                 directory_id=directory_id,
                                 incremental=incremental
                             )
+                            keyword_time = time.time() - start_time
+
+                            # Calculate directory size
+                            try:
+                                total_size = sum(
+                                    f.stat().st_size for f in PathlibPath(directory_path).rglob('*')
+                                    if f.is_file()
+                                )
+                            except Exception:
+                                total_size = 0
+
+                            # Store stats
+                            db.store_directory_stats(
+                                directory_id=directory_id,
+                                index_type='keyword',
+                                files_indexed=keyword_count,
+                                total_size_bytes=total_size,
+                                indexing_time_seconds=keyword_time,
+                                is_initial=dir_data.get('last_indexed') is None
+                            )
+
                             logger.info(
                                 "Keyword indexing completed",
                                 directory_id=directory_id,
-                                files_indexed=keyword_count
+                                files_indexed=keyword_count,
+                                time_seconds=keyword_time
                             )
                         except Exception as e:
                             logger.error(
@@ -641,16 +671,30 @@ async def reindex_directory(directory_id: int, index_keyword: bool = True, index
                     # Index with Vector (Embeddings)
                     if index_vector:
                         try:
+                            start_time = time.time()
                             vector_indexer = VectorIndexer()
                             vector_count = vector_indexer.index_directory(
                                 directory_path=directory_path,
                                 directory_id=directory_id,
                                 incremental=incremental
                             )
+                            vector_time = time.time() - start_time
+
+                            # Store stats
+                            db.store_directory_stats(
+                                directory_id=directory_id,
+                                index_type='vector',
+                                files_indexed=vector_count,
+                                total_size_bytes=total_size,
+                                indexing_time_seconds=vector_time,
+                                is_initial=dir_data.get('last_indexed') is None
+                            )
+
                             logger.info(
                                 "Vector indexing completed",
                                 directory_id=directory_id,
-                                files_indexed=vector_count
+                                files_indexed=vector_count,
+                                time_seconds=vector_time
                             )
                         except Exception as e:
                             logger.error(
@@ -671,7 +715,7 @@ async def reindex_directory(directory_id: int, index_keyword: bool = True, index
                     except Exception as e:
                         logger.error("Failed to update last_indexed timestamp", directory_id=directory_id, error=str(e))
 
-                    logger.info("Directory indexed successfully", directory_id=directory_id)
+                    logger.info("Directory indexed successfully", directory_id=directory_id, keyword_count=keyword_count, vector_count=vector_count)
 
                 except Exception as e:
                     logger.error(

@@ -1002,6 +1002,69 @@ class FileMetadataDatabase:
 
             return [dict(row) for row in cursor.fetchall()]
 
+    def store_directory_stats(
+        self,
+        directory_id: int,
+        index_type: str,
+        files_indexed: int,
+        total_size_bytes: int,
+        indexing_time_seconds: float,
+        is_initial: bool = False
+    ) -> None:
+        """
+        Store indexing statistics for a directory.
+
+        Business Purpose: Records performance metrics and file counts after
+        directory indexing, enabling users to see indexing progress and
+        performance metrics in the UI.
+
+        Args:
+            directory_id: Directory's primary key
+            index_type: 'keyword' or 'vector'
+            files_indexed: Number of files indexed
+            total_size_bytes: Total size of indexed files
+            indexing_time_seconds: Time taken for indexing
+            is_initial: True if this is the initial indexing
+
+        Example:
+            db.store_directory_stats(
+                directory_id=1,
+                index_type='keyword',
+                files_indexed=150,
+                total_size_bytes=52428800,
+                indexing_time_seconds=12.5,
+                is_initial=True
+            )
+        """
+        now = int(time.time())
+
+        with self._get_connection() as conn:
+            if is_initial:
+                # Initial indexing
+                conn.execute('''
+                    INSERT OR REPLACE INTO directory_stats (
+                        directory_id, index_type, initial_index_time_seconds,
+                        initial_index_timestamp, total_files_indexed, total_size_bytes
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (directory_id, index_type, indexing_time_seconds, now, files_indexed, total_size_bytes))
+            else:
+                # Reindexing - update last_reindex fields but preserve initial_index fields
+                conn.execute('''
+                    INSERT INTO directory_stats (
+                        directory_id, index_type, last_reindex_time_seconds,
+                        last_reindex_timestamp, total_files_indexed, total_size_bytes
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(directory_id, index_type) DO UPDATE SET
+                        last_reindex_time_seconds = excluded.last_reindex_time_seconds,
+                        last_reindex_timestamp = excluded.last_reindex_timestamp,
+                        total_files_indexed = excluded.total_files_indexed,
+                        total_size_bytes = excluded.total_size_bytes
+                ''', (directory_id, index_type, indexing_time_seconds, now, files_indexed, total_size_bytes))
+
+            conn.commit()
+
     def remove_directory_files(self, directory_id: int) -> int:
         """
         Remove all files associated with a directory.
