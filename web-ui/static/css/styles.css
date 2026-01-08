@@ -16,9 +16,14 @@
     --warning-color: #f59e0b;
     --danger-color: #ef4444;
     --bg-color: #f8fafc;
+    --bg-secondary: #f1f5f9;
+    --bg-tertiary: #e2e8f0;
     --card-bg: #ffffff;
     --text-color: #1e293b;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
     --text-muted: #64748b;
+    --accent-color: #2563eb;
     --border-color: #e2e8f0;
     --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
@@ -2511,7 +2516,7 @@ body {
 }
 
 .modal-content {
-    background: var(--bg-secondary);
+    background: var(--card-bg);
     border-radius: 12px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     max-width: 700px;
