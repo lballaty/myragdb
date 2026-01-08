@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CodeGenerationConfig(SkillConfig):
     """Configuration for code generation."""
+    name: str = "code_generation"
+    description: str = "Generate, refactor, and optimize code across multiple languages"
     max_code_length: int = 10000
     supported_languages: List[str] = None
     enable_formatting: bool = True
@@ -87,8 +89,66 @@ class CodeGenerationSkill(Skill):
         Args:
             config: Code generation configuration
         """
-        super().__init__(config or CodeGenerationConfig())
-        self.config: CodeGenerationConfig = self.config
+        config = config or CodeGenerationConfig()
+        super().__init__(config)
+        self.config: CodeGenerationConfig = config
+
+    @property
+    def input_schema(self) -> Dict[str, Any]:
+        """Define input schema for code generation skill."""
+        return {
+            "action": {
+                "type": "string",
+                "required": True,
+                "enum": ["generate", "refactor", "generate_tests", "format", "documentation", "optimize"],
+                "description": "Action to perform"
+            },
+            "language": {
+                "type": "string",
+                "required": True,
+                "description": "Programming language"
+            },
+            "description": {
+                "type": "string",
+                "required": False,
+                "description": "For generation, description of what to generate"
+            },
+            "code": {
+                "type": "string",
+                "required": False,
+                "description": "For refactoring, existing code to improve"
+            },
+            "improvements": {
+                "type": "array",
+                "required": False,
+                "description": "List of improvements (readability, performance, security)"
+            },
+            "test_framework": {
+                "type": "string",
+                "required": False,
+                "description": "Test framework (pytest, unittest, jest, etc.)"
+            },
+            "doc_format": {
+                "type": "string",
+                "required": False,
+                "description": "Documentation format (docstring, jsdoc, javadoc)"
+            }
+        }
+
+    @property
+    def output_schema(self) -> Dict[str, Any]:
+        """Define output schema for code generation skill."""
+        return {
+            "status": {"type": "string"},
+            "data": {
+                "type": "object",
+                "properties": {
+                    "code": {"type": "string"},
+                    "language": {"type": "string"},
+                    "description": {"type": "string"}
+                }
+            }
+        }
 
     async def execute(self, **kwargs) -> Dict[str, Any]:
         """

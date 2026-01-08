@@ -29,6 +29,8 @@ class MessageType(Enum):
 @dataclass
 class SlackIntegrationConfig(SkillConfig):
     """Configuration for Slack integration."""
+    name: str = "slack_integration"
+    description: str = "Send messages and notifications to Slack"
     webhook_url: Optional[str] = None
     bot_token: Optional[str] = None
     default_channel: str = "#general"
@@ -91,14 +93,94 @@ class SlackIntegrationSkill(Skill):
         Args:
             config: Slack configuration
         """
-        super().__init__(config or SlackIntegrationConfig())
-        self.config: SlackIntegrationConfig = self.config
+        config = config or SlackIntegrationConfig()
+        super().__init__(config)
+        self.config: SlackIntegrationConfig = config
 
         # Load config from environment if not provided
         if not self.config.webhook_url:
             self.config.webhook_url = os.getenv("SLACK_WEBHOOK_URL")
         if not self.config.bot_token:
             self.config.bot_token = os.getenv("SLACK_BOT_TOKEN")
+
+    @property
+    def input_schema(self) -> Dict[str, Any]:
+        """Define input schema for Slack integration skill."""
+        return {
+            "action": {
+                "type": "string",
+                "required": True,
+                "enum": ["send_message", "send_rich_message", "send_thread", "add_reaction", "upload_file", "update_message"],
+                "description": "Action to perform"
+            },
+            "channel": {
+                "type": "string",
+                "required": True,
+                "description": "Target Slack channel"
+            },
+            "message": {
+                "type": "string",
+                "required": False,
+                "description": "Message text"
+            },
+            "title": {
+                "type": "string",
+                "required": False,
+                "description": "Message title (for rich messages)"
+            },
+            "blocks": {
+                "type": "array",
+                "required": False,
+                "description": "Slack block kit blocks"
+            },
+            "thread_ts": {
+                "type": "string",
+                "required": False,
+                "description": "Timestamp for threaded reply"
+            },
+            "emoji": {
+                "type": "string",
+                "required": False,
+                "description": "Emoji reaction"
+            },
+            "timestamp": {
+                "type": "string",
+                "required": False,
+                "description": "Message timestamp"
+            },
+            "file_path": {
+                "type": "string",
+                "required": False,
+                "description": "Path to file to upload"
+            },
+            "file_name": {
+                "type": "string",
+                "required": False,
+                "description": "Name for uploaded file"
+            },
+            "new_message": {
+                "type": "string",
+                "required": False,
+                "description": "New message text for updates"
+            }
+        }
+
+    @property
+    def output_schema(self) -> Dict[str, Any]:
+        """Define output schema for Slack integration skill."""
+        return {
+            "status": {"type": "string"},
+            "data": {
+                "type": "object",
+                "properties": {
+                    "channel": {"type": "string"},
+                    "message_sent": {"type": "boolean"},
+                    "message_updated": {"type": "boolean"},
+                    "reaction_added": {"type": "boolean"},
+                    "uploaded": {"type": "boolean"}
+                }
+            }
+        }
 
     async def execute(self, **kwargs) -> Dict[str, Any]:
         """

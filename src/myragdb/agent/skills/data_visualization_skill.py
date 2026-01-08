@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 @dataclass
 class VisualizationConfig(SkillConfig):
     """Configuration for data visualization."""
+    name: str = "data_visualization"
+    description: str = "Generate interactive charts and visualizations from data"
     max_data_points: int = 1000
     default_chart_type: str = "line"
     width: int = 1024
@@ -105,8 +107,72 @@ class DataVisualizationSkill(Skill):
         Args:
             config: Visualization configuration
         """
-        super().__init__(config or VisualizationConfig())
-        self.config: VisualizationConfig = self.config
+        config = config or VisualizationConfig()
+        super().__init__(config)
+        self.config: VisualizationConfig = config
+
+    @property
+    def input_schema(self) -> Dict[str, Any]:
+        """Define input schema for data visualization skill."""
+        return {
+            "chart_type": {
+                "type": "string",
+                "required": True,
+                "enum": list(self.SUPPORTED_CHART_TYPES),
+                "description": "Type of chart to generate"
+            },
+            "title": {
+                "type": "string",
+                "required": True,
+                "description": "Chart title"
+            },
+            "labels": {
+                "type": "array",
+                "required": True,
+                "description": "Data labels (X-axis)"
+            },
+            "datasets": {
+                "type": "array",
+                "required": True,
+                "description": "List of datasets with label and data"
+            },
+            "x_label": {
+                "type": "string",
+                "required": False,
+                "description": "X-axis label"
+            },
+            "y_label": {
+                "type": "string",
+                "required": False,
+                "description": "Y-axis label"
+            },
+            "export_format": {
+                "type": "string",
+                "required": False,
+                "enum": list(self.SUPPORTED_EXPORT_FORMATS),
+                "default": "json",
+                "description": "Format to export as"
+            },
+            "options": {
+                "type": "object",
+                "required": False,
+                "description": "Additional chart options"
+            }
+        }
+
+    @property
+    def output_schema(self) -> Dict[str, Any]:
+        """Define output schema for data visualization skill."""
+        return {
+            "title": {"type": "string"},
+            "chart_type": {"type": "string"},
+            "data_points": {"type": "integer"},
+            "chart_json": {"type": "string"},
+            "chart_html": {"type": "string"},
+            "chart_svg": {"type": "string"},
+            "chart_base64_png": {"type": "string"},
+            "metadata": {"type": "object"}
+        }
 
     async def execute(self, **kwargs) -> Dict[str, Any]:
         """

@@ -5,6 +5,7 @@
 
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
 
 from pydantic import BaseModel
 
@@ -16,6 +17,24 @@ class SkillInputSchema(BaseModel):
 
 class SkillOutputSchema(BaseModel):
     """Output schema for a skill"""
+    pass
+
+
+@dataclass
+class SkillConfig:
+    """
+    Base configuration class for skills.
+
+    Business Purpose: Provide a standardized way for skills to define and store
+    their configuration. Subclasses override this to add skill-specific settings.
+
+    Example:
+        @dataclass
+        class MySkillConfig(SkillConfig):
+            api_key: Optional[str] = None
+            timeout: int = 30
+            enable_caching: bool = True
+    """
     pass
 
 
@@ -59,16 +78,40 @@ class Skill(ABC):
         print(result)  # {"results": [...]}
     """
 
-    def __init__(self, name: str, description: str):
+    def __init__(self, name_or_config: Any = None, description: str = None, **kwargs):
         """
         Initialize skill.
 
+        Supports two initialization patterns:
+
+        Pattern 1 (Built-in skills):
+            super().__init__(name="search", description="Search the index")
+
+        Pattern 2 (Advanced skills with config):
+            super().__init__(config)  # Config object with name/description
+
         Args:
-            name: Unique skill identifier (e.g., "search", "sql", "report")
-            description: Human-readable description of what skill does
+            name_or_config: Either skill name (str) or SkillConfig object
+            description: Human-readable description (only if using Pattern 1)
+            **kwargs: Additional keyword arguments (supports name= and description= kwargs)
         """
-        self.name = name
-        self.description = description
+        # Handle keyword arguments (from super().__init__(name=..., description=...))
+        if 'name' in kwargs:
+            name_or_config = kwargs['name']
+        if 'description' in kwargs:
+            description = kwargs['description']
+
+        # Pattern 2: Config object passed
+        if isinstance(name_or_config, SkillConfig):
+            self.config = name_or_config
+            # Try to get name/description from config if available
+            self.name = getattr(name_or_config, 'name', 'unknown')
+            self.description = getattr(name_or_config, 'description', 'No description')
+        # Pattern 1: Name and description passed separately
+        else:
+            self.name = name_or_config or "unknown"
+            self.description = description or "No description"
+            self.config = None
 
     @property
     @abstractmethod

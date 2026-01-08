@@ -32,6 +32,8 @@ class HTTPMethod(Enum):
 @dataclass
 class WebhookIntegrationConfig(SkillConfig):
     """Configuration for webhook integration."""
+    name: str = "webhook_integration"
+    description: str = "Call webhooks and integrate with HTTP-based services"
     timeout_seconds: int = 30
     max_retries: int = 3
     retry_backoff_multiplier: float = 2.0
@@ -88,8 +90,69 @@ class WebhookIntegrationSkill(Skill):
         Args:
             config: Webhook configuration
         """
-        super().__init__(config or WebhookIntegrationConfig())
-        self.config: WebhookIntegrationConfig = self.config
+        config = config or WebhookIntegrationConfig()
+        super().__init__(config)
+        self.config: WebhookIntegrationConfig = config
+
+    @property
+    def input_schema(self) -> Dict[str, Any]:
+        """Define input schema for webhook integration skill."""
+        return {
+            "action": {
+                "type": "string",
+                "required": True,
+                "enum": ["call_webhook", "verify_signature"],
+                "description": "Action to perform"
+            },
+            "url": {
+                "type": "string",
+                "required": False,
+                "description": "Webhook URL"
+            },
+            "method": {
+                "type": "string",
+                "required": False,
+                "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD"],
+                "default": "POST",
+                "description": "HTTP method"
+            },
+            "payload": {
+                "type": "object",
+                "required": False,
+                "description": "Request payload"
+            },
+            "headers": {
+                "type": "object",
+                "required": False,
+                "description": "Custom headers"
+            },
+            "signature": {
+                "type": "string",
+                "required": False,
+                "description": "Webhook signature to verify"
+            },
+            "secret": {
+                "type": "string",
+                "required": False,
+                "description": "Secret for signature verification"
+            }
+        }
+
+    @property
+    def output_schema(self) -> Dict[str, Any]:
+        """Define output schema for webhook integration skill."""
+        return {
+            "status": {"type": "string"},
+            "data": {
+                "type": "object",
+                "properties": {
+                    "status_code": {"type": "integer"},
+                    "response": {"type": "object"},
+                    "valid": {"type": "boolean"},
+                    "message": {"type": "string"}
+                }
+            }
+        }
 
     async def execute(self, **kwargs) -> Dict[str, Any]:
         """

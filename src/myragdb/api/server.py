@@ -81,6 +81,20 @@ from myragdb.config import settings, load_repositories_config
 from myragdb.utils.repo_discovery import RepositoryDiscovery, DiscoveredRepository
 from myragdb.watcher.repository_watcher import RepositoryWatcherManager
 from myragdb.api.routes.directories import router as directories_router
+from myragdb.agent.skills import (
+    SkillRegistry,
+    SearchSkill,
+    LLMSkill,
+    CodeAnalysisSkill,
+    ReportSkill,
+    SQLSkill,
+    DataVisualizationSkill,
+    CodeGenerationSkill,
+    SlackIntegrationSkill,
+    WebhookIntegrationSkill,
+)
+from myragdb.agent.orchestration import AgentOrchestrator
+from myragdb.api.agent_routes import create_agent_routes
 import structlog
 
 # Configure structured logging
@@ -100,6 +114,10 @@ session_manager = None
 credential_store = None
 api_key_auth_manager = None
 api_key_validator = None
+
+# Initialize agent orchestration (singleton pattern)
+agent_orchestrator = None
+skill_registry = None
 
 # Indexing state - supports independent Keyword (Meilisearch) and Vector indexing
 indexing_state = {
@@ -223,6 +241,56 @@ def get_llm_services():
     return session_manager, credential_store, api_key_auth_manager, api_key_validator
 
 
+def get_agent_orchestrator():
+    """
+    Get or initialize the AgentOrchestrator instance.
+
+    Business Purpose: Lazy initialization of agent orchestration platform
+    with all required dependencies (skills, engines, etc.).
+
+    Returns:
+        AgentOrchestrator instance with registered skills
+    """
+    global agent_orchestrator, skill_registry
+
+    if agent_orchestrator is None:
+        logger.info("Initializing agent orchestration platform")
+
+        # Get required dependencies
+        _, _, hybrid_engine = get_search_engines()
+        session_mgr, _, _, _ = get_llm_services()
+
+        # Initialize skill registry
+        if skill_registry is None:
+            logger.info("Initializing skill registry")
+            skill_registry = SkillRegistry()
+
+            # Register built-in skills
+            logger.info("Registering agent skills")
+            skill_registry.register_skill(SearchSkill(hybrid_engine))
+            skill_registry.register_skill(LLMSkill(session_mgr))
+            skill_registry.register_skill(CodeAnalysisSkill())
+            skill_registry.register_skill(ReportSkill())
+            skill_registry.register_skill(SQLSkill())
+
+            # Register advanced skills
+            logger.info("Registering advanced skills")
+            skill_registry.register_skill(DataVisualizationSkill())
+            skill_registry.register_skill(CodeGenerationSkill())
+            skill_registry.register_skill(SlackIntegrationSkill())
+            skill_registry.register_skill(WebhookIntegrationSkill())
+
+        # Create orchestrator with all dependencies
+        logger.info("Creating agent orchestrator")
+        agent_orchestrator = AgentOrchestrator(
+            skill_registry=skill_registry,
+            session_manager=session_mgr,
+            search_engine=hybrid_engine
+        )
+
+    return agent_orchestrator
+
+
 # Import version
 from myragdb.version import __version__
 
@@ -256,6 +324,19 @@ if docs_path.exists():
 
 # Register directory management routes
 app.include_router(directories_router)
+
+# Register agent orchestration routes
+try:
+    agent_orch = get_agent_orchestrator()
+    agent_router = create_agent_routes(agent_orch)
+    app.include_router(agent_router)
+    logger.info("Agent orchestration routes registered successfully")
+except Exception as e:
+    logger.error(
+        "Failed to register agent orchestration routes",
+        error=str(e),
+        exc_info=True
+    )
 
 
 # Application lifecycle events
