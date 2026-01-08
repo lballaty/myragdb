@@ -733,7 +733,12 @@ async function loadRepositories() {
         const repositories = await response.json();
         state.repositories = repositories;
 
-        renderRepositories();
+        // Render with appropriate view mode
+        if (state.reindexViewMode === 'tree') {
+            renderRepositoriesTreeView();
+        } else {
+            renderRepositories();
+        }
         populateRepositoryFilter();
 
         // Update badge with success state (count only non-excluded repositories)
@@ -967,6 +972,80 @@ function renderRepositories() {
     repositoryList.innerHTML = reposHtml;
 }
 
+function renderRepositoriesTreeView() {
+    const repositoryList = document.getElementById('repository-list');
+
+    if (state.repositories.length === 0) {
+        repositoryList.innerHTML = '<div style="color: var(--text-muted);">No repositories configured</div>';
+        return;
+    }
+
+    // Build tree structure (repositories can have nesting but for simplicity, treat as flat list)
+    const reposHtml = state.repositories.map((repo, idx) => {
+        const isExcluded = repo.excluded || false;
+        const enabledClass = repo.enabled ? 'enabled' : 'disabled';
+        const priorityClass = `priority-${repo.priority}`;
+        const excludedClass = isExcluded ? 'excluded-repo' : '';
+
+        // Calculate total indexed files from indexing_stats
+        let totalIndexedFiles = 0;
+        if (repo.indexing_stats && repo.indexing_stats.length > 0) {
+            totalIndexedFiles = Math.max(...repo.indexing_stats.map(stat => stat.total_files_indexed || 0));
+        }
+
+        // Format file count badges
+        let fileCountBadge = '';
+        if (repo.file_count !== null && repo.file_count !== undefined) {
+            const formattedSize = formatBytes(repo.total_size_bytes);
+            const indexedPercent = repo.file_count > 0 ? ((totalIndexedFiles / repo.file_count) * 100).toFixed(0) : 0;
+            fileCountBadge = `<div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem; margin-left: 1.7rem;">
+                <span class="repository-badge file-count">${repo.file_count.toLocaleString()} files (${formattedSize})</span>
+                <span class="repository-badge file-count">${totalIndexedFiles.toLocaleString()} indexed (${indexedPercent}%)</span>
+            </div>`;
+        }
+
+        // Excluded badge
+        let excludedBadge = '';
+        if (isExcluded) {
+            excludedBadge = '<span class="repository-badge excluded" style="background-color: var(--status-warning); color: white;">🔒 LOCKED</span>';
+        }
+
+        return `
+            <div class="tree-item" style="padding-left: 0; border-left: none; margin-bottom: 1rem;">
+                <div class="tree-node" style="padding: 0.5rem; background: var(--bg-color); border-radius: 6px; border: 1px solid var(--border-color);">
+                    <input type="checkbox"
+                           class="repo-checkbox"
+                           value="${escapeHtml(repo.name)}"
+                           id="repo-${escapeHtml(repo.name)}"
+                           ${repo.enabled && !isExcluded ? 'checked' : ''}
+                           ${isExcluded ? 'disabled' : ''}
+                           style="margin-top: 0; margin-right: 0.5rem;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 500; color: var(--text-primary);">
+                            ${escapeHtml(repo.name)}
+                        </div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted); word-break: break-all;">
+                            ${escapeHtml(repo.path)}
+                        </div>
+                        <div style="margin-top: 0.5rem;">
+                            ${excludedBadge}
+                            <span class="repository-badge ${enabledClass}">
+                                ${repo.enabled ? 'Enabled' : 'Disabled'}
+                            </span>
+                            <span class="repository-badge ${priorityClass}">
+                                ${repo.priority.toUpperCase()}
+                            </span>
+                        </div>
+                        ${fileCountBadge}
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    repositoryList.innerHTML = reposHtml;
+}
+
 function getSelectedRepositories() {
     const checkboxes = document.querySelectorAll('.repo-checkbox:checked');
     return Array.from(checkboxes).map(cb => cb.value);
@@ -1120,6 +1199,37 @@ function initializeReindex() {
             cb.checked = e.target.checked;
         });
     });
+
+    // Initialize reindex view toggle
+    const reindexViewToggle = document.getElementById('reindex-view-toggle');
+    const repositoryList = document.getElementById('repository-list');
+
+    // Restore view mode from localStorage
+    const savedReindexViewMode = localStorage.getItem('reindex_view_mode') || 'card';
+    state.reindexViewMode = savedReindexViewMode;
+
+    if (reindexViewToggle) {
+        reindexViewToggle.addEventListener('click', () => {
+            state.reindexViewMode = state.reindexViewMode === 'card' ? 'tree' : 'card';
+            localStorage.setItem('reindex_view_mode', state.reindexViewMode);
+
+            if (state.reindexViewMode === 'tree') {
+                reindexViewToggle.classList.add('active-tree');
+                repositoryList.classList.add('tree-view-mode');
+                renderRepositoriesTreeView();
+            } else {
+                reindexViewToggle.classList.remove('active-tree');
+                repositoryList.classList.remove('tree-view-mode');
+                renderRepositories();
+            }
+        });
+
+        // Set initial state
+        if (savedReindexViewMode === 'tree') {
+            reindexViewToggle.classList.add('active-tree');
+            repositoryList.classList.add('tree-view-mode');
+        }
+    }
 }
 
 // Local Storage
