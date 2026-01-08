@@ -448,22 +448,42 @@ function getScoreClass(score) {
 let currentActivityView = 'ui'; // 'ui' or 'server'
 
 function initializeActivityMonitor() {
-    document.getElementById('refresh-activity').addEventListener('click', () => {
-        if (currentActivityView === 'ui') {
-            renderActivityLog();
-        } else {
-            loadServerLogs();
-        }
-    });
-    document.getElementById('clear-activity').addEventListener('click', clearActivityLog);
+    // Check if activity monitor elements exist before initializing
+    const refreshBtn = document.getElementById('refresh-activity');
+    const clearBtn = document.getElementById('clear-activity');
+    const uiLogsTab = document.getElementById('tab-ui-logs');
+    const serverLogsTab = document.getElementById('tab-server-logs');
+
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            if (currentActivityView === 'ui') {
+                renderActivityLog();
+            } else {
+                loadServerLogs();
+            }
+        });
+    }
+    if (clearBtn) {
+        clearBtn.addEventListener('click', clearActivityLog);
+    }
 
     // Tab switching
-    document.getElementById('tab-ui-logs').addEventListener('click', () => switchActivityView('ui'));
-    document.getElementById('tab-server-logs').addEventListener('click', () => switchActivityView('server'));
+    if (uiLogsTab) {
+        uiLogsTab.addEventListener('click', () => switchActivityView('ui'));
+    }
+    if (serverLogsTab) {
+        serverLogsTab.addEventListener('click', () => switchActivityView('server'));
+    }
 
     // Server logs filters
-    document.getElementById('log-level-select').addEventListener('change', loadServerLogs);
-    document.getElementById('log-lines-select').addEventListener('change', loadServerLogs);
+    const logLevelSelect = document.getElementById('log-level-select');
+    const logLinesSelect = document.getElementById('log-lines-select');
+    if (logLevelSelect) {
+        logLevelSelect.addEventListener('change', loadServerLogs);
+    }
+    if (logLinesSelect) {
+        logLinesSelect.addEventListener('change', loadServerLogs);
+    }
 }
 
 function switchActivityView(view) {
