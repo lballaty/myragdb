@@ -3407,13 +3407,32 @@ async function reindexDirectory(directoryId) {
     const directory = state.directories.find(d => d.id === directoryId);
     if (!directory) return;
 
-    if (!confirm(`Reindex "${directory.name}"? This will update the search indexes.`)) {
+    // Get selected reindex options
+    const indexKeyword = document.getElementById('dir-index-keyword').checked;
+    const indexVector = document.getElementById('dir-index-vector').checked;
+    const fullRebuild = document.getElementById('dir-mode-full').checked;
+
+    // Validate that at least one index type is selected
+    if (!indexKeyword && !indexVector) {
+        alert('Please select at least one index type (Keyword or Vector).');
+        return;
+    }
+
+    // Build description for confirmation
+    const indexTypes = [];
+    if (indexKeyword) indexTypes.push('Keyword');
+    if (indexVector) indexTypes.push('Vector');
+    const mode = fullRebuild ? 'full rebuild' : 'incremental update';
+
+    const confirmMsg = `Reindex "${directory.name}"?\n\nIndex Types: ${indexTypes.join(' + ')}\nMode: ${mode}\n\nThis will ${mode} the search indexes.`;
+
+    if (!confirm(confirmMsg)) {
         return;
     }
 
     try {
         const response = await fetch(
-            `${API_BASE_URL}/directories/${directoryId}/reindex?index_keyword=true&index_vector=true&full_rebuild=false`,
+            `${API_BASE_URL}/directories/${directoryId}/reindex?index_keyword=${indexKeyword}&index_vector=${indexVector}&full_rebuild=${fullRebuild}`,
             {
                 method: 'POST'
             }
@@ -3541,7 +3560,26 @@ async function handleReindexAllDirectories() {
         return;
     }
 
-    if (!confirm(`Reindex all ${state.directories.length} directory(ies)? This may take several minutes.`)) {
+    // Get selected reindex options
+    const indexKeyword = document.getElementById('dir-index-keyword').checked;
+    const indexVector = document.getElementById('dir-index-vector').checked;
+    const fullRebuild = document.getElementById('dir-mode-full').checked;
+
+    // Validate that at least one index type is selected
+    if (!indexKeyword && !indexVector) {
+        alert('Please select at least one index type (Keyword or Vector).');
+        return;
+    }
+
+    // Build description for confirmation
+    const indexTypes = [];
+    if (indexKeyword) indexTypes.push('Keyword');
+    if (indexVector) indexTypes.push('Vector');
+    const mode = fullRebuild ? 'full rebuild' : 'incremental update';
+
+    const confirmMsg = `Reindex all ${state.directories.length} directory(ies)?\n\nIndex Types: ${indexTypes.join(' + ')}\nMode: ${mode}\n\nThis may take several minutes.`;
+
+    if (!confirm(confirmMsg)) {
         return;
     }
 
@@ -3551,7 +3589,7 @@ async function handleReindexAllDirectories() {
     for (const dir of state.directories) {
         try {
             const response = await fetch(
-                `${API_BASE_URL}/directories/${dir.id}/reindex?index_keyword=true&index_vector=true&full_rebuild=false`,
+                `${API_BASE_URL}/directories/${dir.id}/reindex?index_keyword=${indexKeyword}&index_vector=${indexVector}&full_rebuild=${fullRebuild}`,
                 {
                     method: 'POST'
                 }
