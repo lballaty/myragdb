@@ -48,12 +48,65 @@ When MyRAGDB becomes part of a larger platform ecosystem (e.g., integrated with 
 
 Rather than using generic advanced skills, consider building domain-specific skills tailored to MyRAGDB's search focus:
 
-**Example Domain Skills:**
+**Core Domain Skills:**
 - **RepositoryManagementSkill** - Add/remove/configure repositories via chat
 - **IndexManagementSkill** - Trigger reindexing, view index status
 - **SearchAnalyticsSkill** - Generate reports on search patterns, find gaps in documentation
 - **CodeRecommendationSkill** - Suggest related files/patterns based on search results
 - **DocumentationGeneratorSkill** - Generate documentation stubs from discovered code
+
+**LLM Quality & Optimization Skills:**
+
+**LocalToCloudComparisonSkill** (HIGH PRIORITY)
+- Purpose: Evaluate local LLM quality by comparing against cloud LLM
+- Workflow:
+  1. Take user query
+  2. Send to local LLM (Phi-3, Llama, etc.) and get response
+  3. Send exact same query to cloud LLM (Claude, GPT, Gemini)
+  4. Compare responses side-by-side
+  5. Generate quality analysis:
+     - Response length/complexity comparison
+     - Accuracy assessment (does cloud LLM agree?)
+     - Helpfulness evaluation
+     - Areas where local LLM could improve
+  6. Suggest improvements (better prompting, fine-tuning, model swap)
+
+- Use Cases:
+  - "Should I use local or cloud LLM for this task?"
+  - "Why is my local model's answer less helpful?"
+  - "How can I improve my local model's output quality?"
+  - Continuous evaluation of local LLM performance
+  - Cost-benefit analysis (local LLM speed vs cloud quality)
+
+- Output Format:
+  ```json
+  {
+    "query": "user's original query",
+    "local_llm_response": "...",
+    "local_llm_model": "phi-3",
+    "cloud_llm_response": "...",
+    "cloud_llm_model": "claude-opus",
+    "comparison": {
+      "response_length": {"local": 150, "cloud": 320},
+      "completeness_score": {"local": 0.7, "cloud": 0.95},
+      "accuracy_score": {"local": 0.75, "cloud": 0.98},
+      "helpfulness_score": {"local": 0.6, "cloud": 0.9}
+    },
+    "analysis": "Local model misses nuance around...",
+    "improvements": [
+      "Add specific examples in prompt",
+      "Use chain-of-thought prompting",
+      "Consider upgrading to Llama-3.1 70B variant"
+    ]
+  }
+  ```
+
+- Implementation Notes:
+  - Leverages existing `SessionManager` for LLM access
+  - Uses cloud LLM credentials already configured
+  - Can cache results for cost savings
+  - Useful for evaluating model upgrades
+  - Helps make informed decisions about local vs cloud
 
 ---
 
@@ -64,6 +117,21 @@ Rather than using generic advanced skills, consider building domain-specific ski
 Enable users to perform most MyRAGDB configuration and management tasks through the LLM Chat Tester interface, rather than only through the web UI.
 
 ### Configuration Tasks That Could Be Chat-Enabled
+
+#### LLM Quality & Performance
+```
+User: "Compare local and cloud LLM on: How do I implement OAuth?"
+Agent: Sends query to both LLMs, compares responses, provides analysis
+Output: Side-by-side comparison, quality scores, improvement suggestions
+
+User: "Should I use my local LLM for code reviews?"
+Agent: Evaluates local LLM performance on code-related queries
+Output: Performance metrics, recommendations, cost-benefit analysis
+
+User: "Why is my local model sometimes wrong?"
+Agent: Analyzes failure patterns, suggests improvements
+Output: Common mistakes, prompting techniques, model upgrade recommendations
+```
 
 #### Directory/Repository Management
 ```
@@ -115,12 +183,20 @@ Agent: Generates formatted export file
 
 If implementing Phase 2, create these MyRAGDB-specific skills:
 
+**Platform Management Skills:**
 - **RepositoryConfigurationSkill** - Manage indexed repositories
 - **DirectoryManagementSkill** - Add, remove, enable/disable directories
 - **SearchExecutionSkill** - Execute searches with filters
 - **IndexManagementSkill** - Trigger indexing, view status
 - **SystemMonitoringSkill** - Check health, view metrics
 - **ExportSkill** - Export results in various formats
+
+**LLM Quality Skills:**
+- **LocalToCloudComparisonSkill** - Compare local vs cloud LLM performance
+  - Input: Query to test on both LLMs
+  - Process: Run on local LLM, then cloud LLM, compare
+  - Output: Quality metrics, analysis, improvement suggestions
+  - High Priority: Very useful for optimizing LLM usage
 
 ---
 
