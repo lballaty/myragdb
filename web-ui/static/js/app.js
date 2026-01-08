@@ -141,6 +141,9 @@ async function restartServer() {
         });
 
         if (!response.ok) {
+            if (response.status === 503 || response.status === 502) {
+                throw new Error('Server is unavailable - restart in progress or server offline');
+            }
             throw new Error(`Restart failed: ${response.status}`);
         }
 
@@ -176,7 +179,12 @@ async function restartServer() {
         }, 3000); // Wait 3 seconds before starting checks
 
     } catch (error) {
-        addActivityLog('error', `Restart failed: ${error.message}`);
+        // If server is completely offline, suggest manual restart
+        if (error.message.includes('fetch') || error.message.includes('Failed to fetch')) {
+            addActivityLog('error', 'Server is offline. To restart, run ./start.sh from the terminal.');
+        } else {
+            addActivityLog('error', `Restart failed: ${error.message}`);
+        }
         restartButton.textContent = originalText;
         restartButton.disabled = false;
     }
