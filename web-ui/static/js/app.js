@@ -2483,10 +2483,27 @@ async function startLLM(modelId) {
             card.classList.add('running');
             card.classList.remove('stopped');
 
-            // Update button
-            button.className = 'llm-start-button running';
-            button.innerHTML = '✅ Running';
-            button.disabled = false;
+            // Replace start button with stop button
+            const actionsContainer = card.querySelector('.llm-model-actions');
+            if (actionsContainer) {
+                actionsContainer.innerHTML = `
+                    <button id="llm-stop-${modelId}" class="llm-stop-button">
+                        🛑 Stop LLM
+                    </button>
+                `;
+
+                // Re-attach event listener to new stop button
+                const newStopButton = document.getElementById(`llm-stop-${modelId}`);
+                if (newStopButton) {
+                    newStopButton.addEventListener('click', () => stopLLM(modelId));
+                }
+            }
+
+            // Hide mode selector when running
+            const modeSelector = document.getElementById(`llm-mode-selector-${modelId}`);
+            if (modeSelector) {
+                modeSelector.style.display = 'none';
+            }
 
             // Update status in card
             const statusElement = card.querySelector('.llm-model-status');
