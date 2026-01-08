@@ -4,10 +4,52 @@
 **Description:** Hybrid search system for semantic code and documentation discovery
 **Author:** Libor Ballaty <libor@arionetworks.com>
 **Created:** 2026-01-04
-**Last Updated:** 2026-01-07
+**Last Updated:** 2026-01-08
 **Last Updated By:** Libor Ballaty <libor@arionetworks.com>
 
-## What's New in This Session (2026-01-07)
+## What's New in This Session (2026-01-08)
+
+### Phase 1-2 Complete: Cloud LLM API Integration
+
+**Authentication & Credential Management:**
+- 🔐 **Secure Credential Storage**: Encrypted at `~/.myragdb/credentials.json` using Fernet symmetric encryption
+- 🔑 **API Key Authentication**: Support for Google Gemini, OpenAI ChatGPT, and Anthropic Claude
+- 🌐 **OAuth Flow**: Browser-based authentication for cloud LLM providers
+- 💻 **Device Code Flow**: CLI-based authentication with polling for headless environments
+- ✅ **Credential Validation**: Test API keys before switching providers
+
+**REST API Endpoints (6 new endpoints):**
+- `GET /llm/session` - Get current active LLM provider and session info
+- `GET /llm/providers` - List all available providers and their models
+- `POST /llm/validate-credentials` - Validate credentials before storing
+- `POST /llm/switch` - Switch active provider with credential validation
+- `GET /llm/authenticated` - List all authenticated providers for quick access
+- `POST /llm/logout/{provider}` - Revoke provider credentials
+- `GET /llm/health` - Detailed LLM-specific health check
+
+**Enhanced Health Checking:**
+- Enhanced `/health` endpoint now includes LLM component status
+- New `/llm/health` endpoint provides detailed LLM configuration and availability
+- Health status includes authenticated providers and current session info
+
+**Web UI Implementation (Phase 3.1-3.2):**
+- 🎨 **Cloud LLM Manager Tab**: Comprehensive provider management UI
+- 📋 **Provider Selection**: Three provider tabs (Gemini, ChatGPT, Claude) with capabilities display
+- 🔑 **Multiple Auth Methods**: API Key, OAuth, and Device Code authentication flows
+- 📊 **Available Models Display**: Shows model specs (context window, vision capability)
+- ⚡ **Quick Switch**: Buttons for rapidly switching between authenticated providers
+- 🏥 **Health Monitoring**: Real-time LLM health status with component breakdown
+- 📱 **Responsive Design**: Mobile-optimized Cloud LLM UI
+
+**Documentation Updates:**
+- Updated User Manual with complete API reference for all new LLM endpoints
+- Added curl examples for all six new endpoints
+- Documented all auth methods and response formats
+- Updated README with cloud LLM feature overview
+
+---
+
+## Previous Session (2026-01-07)
 
 Comprehensive enhancement session adding advanced filtering, monitoring, and observability features:
 
@@ -19,7 +61,7 @@ Comprehensive enhancement session adding advanced filtering, monitoring, and obs
 - **Web UI Advanced Filters**: New HTML5 date pickers and score input in search interface
 - **Comprehensive API Documentation**: Complete SEARCH_API_REFERENCE.md with all endpoints, examples, and usage patterns
 - **Port Alignment**: Verified all ports against port-registry.json (port 3003 for main API)
-- **Updated User Manual**: This README with extensive new sections documenting all enhancements
+- **Updated User Manual**: Extensive new sections documenting all enhancements
 
 ---
 
@@ -240,14 +282,19 @@ The web UI provides a complete interface for all features:
   - **Alert Notifications**: Real-time alerts when thresholds exceeded
   - **JSON Export**: Export all metrics and events for analysis
 
-#### **LLM Manager Tab**
-- Discover and manage local LLMs
-- Start LLMs in different modes:
-  - **Standard**: Regular text completion
-  - **Function Calling**: Tool use enabled
-  - **Context Size Testing**: Verify model context limits
-- View running LLMs and their endpoints
-- Quick access to LLM Chat Tester UI
+#### **Cloud LLM Manager Tab**
+- Switch between cloud LLM providers (Google Gemini, OpenAI ChatGPT, Anthropic Claude)
+- Multiple authentication methods:
+  - **API Key**: Enter your provider API key (encrypted storage)
+  - **OAuth**: Browser-based login for provider accounts
+  - **Device Code**: CLI-based authentication for headless environments
+- View provider capabilities:
+  - Available models with context window sizes
+  - Vision capability indicators
+  - Model performance characteristics
+- Quick-switch between authenticated providers
+- Real-time health monitoring of LLM configuration
+- Secure credential management with automatic encryption/decryption
 
 ### 2. CLI Search
 

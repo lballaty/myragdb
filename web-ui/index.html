@@ -560,6 +560,17 @@
                         >
                     </div>
 
+                    <!-- Search/Filter Input -->
+                    <div class="browser-search-container">
+                        <input
+                            type="text"
+                            id="browser-search-input"
+                            class="browser-search-input"
+                            placeholder="🔍 Search directories by name..."
+                            onkeyup="filterDirectoryTree()"
+                        >
+                    </div>
+
                     <!-- Directory Tree -->
                     <div class="directory-tree-container">
                         <div id="directory-tree" class="directory-tree">
