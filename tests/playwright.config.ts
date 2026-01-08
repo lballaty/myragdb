@@ -25,7 +25,7 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
   webServer: {
-    command: 'npm run dev',
+    command: 'python -m myragdb.api.server',
     url: 'http://localhost:3003',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,

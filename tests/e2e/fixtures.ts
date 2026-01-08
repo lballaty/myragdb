@@ -13,7 +13,7 @@ export type TestFixtures = {
 };
 
 export const test = base.extend<TestFixtures>({
-  apiBaseURL: 'http://localhost:3002',
+  apiBaseURL: 'http://localhost:3003',
   uiBaseURL: 'http://localhost:3003',
 
   apiClient: async ({ apiBaseURL }, use) => {

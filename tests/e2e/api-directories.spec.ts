@@ -7,7 +7,10 @@ import { test, expect } from '@playwright/test';
 import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:3003';
-const api = axios.create({ baseURL: API_BASE_URL });
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  validateStatus: () => true, // Don't throw on any status code
+});
 
 test.describe('Directories API @api @directories', () => {
   let testDirectoryId: number;
