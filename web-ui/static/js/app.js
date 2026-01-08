@@ -3175,7 +3175,7 @@ function renderDirectories() {
 
     const dirsHtml = sortedDirs.map(dir => {
         const enabledClass = dir.enabled ? 'enabled' : 'disabled';
-        const priorityDisplay = dir.priority > 5 ? '🔴 High' : dir.priority < 0 ? '🟡 Low' : '⚪ Normal';
+        const priorityClass = `priority-${dir.priority}`;
 
         // Calculate total files indexed
         // Take the max since files are indexed in both keyword and vector
@@ -3193,11 +3193,8 @@ function renderDirectories() {
         }
 
         const formattedSize = formatBytes(totalSizeBytes);
-        const statusBadge = dir.enabled
-            ? '<span style="background: #10b981; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.85em;">✓ Enabled</span>'
-            : '<span style="background: #ef4444; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.85em;">✗ Disabled</span>';
 
-        // Format file count badges - show indexed files with percentage
+        // Format file count badges - show both total and indexed (matching repositories)
         let fileCountBadge = '';
         if (totalFilesIndexed > 0 && dir.stats && dir.stats.length > 0) {
             fileCountBadge = `<span class="repository-badge file-count" title="Files indexed in search">${totalFilesIndexed.toLocaleString()} indexed</span>`;
@@ -3242,28 +3239,37 @@ function renderDirectories() {
         }
 
         return `
-            <div class="repository-card ${enabledClass}">
-                <div class="repository-header">
-                    <label>
-                        <input type="checkbox" class="directory-checkbox" value="${dir.id}" onchange="updateDirectorySelection()">
-                        <strong>${escapeHtml(dir.name)}</strong>
-                        <span class="repo-priority">${priorityDisplay}</span>
-                    </label>
-                </div>
-                <div class="repository-details">
-                    <p class="repo-path">📁 ${escapeHtml(dir.path)}</p>
-                    ${dir.notes ? `<p class="repo-description">📝 ${escapeHtml(dir.notes)}</p>` : ''}
-                </div>
-                <div class="repository-stats">
-                    <span>💾 ${formattedSize}</span>
-                    ${fileCountBadge}
-                    ${statusBadge}
-                </div>
-                ${indexingStatsBadges ? `<div class="repository-stats">${indexingStatsBadges}</div>` : ''}
+            <div class="repository-item">
+                <input type="checkbox"
+                       class="directory-checkbox"
+                       value="${dir.id}"
+                       id="dir-${dir.id}"
+                       ${dir.enabled ? 'checked' : ''}
+                       title="${dir.enabled ? 'Click to disable this directory' : 'Click to enable this directory'}"
+                       onchange="toggleDirectoryEnabled(${dir.id}, this.checked); updateDirectorySelection()">
+                <label for="dir-${dir.id}" class="repository-info">
+                    <div class="repository-name">
+                        ${escapeHtml(dir.name)}
+                    </div>
+                    <div class="repository-path">${escapeHtml(dir.path)}</div>
+                    <div>
+                        <span class="repository-badge ${enabledClass}">
+                            ${dir.enabled ? 'Enabled' : 'Disabled'}
+                        </span>
+                        <span class="repository-badge ${priorityClass}">
+                            ${dir.priority > 0 ? 'HIGH' : dir.priority < 0 ? 'LOW' : 'MEDIUM'}
+                        </span>
+                    </div>
+                    ${fileCountBadge || formattedSize ? `<div>
+                        ${formattedSize ? `<span class="repository-badge file-count" title="Total directory size">${formattedSize}</span>` : ''}
+                        ${fileCountBadge}
+                    </div>` : ''}
+                    ${indexingStatsBadges ? `<div>${indexingStatsBadges}</div>` : ''}
+                </label>
                 <div class="repository-actions">
-                    <button class="action-button" title="Edit" onclick="editDirectory(${dir.id})">✏️ Edit</button>
-                    <button class="action-button" title="Reindex" onclick="reindexDirectory(${dir.id})">🔄 Reindex</button>
-                    <button class="action-button danger" title="Delete" onclick="deleteDirectory(${dir.id})">🗑️ Delete</button>
+                    <button class="action-button" title="Edit directory" onclick="event.stopPropagation(); editDirectory(${dir.id})">✏️</button>
+                    <button class="action-button" title="Reindex directory" onclick="event.stopPropagation(); reindexDirectory(${dir.id})">🔄</button>
+                    <button class="action-button danger" title="Delete directory" onclick="event.stopPropagation(); deleteDirectory(${dir.id})">🗑️</button>
                 </div>
             </div>
         `;
@@ -3363,6 +3369,44 @@ async function handleAddDirectory() {
     } catch (error) {
         addActivityLog('error', `Failed to add directory: ${error.message}`);
         alert(`Failed to add directory: ${error.message}`);
+    }
+}
+
+// Toggle directory enabled status
+async function toggleDirectoryEnabled(directoryId, enabled) {
+    const directory = state.directories.find(d => d.id === directoryId);
+    if (!directory) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/directories/${directoryId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                path: directory.path,
+                name: directory.name,
+                enabled: enabled,
+                priority: directory.priority,
+                notes: directory.notes
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `HTTP ${response.status}`);
+        }
+
+        // Update local state
+        directory.enabled = enabled;
+        addActivityLog('success', `${enabled ? 'Enabled' : 'Disabled'} directory: ${directory.name}`);
+        renderDirectories();
+
+    } catch (error) {
+        addActivityLog('error', `Failed to toggle directory: ${error.message}`);
+        alert(`Failed to toggle directory: ${error.message}`);
+        // Revert checkbox on error
+        renderDirectories();
     }
 }
 
