@@ -6,7 +6,7 @@
 from typing import List, Optional
 from pathlib import Path
 import time
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from myragdb.api.models import (
     DirectoryInfo,
     DirectoryRequest,
@@ -15,6 +15,8 @@ from myragdb.api.models import (
     DirectoryBrowseInfo
 )
 from myragdb.db.file_metadata import get_metadata_db
+from myragdb.indexers.meilisearch_indexer import MeilisearchIndexer
+from myragdb.indexers.vector_indexer import VectorIndexer
 import structlog
 
 # Configure structured logging
@@ -547,7 +549,7 @@ async def delete_directory(directory_id: int):
 
 
 @router.post("/{directory_id}/reindex")
-async def reindex_directory(directory_id: int, index_keyword: bool = True, index_vector: bool = True, full_rebuild: bool = False):
+async def reindex_directory(directory_id: int, index_keyword: bool = True, index_vector: bool = True, full_rebuild: bool = False, background_tasks: BackgroundTasks = None):
     """
     Trigger re-indexing of a specific directory.
 
@@ -591,10 +593,6 @@ async def reindex_directory(directory_id: int, index_keyword: bool = True, index
                 detail="At least one index type (Keyword or Vector) must be selected"
             )
 
-        # Note: Actual indexing is handled by background tasks
-        # This endpoint just returns a success message and logs the request
-        # The UI will check /stats endpoint for indexing progress
-
         mode = "full rebuild" if full_rebuild else "incremental update"
         index_types = []
         if index_keyword:
@@ -609,6 +607,82 @@ async def reindex_directory(directory_id: int, index_keyword: bool = True, index
             index_types=index_types,
             mode=mode
         )
+
+        # If background_tasks provided, schedule the actual indexing
+        if background_tasks:
+            async def perform_indexing():
+                """Background task to perform actual directory indexing."""
+                try:
+                    directory_path = dir_data['path']
+                    incremental = not full_rebuild
+
+                    # Index with Keyword (Meilisearch)
+                    if index_keyword:
+                        try:
+                            meilisearch_indexer = MeilisearchIndexer()
+                            keyword_count = meilisearch_indexer.index_directory(
+                                directory_path=directory_path,
+                                directory_id=directory_id,
+                                incremental=incremental
+                            )
+                            logger.info(
+                                "Keyword indexing completed",
+                                directory_id=directory_id,
+                                files_indexed=keyword_count
+                            )
+                        except Exception as e:
+                            logger.error(
+                                "Keyword indexing failed",
+                                directory_id=directory_id,
+                                error=str(e),
+                                exc_info=True
+                            )
+
+                    # Index with Vector (Embeddings)
+                    if index_vector:
+                        try:
+                            vector_indexer = VectorIndexer()
+                            vector_count = vector_indexer.index_directory(
+                                directory_path=directory_path,
+                                directory_id=directory_id,
+                                incremental=incremental
+                            )
+                            logger.info(
+                                "Vector indexing completed",
+                                directory_id=directory_id,
+                                files_indexed=vector_count
+                            )
+                        except Exception as e:
+                            logger.error(
+                                "Vector indexing failed",
+                                directory_id=directory_id,
+                                error=str(e),
+                                exc_info=True
+                            )
+
+                    # Update last_indexed timestamp in database
+                    try:
+                        with db._get_connection() as conn:
+                            conn.execute(
+                                'UPDATE directories SET last_indexed = ?, updated_at = ? WHERE id = ?',
+                                (int(time.time()), int(time.time()), directory_id)
+                            )
+                            conn.commit()
+                    except Exception as e:
+                        logger.error("Failed to update last_indexed timestamp", directory_id=directory_id, error=str(e))
+
+                    logger.info("Directory indexed successfully", directory_id=directory_id)
+
+                except Exception as e:
+                    logger.error(
+                        "Background indexing task failed",
+                        directory_id=directory_id,
+                        error=str(e),
+                        exc_info=True
+                    )
+
+            # Schedule the background task
+            background_tasks.add_task(perform_indexing)
 
         return {
             "status": "started",

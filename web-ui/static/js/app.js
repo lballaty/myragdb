@@ -3168,19 +3168,68 @@ function renderDirectories() {
         const priorityDisplay = dir.priority > 5 ? '🔴 High' : dir.priority < 0 ? '🟡 Low' : '⚪ Normal';
 
         // Calculate total files indexed
+        // Take the max since files are indexed in both keyword and vector
         let totalFilesIndexed = 0;
         let totalSizeBytes = 0;
         if (dir.stats && Array.isArray(dir.stats)) {
+            totalFilesIndexed = Math.max(...dir.stats.map(stat => stat.total_files_indexed || 0));
             dir.stats.forEach(stat => {
-                totalFilesIndexed += stat.total_files_indexed || 0;
                 totalSizeBytes += stat.total_size_bytes || 0;
             });
+            // Avoid double-counting if both index types have same size
+            if (dir.stats.length > 1) {
+                totalSizeBytes = dir.stats[0].total_size_bytes || 0;
+            }
         }
 
         const formattedSize = formatBytes(totalSizeBytes);
         const statusBadge = dir.enabled
             ? '<span style="background: #10b981; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.85em;">✓ Enabled</span>'
             : '<span style="background: #ef4444; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.85em;">✗ Disabled</span>';
+
+        // Format file count badges - show indexed files with percentage
+        let fileCountBadge = '';
+        if (totalFilesIndexed > 0 && dir.stats && dir.stats.length > 0) {
+            fileCountBadge = `<span class="repository-badge file-count" title="Files indexed in search">${totalFilesIndexed.toLocaleString()} indexed</span>`;
+        }
+
+        // Format indexing time stats (matching repository display)
+        let indexingStatsBadges = '';
+        if (dir.stats && dir.stats.length > 0) {
+            const statsItems = dir.stats.map(stat => {
+                const indexType = stat.index_type === 'keyword' ? 'Keyword' : 'Vector';
+
+                // Show last reindex time if available, otherwise initial time
+                const timeSeconds = stat.last_reindex_time_seconds !== null
+                    ? stat.last_reindex_time_seconds
+                    : stat.initial_index_time_seconds;
+
+                if (timeSeconds === null || timeSeconds === 0) {
+                    return ''; // No timing data yet
+                }
+
+                // Calculate rate: files per second
+                const filesPerSec = stat.total_files_indexed / timeSeconds;
+
+                // Format time with appropriate precision
+                let timeDisplay;
+                if (timeSeconds < 0.1) {
+                    timeDisplay = `${(timeSeconds * 1000).toFixed(0)}ms`;
+                } else if (timeSeconds < 60) {
+                    timeDisplay = `${timeSeconds.toFixed(1)}s`;
+                } else {
+                    const mins = Math.floor(timeSeconds / 60);
+                    const secs = Math.floor(timeSeconds % 60);
+                    timeDisplay = `${mins}m ${secs}s`;
+                }
+
+                return `<span class="repository-badge file-count" title="${stat.index_type} indexing: ${stat.total_files_indexed} files in ${timeDisplay} (${filesPerSec.toFixed(1)} files/sec)">${indexType}: ${timeDisplay}</span>`;
+            }).filter(s => s !== '').join(' ');
+
+            if (statsItems && statsItems.trim() !== '') {
+                indexingStatsBadges = statsItems;
+            }
+        }
 
         return `
             <div class="repository-card ${enabledClass}">
@@ -3196,10 +3245,11 @@ function renderDirectories() {
                     ${dir.notes ? `<p class="repo-description">📝 ${escapeHtml(dir.notes)}</p>` : ''}
                 </div>
                 <div class="repository-stats">
-                    <span>📄 ${totalFilesIndexed} files</span>
                     <span>💾 ${formattedSize}</span>
+                    ${fileCountBadge}
                     ${statusBadge}
                 </div>
+                ${indexingStatsBadges ? `<div class="repository-stats">${indexingStatsBadges}</div>` : ''}
                 <div class="repository-actions">
                     <button class="action-button" title="Edit" onclick="editDirectory(${dir.id})">✏️ Edit</button>
                     <button class="action-button" title="Reindex" onclick="reindexDirectory(${dir.id})">🔄 Reindex</button>
