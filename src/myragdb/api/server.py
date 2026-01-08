@@ -83,6 +83,7 @@ from myragdb.watcher.repository_watcher import RepositoryWatcherManager
 from myragdb.api.routes.directories import router as directories_router
 from myragdb.api.routes.activities import router as activities_router
 from myragdb.api.routes.observability import router as observability_router
+from myragdb.api.routes.llm_config import router as llm_config_router
 from myragdb.agent.skills import (
     SkillRegistry,
     SearchSkill,
@@ -330,6 +331,9 @@ app.include_router(directories_router)
 # Register activity and observability routes
 app.include_router(activities_router)
 app.include_router(observability_router)
+
+# Register LLM configuration routes
+app.include_router(llm_config_router)
 
 # Register agent orchestration routes
 try:

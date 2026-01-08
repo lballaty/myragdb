@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.08.2.100.1">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.08.2.101.0">
     <link rel="stylesheet" href="static/css/activity-observability.css?v=2026.01.07.2.76.0">
     <link rel="stylesheet" href="static/css/cloud-llm.css?v=2026.01.08.2.83.0">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -842,12 +842,15 @@
                             <label for="auth-method-apikey">API Key</label>
                         </div>
                         <div class="auth-method-content">
-                            <input
-                                type="password"
-                                id="llm-apikey-input"
-                                placeholder="Enter your API key..."
-                                class="form-input"
-                            >
+                            <form style="margin: 0;">
+                                <input
+                                    type="password"
+                                    id="llm-apikey-input"
+                                    placeholder="Enter your API key..."
+                                    class="form-input"
+                                    autocomplete="off"
+                                >
+                            </form>
                             <div class="auth-method-help">
                                 <span>Your API key will be encrypted and stored locally at <code>~/.myragdb/credentials.json</code></span>
                             </div>
@@ -1064,6 +1067,6 @@
     <script src="static/js/activity-monitor.js?v=2026.01.07.2.76.0"></script>
     <script src="static/js/observability.js?v=2026.01.07.2.76.0"></script>
     <script src="static/js/cloud-llm.js?v=2026.01.08.2.83.0"></script>
-    <script src="static/js/app.js?v=2026.01.08.2.100.1"></script>
+    <script src="static/js/app.js?v=2026.01.08.2.101.0"></script>
 </body>
 </html>
