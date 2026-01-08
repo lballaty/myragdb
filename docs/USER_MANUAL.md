@@ -1665,6 +1665,269 @@ Get indexing status and statistics.
 curl "http://localhost:3003/index/status"
 ```
 
+#### Cloud LLM Management
+
+**GET /llm/session**
+
+Get current active cloud LLM provider and session information.
+
+```bash
+curl "http://localhost:3003/llm/session"
+```
+
+**Response (Configured):**
+```json
+{
+  "status": "configured",
+  "provider_type": "gemini",
+  "model_id": "gemini-2.0-flash",
+  "auth_method": "api_key",
+  "configured_at": "2026-01-08T12:00:00Z"
+}
+```
+
+**Response (Not Configured):**
+```json
+{
+  "status": "not_configured",
+  "provider_type": null,
+  "model_id": null,
+  "auth_method": null,
+  "configured_at": null
+}
+```
+
+**GET /llm/providers**
+
+List all available cloud LLM providers and their capabilities.
+
+```bash
+curl "http://localhost:3003/llm/providers"
+```
+
+**Response:**
+```json
+{
+  "providers": [
+    {
+      "name": "gemini",
+      "display_name": "Google Gemini",
+      "auth_methods": ["api_key"],
+      "models": [
+        {
+          "id": "gemini-2.0-flash",
+          "name": "Gemini 2.0 Flash",
+          "context_window": 1000000,
+          "vision_capable": true
+        }
+      ]
+    },
+    {
+      "name": "openai",
+      "display_name": "OpenAI ChatGPT",
+      "auth_methods": ["api_key"],
+      "models": [
+        {
+          "id": "gpt-4-turbo",
+          "name": "GPT-4 Turbo",
+          "context_window": 128000,
+          "vision_capable": true
+        }
+      ]
+    },
+    {
+      "name": "anthropic",
+      "display_name": "Anthropic Claude",
+      "auth_methods": ["api_key"],
+      "models": [
+        {
+          "id": "claude-3-opus",
+          "name": "Claude 3 Opus",
+          "context_window": 200000,
+          "vision_capable": true
+        }
+      ]
+    }
+  ],
+  "current_provider": "gemini"
+}
+```
+
+**POST /llm/validate-credentials**
+
+Validate cloud LLM API credentials before saving.
+
+```bash
+curl -X POST "http://localhost:3003/llm/validate-credentials" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "gemini",
+    "auth_method": "api_key",
+    "credentials": {
+      "api_key": "your-api-key-here"
+    }
+  }'
+```
+
+**Response (Valid):**
+```json
+{
+  "valid": true,
+  "provider": "gemini",
+  "model_id": "gemini-2.0-flash",
+  "error": null
+}
+```
+
+**Response (Invalid):**
+```json
+{
+  "valid": false,
+  "provider": "gemini",
+  "model_id": null,
+  "error": "invalid_api_key"
+}
+```
+
+**POST /llm/switch**
+
+Switch active cloud LLM provider. Validates and stores credentials securely.
+
+```bash
+curl -X POST "http://localhost:3003/llm/switch" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "gemini",
+    "auth_method": "api_key",
+    "credentials": {
+      "api_key": "your-api-key-here"
+    }
+  }'
+```
+
+**Response (Success):**
+```json
+{
+  "status": "switched",
+  "provider_type": "gemini",
+  "model_id": "gemini-2.0-flash",
+  "auth_method": "api_key",
+  "message": "Successfully switched to Gemini"
+}
+```
+
+**Response (Error):**
+```json
+{
+  "status": "error",
+  "provider_type": null,
+  "model_id": null,
+  "auth_method": null,
+  "message": "Invalid API credentials"
+}
+```
+
+**GET /llm/authenticated**
+
+List all providers with stored credentials.
+
+```bash
+curl "http://localhost:3003/llm/authenticated"
+```
+
+**Response:**
+```json
+{
+  "authenticated_providers": [
+    "gemini",
+    "openai"
+  ],
+  "total": 2
+}
+```
+
+**POST /llm/logout/{provider}**
+
+Revoke stored credentials for a provider.
+
+```bash
+curl -X POST "http://localhost:3003/llm/logout/gemini"
+```
+
+**Response:**
+```json
+{
+  "status": "logged_out",
+  "provider": "gemini",
+  "message": "Successfully logged out from Gemini",
+  "switched_to": "local"
+}
+```
+
+**GET /llm/health**
+
+Detailed cloud LLM health check and status information.
+
+```bash
+curl "http://localhost:3003/llm/health"
+```
+
+**Response (Healthy):**
+```json
+{
+  "status": "healthy",
+  "cloud_llm_available": true,
+  "current_provider": "gemini",
+  "authenticated_providers": ["gemini", "openai"],
+  "message": "Cloud LLM is configured and healthy (Provider: gemini, Model: gemini-2.0-flash)"
+}
+```
+
+**Response (Not Configured):**
+```json
+{
+  "status": "available",
+  "cloud_llm_available": false,
+  "current_provider": null,
+  "authenticated_providers": ["gemini"],
+  "message": "Cloud LLM not configured. 1 provider(s) authenticated and ready for use"
+}
+```
+
+### Health Check Endpoint
+
+**GET /health**
+
+System-wide health check including all components (Meilisearch, ChromaDB, LLM).
+
+```bash
+curl "http://localhost:3003/health"
+```
+
+**Response (Healthy):**
+```json
+{
+  "status": "healthy",
+  "message": "MyRAGDB service is healthy (Meilisearch, ChromaDB, LLM (gemini))"
+}
+```
+
+**Response (Degraded):**
+```json
+{
+  "status": "degraded",
+  "message": "MyRAGDB service degraded: LLM unavailable or expired"
+}
+```
+
+**Response (Unhealthy):**
+```json
+{
+  "status": "unhealthy",
+  "message": "MyRAGDB service unhealthy: Meilisearch unavailable"
+}
+```
+
 ### Python Client
 
 ```python
