@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadRepositories();
     loadFromLocalStorage();
     loadVersion();
+    updateLLMStatusBadge();
 });
 
 // Tab Management
@@ -70,6 +71,8 @@ function initializeTabs() {
                 renderActivityLog();
             } else if (tabName === 'directories') {
                 loadDirectories();
+            } else if (tabName === 'llm-manager') {
+                loadLLMModels();
             }
         });
     });
@@ -2635,16 +2638,8 @@ async function stopLLM(modelId) {
     }
 }
 
-// Initialize LLM Manager when tab is shown
+// Make LLM status badge clickable to navigate to LLM Manager tab
 document.addEventListener('DOMContentLoaded', () => {
-    const llmManagerTab = document.querySelector('[data-tab="llm-manager"]');
-    if (llmManagerTab) {
-        llmManagerTab.addEventListener('click', () => {
-            loadLLMModels();
-        });
-    }
-
-    // Make LLM status badge clickable to navigate to LLM Manager tab
     const llmStatusBadge = document.getElementById('llm-status-badge');
     if (llmStatusBadge) {
         llmStatusBadge.addEventListener('click', () => {
