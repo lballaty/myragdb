@@ -887,6 +887,9 @@ function updateDirectoryFilterValues() {
             filterButton.textContent = `📁 ${checkboxes.length} selected`;
         }
     }
+
+    // Persist directory selection to localStorage
+    saveToLocalStorage();
 }
 
 function renderRepositories() {
@@ -1273,6 +1276,17 @@ function initializeReindex() {
 function saveToLocalStorage() {
     try {
         localStorage.setItem('myragdb_state', JSON.stringify(state));
+
+        // Save search configuration
+        const repositoryFilter = document.getElementById('repository-filter');
+        const directoryFilterValues = document.getElementById('directory-filter-values');
+
+        if (repositoryFilter) {
+            localStorage.setItem('search_repository_filter', repositoryFilter.value);
+        }
+        if (directoryFilterValues) {
+            localStorage.setItem('search_directory_filter', directoryFilterValues.value);
+        }
     } catch (error) {
         console.error('Failed to save to localStorage:', error);
     }
@@ -1285,6 +1299,29 @@ function loadFromLocalStorage() {
             const loaded = JSON.parse(saved);
             state.activityLog = loaded.activityLog || [];
             state.stats = loaded.stats || { totalSearches: 0, responseTimes: [] };
+        }
+
+        // Restore search configuration
+        const repositoryFilter = document.getElementById('repository-filter');
+        const savedRepoFilter = localStorage.getItem('search_repository_filter');
+        if (repositoryFilter && savedRepoFilter !== null) {
+            repositoryFilter.value = savedRepoFilter;
+        }
+
+        // Restore directory selections
+        const directoryFilterValues = document.getElementById('directory-filter-values');
+        const savedDirFilter = localStorage.getItem('search_directory_filter');
+        if (savedDirFilter) {
+            directoryFilterValues.value = savedDirFilter;
+
+            // Check the directory checkboxes that were previously selected
+            const selectedDirIds = savedDirFilter.split(',').map(id => id.trim());
+            document.querySelectorAll('.directory-filter-checkbox').forEach(checkbox => {
+                checkbox.checked = selectedDirIds.includes(checkbox.value);
+            });
+
+            // Update the button text to reflect selected count
+            updateDirectoryFilterValues();
         }
     } catch (error) {
         console.error('Failed to load from localStorage:', error);
