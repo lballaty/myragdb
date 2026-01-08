@@ -771,7 +771,11 @@ async def discover_repositories(request: DiscoverRequest):
                 modified_date=repo.modified_date,
                 git_remote_url=repo.git_remote_url,
                 clone_group=repo.clone_group,
-                excluded=excluded
+                excluded=excluded,
+                is_nested=repo.is_nested,
+                parent_repository_path=repo.parent_repository_path,
+                parent_repository_name=repo.parent_repository_name,
+                nesting_depth=repo.nesting_depth
             ))
 
         return DiscoverResponse(

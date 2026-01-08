@@ -1,0 +1,498 @@
+{
+  "description": "Test categorization and metadata for MyRAGDB regression test suite",
+  "categories": {
+    "executionSpeed": {
+      "@smoke": {
+        "description": "Fast critical tests - should complete in <5 seconds",
+        "duration": "5-10 minutes total",
+        "purpose": "Verify critical paths work",
+        "frequency": "After every code change"
+      },
+      "@fast": {
+        "description": "Quick tests - should complete in <30 seconds each",
+        "duration": "20-30 minutes total",
+        "purpose": "Quick regression check",
+        "frequency": "Before git push"
+      },
+      "@slow": {
+        "description": "Long-running tests - >30 seconds each",
+        "duration": "Variable (30+ minutes)",
+        "purpose": "Comprehensive testing",
+        "frequency": "Before release"
+      }
+    },
+    "scope": {
+      "@unit": {
+        "description": "Single component tests",
+        "isolates": "Individual component behavior",
+        "mocking": "Mocked dependencies"
+      },
+      "@integration": {
+        "description": "Multiple component interaction",
+        "isolates": "Component interactions",
+        "mocking": "Minimal mocking"
+      },
+      "@e2e": {
+        "description": "Full system workflows",
+        "isolates": "Complete system behavior",
+        "mocking": "No mocking"
+      },
+      "@critical": {
+        "description": "Must pass before release",
+        "priority": "Highest",
+        "mustPass": true
+      }
+    },
+    "featureArea": {
+      "@api": {
+        "description": "Backend API tests",
+        "tested": [
+          "Search API",
+          "Skill API",
+          "Template API",
+          "Directory API"
+        ]
+      },
+      "@ui": {
+        "description": "Frontend UI tests",
+        "tested": [
+          "Navigation",
+          "Repository management",
+          "Directory management",
+          "Search interface",
+          "Workflow builder"
+        ]
+      },
+      "@search": {
+        "description": "Search functionality",
+        "tested": [
+          "Keyword search (Meilisearch)",
+          "Semantic search (ChromaDB)",
+          "Hybrid search (combined)",
+          "Search filters",
+          "Result ranking"
+        ]
+      },
+      "@workflow": {
+        "description": "Workflow execution",
+        "tested": [
+          "Simple workflows",
+          "Multi-step workflows",
+          "Skill chaining",
+          "Parameter handling"
+        ]
+      },
+      "@indexing": {
+        "description": "File indexing operations",
+        "tested": [
+          "Repository indexing",
+          "Directory indexing",
+          "Incremental updates",
+          "Index performance"
+        ]
+      },
+      "@repository": {
+        "description": "Repository management",
+        "tested": [
+          "Repository discovery",
+          "Enable/disable repos",
+          "Repository statistics",
+          "Nested repositories"
+        ]
+      },
+      "@directory": {
+        "description": "Directory management",
+        "tested": [
+          "Add directories",
+          "Remove directories",
+          "Directory indexing",
+          "Directory statistics"
+        ]
+      },
+      "@skill": {
+        "description": "Skill execution",
+        "tested": [
+          "Skill listing",
+          "Skill execution",
+          "Parameter validation",
+          "Result handling"
+        ]
+      },
+      "@template": {
+        "description": "Template operations",
+        "tested": [
+          "Template creation",
+          "Template execution",
+          "Template management",
+          "Template versioning"
+        ]
+      },
+      "@chat": {
+        "description": "Chat interface and LLM configuration",
+        "tested": [
+          "Main dashboard tabs (Search, Activity, Repositories, Directories, Observability, LLM Manager)",
+          "LLM provider configuration (Gemini, OpenAI, Anthropic)",
+          "Chat interface (message input, send, display)",
+          "Model selection and connection",
+          "Token counting and context management",
+          "Tool calling and function execution",
+          "Message formatting (user, assistant, system)",
+          "Clear chat and context compression",
+          "Error handling and status display"
+        ]
+      },
+      "@dashboard": {
+        "description": "Main dashboard components",
+        "tested": [
+          "Tab navigation",
+          "Repository management tab",
+          "Directory management tab",
+          "Activity monitoring tab",
+          "Observability metrics tab",
+          "LLM configuration tab",
+          "Search functionality tab"
+        ]
+      },
+      "@llm-manager": {
+        "description": "LLM provider management",
+        "tested": [
+          "Google Gemini configuration",
+          "OpenAI ChatGPT configuration",
+          "Anthropic Claude configuration",
+          "API key input and validation",
+          "Model selection",
+          "Connection testing",
+          "Configuration persistence",
+          "Error handling"
+        ]
+      },
+      "@observability": {
+        "description": "System observability and monitoring",
+        "tested": [
+          "Statistics display",
+          "Database metrics",
+          "Recent errors table",
+          "Indexing events table",
+          "Performance metrics",
+          "Status indicators"
+        ]
+      },
+      "@activity": {
+        "description": "Activity monitoring and logging",
+        "tested": [
+          "UI activity logs",
+          "Server logs",
+          "Log filtering",
+          "Log clearing",
+          "Log export",
+          "Real-time updates"
+        ]
+      }
+    },
+    "type": {
+      "@smoke": {
+        "description": "Smoke/sanity tests",
+        "verifies": "Core functionality works",
+        "priority": "Critical"
+      },
+      "@regression": {
+        "description": "Regression prevention tests",
+        "verifies": "Previously fixed bugs don't return",
+        "priority": "High"
+      },
+      "@performance": {
+        "description": "Performance benchmarks",
+        "verifies": "Response times meet targets",
+        "priority": "Medium"
+      },
+      "@compatibility": {
+        "description": "Browser/OS compatibility",
+        "verifies": "Works across browsers",
+        "priority": "Medium"
+      }
+    }
+  },
+  "testSuites": {
+    "smokeTests": {
+      "name": "Smoke Tests",
+      "tags": ["@smoke"],
+      "duration": "5-10 minutes",
+      "description": "Quick verification of critical functionality",
+      "command": "npm test -- --grep '@smoke'",
+      "frequency": "After every change"
+    },
+    "fastRegression": {
+      "name": "Fast Regression",
+      "tags": ["@fast"],
+      "duration": "20-30 minutes",
+      "description": "Quick full regression test",
+      "command": "npm test -- --grep '@fast'",
+      "frequency": "Before push"
+    },
+    "apiTests": {
+      "name": "API Tests",
+      "tags": ["@api"],
+      "duration": "15-25 minutes",
+      "description": "Backend API functionality",
+      "command": "npm test -- --grep '@api'",
+      "frequency": "For API changes"
+    },
+    "uiTests": {
+      "name": "UI Tests",
+      "tags": ["@ui"],
+      "duration": "15-25 minutes",
+      "description": "Frontend UI functionality",
+      "command": "npm test -- --grep '@ui'",
+      "frequency": "For UI changes"
+    },
+    "searchTests": {
+      "name": "Search Tests",
+      "tags": ["@search"],
+      "duration": "20-30 minutes",
+      "description": "Search functionality",
+      "command": "npm test -- --grep '@search'",
+      "frequency": "For search changes"
+    },
+    "integrationTests": {
+      "name": "Integration Tests",
+      "tags": ["@integration"],
+      "duration": "30-45 minutes",
+      "description": "Multi-component workflows",
+      "command": "npm test -- --grep '@integration'",
+      "frequency": "Before integration PRs"
+    },
+    "fullRegression": {
+      "name": "Full Regression",
+      "tags": ["all"],
+      "duration": "60-120 minutes",
+      "description": "Complete test suite",
+      "command": "npm test",
+      "frequency": "Before release"
+    },
+    "chatTests": {
+      "name": "Chat Page Tests",
+      "tags": ["@chat"],
+      "duration": "25-35 minutes",
+      "description": "Dashboard tabs and chat interface testing",
+      "command": "npm test -- --grep '@chat'",
+      "frequency": "For chat/LLM configuration changes"
+    },
+    "dashboardTests": {
+      "name": "Dashboard Tests",
+      "tags": ["@dashboard"],
+      "duration": "20-30 minutes",
+      "description": "Main dashboard tab and component testing",
+      "command": "npm test -- --grep '@dashboard'",
+      "frequency": "For dashboard UI changes"
+    }
+  },
+  "testFiles": {
+    "apiSearch": {
+      "file": "api-search.spec.ts",
+      "tags": ["@api", "@search", "@integration"],
+      "tests": [
+        "Hybrid search with keyword and semantic",
+        "Search with repository filter",
+        "Search with date range filter",
+        "Search result ranking",
+        "Search performance < 300ms"
+      ]
+    },
+    "apiExecution": {
+      "file": "api-execution.spec.ts",
+      "tags": ["@api", "@workflow", "@integration"],
+      "tests": [
+        "Skill execution with parameters",
+        "Workflow execution",
+        "Error handling in execution",
+        "Result persistence"
+      ]
+    },
+    "apiSkills": {
+      "file": "api-skills.spec.ts",
+      "tags": ["@api", "@skill"],
+      "tests": [
+        "List available skills",
+        "Get skill metadata",
+        "Validate skill parameters",
+        "Execute skill"
+      ]
+    },
+    "apiTemplates": {
+      "file": "api-templates.spec.ts",
+      "tags": ["@api", "@template"],
+      "tests": [
+        "Create template",
+        "List templates",
+        "Execute template",
+        "Update template",
+        "Delete template"
+      ]
+    },
+    "apiDirectories": {
+      "file": "api-directories.spec.ts",
+      "tags": ["@api", "@directory"],
+      "tests": [
+        "Add directory",
+        "List directories",
+        "Get directory stats",
+        "Update directory",
+        "Delete directory"
+      ]
+    },
+    "apiOrchestrator": {
+      "file": "api-orchestrator.spec.ts",
+      "tags": ["@api", "@integration", "@workflow"],
+      "tests": [
+        "Multi-step workflow execution",
+        "Skill chaining",
+        "Data flow between skills",
+        "Complex scheduling"
+      ]
+    },
+    "uiNavigation": {
+      "file": "ui-navigation.spec.ts",
+      "tags": ["@ui", "@smoke", "@fast"],
+      "tests": [
+        "Home page loads",
+        "Navigation elements present",
+        "Page responsiveness",
+        "Back/forward navigation",
+        "Refresh handling"
+      ]
+    },
+    "uiRepositoryManagement": {
+      "file": "ui-repository-management.spec.ts",
+      "tags": ["@ui", "@repository", "@fast"],
+      "tests": [
+        "Display repository list",
+        "Enable/disable repository",
+        "Update settings",
+        "View statistics",
+        "Indexing indicator"
+      ]
+    },
+    "uiDirectories": {
+      "file": "ui-directories.spec.ts",
+      "tags": ["@ui", "@directory", "@fast"],
+      "tests": [
+        "Add new directory",
+        "Display directory list",
+        "Enable/disable directory",
+        "Update settings",
+        "File counts",
+        "Indexing status"
+      ]
+    },
+    "uiSearchWorkflow": {
+      "file": "ui-search-workflow.spec.ts",
+      "tags": ["@ui", "@search", "@workflow"],
+      "tests": [
+        "Search input interaction",
+        "Result display",
+        "Filter application",
+        "Result sorting",
+        "Pagination"
+      ]
+    },
+    "uiChat": {
+      "file": "ui-chat.spec.ts",
+      "tags": ["@ui", "@chat", "@slow", "@interaction"],
+      "tests": [
+        "Dashboard tab navigation (6 tabs: Search, Activity Monitor, Repositories, Directories, Observability, LLM Manager)",
+        "LLM Manager provider configuration (Gemini, OpenAI, Anthropic)",
+        "LLM provider tab switching",
+        "API key input and validation",
+        "Model selection dropdown",
+        "Test Connection button functionality",
+        "Repository list display and management (enable/disable, delete, settings)",
+        "Directory list display and management (add, enable/disable, delete, settings)",
+        "Activity Monitor UI and Server Logs tabs",
+        "Observability statistics and metrics display",
+        "Recent Errors and Indexing Events tables",
+        "Search tab functionality",
+        "Chat Tester page - Model selection and connection",
+        "Chat interface - Message input, display, send",
+        "Message formatting (user, assistant, system roles)",
+        "Token counter and context window display",
+        "Tool calling and function display",
+        "Tool results display",
+        "Clear Chat functionality",
+        "Compress Context functionality",
+        "Error handling and status display",
+        "Connection status indicators",
+        "Responsive design (mobile, tablet, desktop)",
+        "Accessibility - ARIA labels and keyboard navigation",
+        "State persistence (selected model, chat history, configuration)",
+        "Complete workflow tests (tab navigation, model selection, message input)"
+      ]
+    }
+  },
+  "runPatterns": {
+    "beforeCommit": {
+      "description": "Run before committing changes",
+      "tags": ["@smoke"],
+      "duration": "5-10 minutes",
+      "purpose": "Catch obvious breakage"
+    },
+    "beforePush": {
+      "description": "Run before pushing to remote",
+      "tags": ["@fast"],
+      "duration": "20-30 minutes",
+      "purpose": "Catch regressions early"
+    },
+    "beforePullRequest": {
+      "description": "Run before creating pull request",
+      "tags": ["all"],
+      "duration": "60-120 minutes",
+      "purpose": "Comprehensive testing"
+    },
+    "beforeRelease": {
+      "description": "Run before deploying to production",
+      "tags": ["all"],
+      "duration": "60-120 minutes",
+      "purpose": "Verify release readiness"
+    },
+    "nightly": {
+      "description": "Automated nightly testing",
+      "tags": ["all"],
+      "duration": "60-120 minutes",
+      "purpose": "Catch overnight regressions"
+    },
+    "ciPipeline": {
+      "description": "Automated testing in CI/CD",
+      "stages": {
+        "onPush": {
+          "tests": ["@smoke"],
+          "duration": "5-10 minutes"
+        },
+        "onPullRequest": {
+          "tests": ["@fast"],
+          "duration": "20-30 minutes"
+        },
+        "beforeMerge": {
+          "tests": ["all"],
+          "duration": "60-120 minutes"
+        }
+      }
+    }
+  },
+  "performanceTargets": {
+    "apiResponseTime": {
+      "searchRequest": "<300ms",
+      "skillExecution": "<1000ms",
+      "templateOperation": "<500ms",
+      "directoryOperation": "<500ms"
+    },
+    "uiResponseTime": {
+      "pageLoad": "<2s",
+      "searchResultDisplay": "<1s",
+      "navigationTransition": "<500ms"
+    },
+    "testExecutionTime": {
+      "smokeTest": "<5s each",
+      "fastTest": "<30s each",
+      "fullSuite": "<120 minutes"
+    }
+  }
+}

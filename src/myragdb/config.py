@@ -33,7 +33,8 @@ class RepositoryConfig(BaseModel):
     Configuration for a single repository to be indexed.
 
     Business Purpose: Defines what and how to index from each repository,
-    allowing fine-grained control over indexing behavior.
+    allowing fine-grained control over indexing behavior. Also tracks nesting
+    relationships when repositories are nested within others.
 
     Example:
         repo = RepositoryConfig(
@@ -51,6 +52,8 @@ class RepositoryConfig(BaseModel):
     excluded: bool = False
     auto_reindex: bool = True  # Enable automatic reindexing when file changes detected
     file_patterns: FilePatterns = Field(default_factory=FilePatterns)
+    is_nested: Optional[bool] = None
+    parent_repository: Optional[str] = None
 
     @validator('path')
     def validate_path_exists(cls, v, values):

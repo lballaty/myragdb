@@ -1334,7 +1334,7 @@ function initializeDiscovery() {
         paginationPrev.addEventListener('click', () => {
             if (state.discoveryPagination.currentPage > 1) {
                 state.discoveryPagination.currentPage--;
-                renderDiscoveredRepos();
+                renderDiscoveredReposWithCurrentView();
             }
         });
     }
@@ -1343,8 +1343,37 @@ function initializeDiscovery() {
         paginationNext.addEventListener('click', () => {
             if (state.discoveryPagination.currentPage < state.discoveryPagination.totalPages) {
                 state.discoveryPagination.currentPage++;
-                renderDiscoveredRepos();
+                renderDiscoveredReposWithCurrentView();
             }
+        });
+    }
+
+    // Initialize view mode toggle and localStorage persistence
+    const viewToggleButton = document.getElementById('discovery-view-toggle');
+    const nestingFilterSelect = document.getElementById('discovery-nesting-filter');
+
+    // Restore view mode from localStorage
+    const savedViewMode = localStorage.getItem('discovery_view_mode') || 'card';
+    state.discoveryViewMode = savedViewMode;
+    if (viewToggleButton) {
+        updateViewToggleButton(viewToggleButton);
+        viewToggleButton.addEventListener('click', () => {
+            state.discoveryViewMode = state.discoveryViewMode === 'card' ? 'tree' : 'card';
+            localStorage.setItem('discovery_view_mode', state.discoveryViewMode);
+            updateViewToggleButton(viewToggleButton);
+            renderDiscoveredReposWithCurrentView();
+        });
+    }
+
+    // Restore nesting filter from localStorage
+    const savedNestingFilter = localStorage.getItem('discovery_nesting_filter') || 'all';
+    state.discoveryNestingFilter = savedNestingFilter;
+    if (nestingFilterSelect) {
+        nestingFilterSelect.value = savedNestingFilter;
+        nestingFilterSelect.addEventListener('change', () => {
+            state.discoveryNestingFilter = nestingFilterSelect.value;
+            localStorage.setItem('discovery_nesting_filter', state.discoveryNestingFilter);
+            applyDiscoveryFilters();
         });
     }
 }
@@ -1436,6 +1465,11 @@ function applyDiscoveryFilters() {
             return false;
         }
 
+        // Nesting filter
+        const nestingFilter = state.discoveryNestingFilter || 'all';
+        if (nestingFilter === 'top-level' && repo.is_nested) return false;
+        if (nestingFilter === 'nested' && !repo.is_nested) return false;
+
         // Date filters
         if (repo.created_date) {
             const repoCreatedDate = new Date(repo.created_date).toISOString().split('T')[0];
@@ -1470,7 +1504,7 @@ function applyDiscoveryFilters() {
     // Store filtered repos in state
     state.filteredDiscoveredRepos = filtered;
 
-    renderDiscoveredRepos();
+    renderDiscoveredReposWithCurrentView();
 }
 
 function renderDiscoveredRepos() {
@@ -1509,6 +1543,7 @@ function renderDiscoveredRepos() {
         let badgeText = isNew ? 'NEW' : 'INDEXED';
         let excludedBadge = '';
         let cloneBadge = '';
+        let nestedBadge = '';
 
         if (isExcluded) {
             excludedBadge = '<span class="badge excluded">🔒 EXCLUDED</span>';
@@ -1520,6 +1555,11 @@ function renderDiscoveredRepos() {
             if (cloneCount > 1) {
                 cloneBadge = `<span class="badge clone" title="${cloneCount} clones detected for ${repo.clone_group}">📋 ${cloneCount} CLONES</span>`;
             }
+        }
+
+        // Nested repository detection
+        if (repo.is_nested && repo.parent_repository_name) {
+            nestedBadge = `<span class="badge nested" title="Nested in ${escapeHtml(repo.parent_repository_name)} (depth: ${repo.nesting_depth})">🔗 NESTED</span>`;
         }
 
         const checkboxHtml = `<input type="checkbox" class="repo-discovery-checkbox" ${isNew ? '' : 'disabled'} data-repo-path="${escapeHtml(repo.path)}">`;
@@ -1566,6 +1606,7 @@ function renderDiscoveredRepos() {
                             <span class="badge ${badgeClass}">${badgeText}</span>
                             ${excludedBadge}
                             ${cloneBadge}
+                            ${nestedBadge}
                             ${priorityHtml}
                         </div>
                         <div class="repo-card-actions">
@@ -1597,6 +1638,118 @@ function updatePaginationInfo(start, end, total) {
 
     if (nextButton) {
         nextButton.disabled = state.discoveryPagination.currentPage === state.discoveryPagination.totalPages;
+    }
+}
+
+function renderDiscoveredReposTreeView() {
+    const container = document.getElementById('discovered-repos-container');
+    const filtered = state.filteredDiscoveredRepos || state.discoveredRepos;
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<div style="color: var(--text-muted); padding: 2rem; text-align: center;">No repositories match the current filters.</div>';
+        updatePaginationInfo(0, 0, 0);
+        return;
+    }
+
+    // Build hierarchy: map of parent paths to children
+    const rootRepos = [];
+    const nestedMap = {};
+
+    filtered.forEach(repo => {
+        if (!repo.is_nested) {
+            rootRepos.push(repo);
+        } else {
+            const parentPath = repo.parent_repository_path;
+            if (!nestedMap[parentPath]) {
+                nestedMap[parentPath] = [];
+            }
+            nestedMap[parentPath].push(repo);
+        }
+    });
+
+    // Sort root repos by name
+    rootRepos.sort((a, b) => a.name.localeCompare(b.name));
+
+    const renderTreeItem = (repo, indent = 0, isLast = true) => {
+        const isNew = !repo.is_already_indexed;
+        const isExcluded = repo.excluded || false;
+        const children = nestedMap[repo.path] || [];
+        const hasChildren = children.length > 0;
+
+        const connectorClass = isLast ? 'tree-connector-end' : 'tree-connector';
+        const indentStyle = `style="padding-left: ${indent * 20}px"`;
+
+        let badgeClass = isNew ? 'new' : 'indexed';
+        let badgeText = isNew ? 'NEW' : 'INDEXED';
+        let statusBadges = `<span class="badge ${badgeClass}">${badgeText}</span>`;
+
+        if (isExcluded) {
+            statusBadges += '<span class="badge excluded">🔒 EXCLUDED</span>';
+        }
+
+        let html = `
+            <div class="tree-item" ${indentStyle}>
+                <div class="tree-connector ${connectorClass}"></div>
+                <div class="tree-node">
+                    <span class="tree-expander ${hasChildren ? 'has-children' : ''}" onclick="toggleTreeNode(event, '${escapeHtml(repo.path)}')">
+                        ${hasChildren ? '▶' : '•'}
+                    </span>
+                    <span class="tree-repo-name">${escapeHtml(repo.name)}</span>
+                    <div class="tree-badges">
+                        ${statusBadges}
+                    </div>
+                </div>
+                <div class="tree-path">${escapeHtml(repo.path)}</div>
+        `;
+
+        if (hasChildren) {
+            html += `<div class="tree-children" id="children-${escapeHtml(repo.path)}">`;
+            children.sort((a, b) => a.name.localeCompare(b.name)).forEach((child, idx) => {
+                html += renderTreeItem(child, indent + 1, idx === children.length - 1);
+            });
+            html += '</div>';
+        }
+
+        html += '</div>';
+        return html;
+    };
+
+    const treeHtml = rootRepos.map((repo, idx) => {
+        return renderTreeItem(repo, 0, idx === rootRepos.length - 1);
+    }).join('');
+
+    container.innerHTML = treeHtml;
+    updatePaginationInfo(1, filtered.length, filtered.length);
+    updateAddSelectedButton();
+}
+
+function toggleTreeNode(event, repoPath) {
+    event.stopPropagation();
+    const childrenDiv = document.getElementById(`children-${escapeHtml(repoPath)}`);
+    const expander = event.target;
+
+    if (childrenDiv) {
+        const isHidden = childrenDiv.style.display === 'none';
+        childrenDiv.style.display = isHidden ? 'block' : 'none';
+        expander.textContent = isHidden ? '▼' : '▶';
+    }
+}
+
+function updateViewToggleButton(button) {
+    if (state.discoveryViewMode === 'tree') {
+        button.textContent = '🔲 Card View | 🌲 Tree View';
+        button.classList.add('active-tree');
+    } else {
+        button.textContent = '🔲 Card View | 🌲 Tree View';
+        button.classList.remove('active-tree');
+    }
+}
+
+function renderDiscoveredReposWithCurrentView() {
+    if (state.discoveryViewMode === 'tree') {
+        renderDiscoveredReposTreeView();
+    } else {
+        renderDiscoveredRepos();
     }
 }
 

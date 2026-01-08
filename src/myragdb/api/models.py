@@ -668,6 +668,7 @@ class DiscoveredRepositoryItem(BaseModel):
 
     Business Purpose: Represents a git repository found during directory scanning.
     Includes clone detection to identify multiple copies of the same repository.
+    Also tracks nesting relationships when repositories are nested within others.
     """
     name: str = Field(..., description="Repository name (directory name)")
     path: str = Field(..., description="Absolute path to repository")
@@ -677,6 +678,10 @@ class DiscoveredRepositoryItem(BaseModel):
     git_remote_url: Optional[str] = Field(None, description="Git remote origin URL")
     clone_group: Optional[str] = Field(None, description="Normalized clone identifier (e.g., 'github.com/user/repo')")
     excluded: bool = Field(False, description="Whether repository is excluded from indexing (locked)")
+    is_nested: bool = Field(False, description="Whether this repository is nested within another repository")
+    parent_repository_path: Optional[str] = Field(None, description="Path of parent repository if nested")
+    parent_repository_name: Optional[str] = Field(None, description="Name of parent repository if nested")
+    nesting_depth: int = Field(0, description="Depth of nesting (1 = direct child, 2 = grandchild, etc.)")
 
     class Config:
         json_schema_extra = {

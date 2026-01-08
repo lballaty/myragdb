@@ -18,7 +18,7 @@ class DiscoveredRepository:
 
     Business Purpose: Contains information about a git repository found during
     directory scanning, ready to be added to the repositories configuration.
-    Also detects clones by analyzing git remote URLs.
+    Also detects clones by analyzing git remote URLs and nested relationships.
 
     Example:
         repo = DiscoveredRepository(
@@ -28,7 +28,8 @@ class DiscoveredRepository:
             created_date="2024-01-15T10:30:00",
             modified_date="2026-01-05T12:00:00",
             git_remote_url="https://github.com/user/MyProject.git",
-            clone_group="github.com/user/MyProject"
+            clone_group="github.com/user/MyProject",
+            is_nested=False
         )
     """
     name: str
@@ -39,6 +40,10 @@ class DiscoveredRepository:
     modified_date: Optional[str] = None
     git_remote_url: Optional[str] = None
     clone_group: Optional[str] = None
+    is_nested: bool = False
+    parent_repository_path: Optional[str] = None
+    parent_repository_name: Optional[str] = None
+    nesting_depth: int = 0
 
 
 class RepositoryDiscovery:
@@ -152,6 +157,56 @@ class RepositoryDiscovery:
             # If git command fails or any error occurs, return None
             return None, None
 
+    def _detect_nesting(self, repositories: List[DiscoveredRepository]) -> List[DiscoveredRepository]:
+        """
+        Detect parent-child relationships between repositories.
+
+        Business Purpose: Identifies when repositories are nested within other
+        repositories, allowing the system to show hierarchical structure and
+        understand containment relationships.
+
+        Args:
+            repositories: List of discovered repositories to analyze
+
+        Returns:
+            List of repositories with nesting information populated
+
+        Example:
+            repos = self.scan_directory("/path/to/repos")
+            repos = self._detect_nesting(repos)
+            for repo in repos:
+                if repo.is_nested:
+                    print(f"{repo.name} is nested in {repo.parent_repository_name}")
+        """
+        if not repositories:
+            return repositories
+
+        # Sort by path length (shortest paths = potential parents first)
+        sorted_repos = sorted(repositories, key=lambda r: len(Path(r.path).parts))
+
+        # For each repository, check if it's contained within any earlier repository
+        for i, repo in enumerate(sorted_repos):
+            repo_path = Path(repo.path)
+
+            # Check all earlier (potential parent) repositories
+            for potential_parent in sorted_repos[:i]:
+                parent_path = Path(potential_parent.path)
+
+                try:
+                    # Check if this repo is a subdirectory of the potential parent
+                    repo_path.relative_to(parent_path)
+                    # If we get here without exception, this repo is nested in parent
+                    repo.is_nested = True
+                    repo.parent_repository_path = potential_parent.path
+                    repo.parent_repository_name = potential_parent.name
+                    repo.nesting_depth = len(repo_path.parts) - len(parent_path.parts)
+                    break  # Found immediate parent, stop checking
+                except ValueError:
+                    # Not a subdirectory of this parent, continue checking
+                    continue
+
+        return sorted_repos
+
     def scan_directory(
         self,
         root_path: str,
@@ -252,19 +307,23 @@ class RepositoryDiscovery:
                     git_remote_url=git_remote_url,
                     clone_group=clone_group
                 ))
-                # Don't recurse into git repositories, unless it's the root (depth=0)
-                # This allows finding nested repositories in a parent git repository
-                if depth > 0:
-                    dirnames.clear()
-                    continue
+                # Continue recursion into git repositories to find nested repositories
+                # Don't skip scanning just because we found a git repo
 
             # Filter out excluded directories
+            # Use selective exclusion for hidden directories instead of blanket exclusion
+            hidden_exclude = {
+                '.Trash', '.cache', '.config', '.npm', '.local',
+                '.vscode', '.atom', '.idea', '.docker', '.kube',
+                '.ssh', '.gnupg', '.cups'
+            }
             dirnames[:] = [
                 d for d in dirnames
-                if d not in exclude_patterns and not d.startswith('.')
+                if d not in exclude_patterns and d not in hidden_exclude
             ]
 
-        return discovered
+        # Detect nesting relationships before returning
+        return self._detect_nesting(discovered)
 
     def get_default_file_patterns(self) -> Dict:
         """
@@ -390,13 +449,20 @@ class RepositoryDiscovery:
         added = 0
         for repo in discovered_repos:
             if repo.path not in existing_paths:
-                config['repositories'].append({
+                repo_entry = {
                     'name': repo.name,
                     'path': repo.path,
                     'enabled': enabled,
                     'priority': priority,
                     'file_patterns': default_patterns
-                })
+                }
+
+                # Add nesting information if applicable
+                if repo.is_nested:
+                    repo_entry['is_nested'] = repo.is_nested
+                    repo_entry['parent_repository'] = repo.parent_repository_name
+
+                config['repositories'].append(repo_entry)
                 added += 1
                 print(f"Added repository: {repo.name} ({repo.path})")
             else:

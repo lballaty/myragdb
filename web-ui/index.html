@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.08.2.90.1">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.08.2.91.0">
     <link rel="stylesheet" href="static/css/activity-observability.css?v=2026.01.07.2.76.0">
     <link rel="stylesheet" href="static/css/cloud-llm.css?v=2026.01.08.2.83.0">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -279,6 +279,19 @@
                             <span>Modified Before</span>
                             <input type="date" id="filter-modified-before" placeholder="YYYY-MM-DD">
                         </label>
+                        <label>
+                            <span>Nesting Filter</span>
+                            <select id="discovery-nesting-filter">
+                                <option value="all">All Repositories</option>
+                                <option value="top-level">Top-Level Only</option>
+                                <option value="nested">Nested Only</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <!-- View Mode Toggle -->
+                    <div class="view-mode-section">
+                        <button id="discovery-view-toggle" class="secondary-button">🔲 Card View | 🌲 Tree View</button>
                     </div>
 
                     <!-- Bulk Actions -->
@@ -1031,6 +1044,6 @@
     <script src="static/js/activity-monitor.js?v=2026.01.07.2.76.0"></script>
     <script src="static/js/observability.js?v=2026.01.07.2.76.0"></script>
     <script src="static/js/cloud-llm.js?v=2026.01.08.2.83.0"></script>
-    <script src="static/js/app.js?v=2026.01.08.2.90.1"></script>
+    <script src="static/js/app.js?v=2026.01.08.2.91.0"></script>
 </body>
 </html>

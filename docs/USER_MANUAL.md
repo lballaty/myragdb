@@ -740,8 +740,19 @@ repositories:
    - **Exclude Patterns**: Directories to skip
 4. Click "Scan Now"
 5. Review discovered repositories
-6. Select repositories to add
-7. Click "Add Selected Repositories"
+6. Filter and view results:
+   - **Nesting Filter**: Show all repositories, top-level only, or nested only
+   - **View Mode Toggle**: Switch between card view (with badges) and tree view (hierarchical)
+   - **Card View**: Shows nested repositories with purple 🔗 NESTED badge indicating parent repository
+   - **Tree View**: Shows repositories in hierarchical tree structure with expandable parent-child relationships
+7. Select repositories to add
+8. Click "Add Selected Repositories"
+
+**Nested Repository Detection:**
+- Automatically detects when repositories are nested within other repositories
+- Nested repositories are marked with the 🔗 NESTED badge in card view
+- Parent repository information is preserved and can be used for organizational purposes
+- Use the nesting filter to focus on top-level repositories or discover nested ones
 
 **Method 3: API**
 
