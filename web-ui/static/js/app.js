@@ -114,7 +114,7 @@ async function checkHealthStatus() {
         indicator.classList.add('offline');
         statusText.textContent = 'Service Offline';
         statusText.title = 'Cannot connect to server';
-        restartButton.style.display = 'none';
+        restartButton.style.display = 'inline-block';
         addActivityLog('error', `Health check failed: ${error.message}`);
     }
 }
