@@ -1,0 +1,641 @@
+/* File: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/myragdb/web-ui/static/css/cloud-llm.css
+   Description: CSS styles for cloud LLM provider management UI
+   Author: Libor Ballaty <libor@arionetworks.com>
+   Created: 2026-01-08 */
+
+/* ============================================================================
+   LLM Manager Section
+   ============================================================================ */
+
+.llm-manager-section {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.llm-manager-section h3 {
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.llm-manager-section h4 {
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+/* ============================================================================
+   Current Session Display
+   ============================================================================ */
+
+.llm-current-session {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.llm-session-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.llm-session-status {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.llm-session-status .status-indicator {
+    display: inline-block;
+    font-size: 1.5rem;
+    animation: pulse 2s infinite;
+}
+
+.llm-session-status .status-indicator.healthy {
+    color: #10b981;
+}
+
+.llm-session-status .status-indicator.degraded {
+    color: #f59e0b;
+}
+
+.llm-session-status .status-indicator.unhealthy {
+    color: #ef4444;
+}
+
+.llm-session-status .status-indicator.loading {
+    color: #6366f1;
+}
+
+.llm-session-text {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* ============================================================================
+   Provider Selection
+   ============================================================================ */
+
+.llm-provider-section {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.llm-provider-tabs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.llm-provider-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1.25rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.llm-provider-tab:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--primary-color);
+    color: var(--text-primary);
+}
+
+.llm-provider-tab.active {
+    background: linear-gradient(135deg, var(--primary-color) 0%, rgba(99, 102, 241, 0.8) 100%);
+    border-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 8px 16px rgba(99, 102, 241, 0.3);
+}
+
+.provider-icon {
+    font-size: 2.5rem;
+    display: block;
+}
+
+.provider-name {
+    text-align: center;
+    font-size: 0.95rem;
+}
+
+/* Provider Details Panel */
+
+.llm-provider-panel {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+}
+
+.provider-details {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.provider-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.provider-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.provider-info-label {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.provider-info-value {
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.provider-description {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+/* ============================================================================
+   Models Section
+   ============================================================================ */
+
+.llm-models-section {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.llm-models-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.llm-model-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 1rem;
+    transition: all 0.2s ease;
+}
+
+.llm-model-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+.model-name {
+    color: var(--text-primary);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.model-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.model-detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.model-detail-label {
+    font-weight: 500;
+}
+
+.model-detail-value {
+    color: var(--text-primary);
+}
+
+/* ============================================================================
+   Authentication Section
+   ============================================================================ */
+
+.llm-auth-section {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.05) 0%, rgba(236, 72, 153, 0.05) 100%);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.llm-auth-method {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.auth-method-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    cursor: pointer;
+}
+
+.auth-method-header input[type="radio"] {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+}
+
+.auth-method-header label {
+    cursor: pointer;
+    color: var(--text-primary);
+    font-weight: 500;
+    margin: 0;
+}
+
+.auth-method-content {
+    margin-left: 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.auth-method-help {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    line-height: 1.4;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 0.75rem;
+    border-radius: 4px;
+    border-left: 2px solid var(--primary-color);
+}
+
+.auth-method-help code {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.2rem 0.4rem;
+    border-radius: 2px;
+    font-size: 0.8rem;
+    font-family: 'Courier New', monospace;
+    color: #10b981;
+}
+
+/* ============================================================================
+   Form Inputs
+   ============================================================================ */
+
+.form-input {
+    width: 100%;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.3);
+}
+
+.form-input::placeholder {
+    color: var(--text-tertiary);
+}
+
+/* ============================================================================
+   Action Buttons
+   ============================================================================ */
+
+.llm-auth-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 1.5rem;
+}
+
+.llm-auth-actions button {
+    flex: 1;
+    min-width: 150px;
+}
+
+/* ============================================================================
+   Auth Status Message
+   ============================================================================ */
+
+.llm-auth-status {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.status-message {
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.status-message.success {
+    color: #10b981;
+    border-left: 3px solid #10b981;
+    padding-left: 0.75rem;
+}
+
+.status-message.error {
+    color: #ef4444;
+    border-left: 3px solid #ef4444;
+    padding-left: 0.75rem;
+}
+
+.status-message.info {
+    color: #3b82f6;
+    border-left: 3px solid #3b82f6;
+    padding-left: 0.75rem;
+}
+
+.status-message.warning {
+    color: #f59e0b;
+    border-left: 3px solid #f59e0b;
+    padding-left: 0.75rem;
+}
+
+/* ============================================================================
+   Authenticated Providers Section
+   ============================================================================ */
+
+.llm-authenticated-section {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(34, 197, 94, 0.05) 100%);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.llm-authenticated-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+}
+
+.llm-authenticated-button {
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+}
+
+.llm-authenticated-button:hover {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.authenticated-provider-icon {
+    font-size: 1.75rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--text-secondary);
+    grid-column: 1 / -1;
+}
+
+/* ============================================================================
+   Health Status Section
+   ============================================================================ */
+
+.llm-health-section {
+    background: linear-gradient(135deg, rgba(34, 211, 238, 0.05) 0%, rgba(99, 102, 241, 0.05) 100%);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.llm-health-status {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.health-status-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
+}
+
+.health-status-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.health-status-value {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-primary);
+}
+
+.health-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.health-indicator.healthy {
+    background-color: #10b981;
+}
+
+.health-indicator.degraded {
+    background-color: #f59e0b;
+}
+
+.health-indicator.unhealthy {
+    background-color: #ef4444;
+}
+
+.health-indicator.loading {
+    background-color: #6366f1;
+    animation: pulse 1s infinite;
+}
+
+/* ============================================================================
+   CLI Login Polling UI
+   ============================================================================ */
+
+.cli-login-polling {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.polling-instruction {
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+}
+
+.polling-code-display {
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid var(--primary-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    font-family: 'Courier New', monospace;
+}
+
+.polling-code {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    letter-spacing: 0.5em;
+    word-break: break-all;
+}
+
+.polling-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.polling-spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.polling-cancel {
+    margin-top: 1.5rem;
+}
+
+/* ============================================================================
+   Responsive Design
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .llm-manager-section {
+        gap: 1.5rem;
+    }
+
+    .llm-provider-tabs {
+        grid-template-columns: 1fr;
+    }
+
+    .provider-info {
+        grid-template-columns: 1fr;
+    }
+
+    .llm-models-list {
+        grid-template-columns: 1fr;
+    }
+
+    .llm-authenticated-list {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+
+    .llm-auth-actions {
+        flex-direction: column;
+    }
+
+    .llm-auth-actions button {
+        min-width: auto;
+    }
+
+    .health-status-line {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .llm-manager-section h3 {
+        font-size: 1.25rem;
+    }
+
+    .llm-manager-section h4 {
+        font-size: 1rem;
+    }
+
+    .provider-icon {
+        font-size: 2rem;
+    }
+
+    .polling-code {
+        font-size: 1.5rem;
+    }
+
+    .llm-authenticated-list {
+        grid-template-columns: 1fr;
+    }
+}

@@ -7,8 +7,9 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.08.2.83.0">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.08.2.84.0">
     <link rel="stylesheet" href="static/css/activity-observability.css?v=2026.01.07.2.76.0">
+    <link rel="stylesheet" href="static/css/cloud-llm.css?v=2026.01.08.2.83.0">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -453,6 +454,40 @@
                     </div>
                 </div>
 
+                <!-- Directory Reindex Options -->
+                <div class="reindex-section" style="margin-top: 20px;">
+                    <h3>🔄 Reindex Options</h3>
+                    <div class="index-options">
+                        <div class="index-option-group">
+                            <h4>Index Types:</h4>
+                            <label>
+                                <input type="checkbox" id="dir-index-keyword" checked>
+                                <strong>Keyword (Meilisearch)</strong>
+                                <span class="option-hint">Fast keyword matching with typo tolerance</span>
+                            </label>
+                            <label>
+                                <input type="checkbox" id="dir-index-vector" checked>
+                                <strong>Vector (Semantic Search)</strong>
+                                <span class="option-hint">Slow but understands meaning</span>
+                            </label>
+                        </div>
+
+                        <div class="index-option-group">
+                            <h4>Index Mode:</h4>
+                            <label>
+                                <input type="radio" name="dir-index-mode" id="dir-mode-incremental" value="incremental" checked>
+                                <strong>Incremental Update</strong>
+                                <span class="option-hint">Fast - updates existing indexes</span>
+                            </label>
+                            <label>
+                                <input type="radio" name="dir-index-mode" id="dir-mode-full" value="full">
+                                <strong>Full Rebuild</strong>
+                                <span class="option-hint">Slow - clears and rebuilds from scratch</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Directories Management Section -->
                 <div class="reindex-section" style="margin-top: 20px;">
                     <h3>📁 Managed Directories</h3>
@@ -714,11 +749,130 @@
         <!-- LLM Manager Tab -->
         <div id="llm-manager-tab" class="tab-content">
             <div class="llm-manager-section">
-                <h3>🤖 LLM Manager</h3>
-                <p class="subtitle">Start and manage your local LLMs with different modes</p>
+                <h3>🤖 Cloud LLM Manager</h3>
+                <p class="subtitle">Switch between cloud LLM providers (Google Gemini, OpenAI ChatGPT, Anthropic Claude)</p>
 
-                <div id="llm-models-grid" class="llm-models-grid">
-                    <!-- Models will be loaded here -->
+                <!-- Current Session Display -->
+                <div class="llm-current-session">
+                    <h4>Current Session</h4>
+                    <div id="llm-session-display" class="llm-session-box">
+                        <div class="llm-session-status">
+                            <span class="status-indicator" id="llm-session-indicator">●</span>
+                            <span id="llm-session-text">Loading...</span>
+                        </div>
+                        <button id="llm-logout-button" class="secondary-button" style="display: none;">🚪 Logout</button>
+                    </div>
+                </div>
+
+                <!-- Provider Selection -->
+                <div class="llm-provider-section">
+                    <h4>Select Provider</h4>
+                    <div class="llm-provider-tabs">
+                        <button class="llm-provider-tab" data-provider="gemini">
+                            <span class="provider-icon">🔷</span>
+                            <span class="provider-name">Google Gemini</span>
+                        </button>
+                        <button class="llm-provider-tab" data-provider="openai">
+                            <span class="provider-icon">🔷</span>
+                            <span class="provider-name">OpenAI ChatGPT</span>
+                        </button>
+                        <button class="llm-provider-tab" data-provider="anthropic">
+                            <span class="provider-icon">🔷</span>
+                            <span class="provider-name">Anthropic Claude</span>
+                        </button>
+                    </div>
+
+                    <!-- Provider Details Panel -->
+                    <div class="llm-provider-panel" id="llm-provider-panel">
+                        <!-- Content loaded dynamically -->
+                    </div>
+                </div>
+
+                <!-- Provider Models Display -->
+                <div class="llm-models-section" id="llm-models-section" style="display: none;">
+                    <h4>Available Models</h4>
+                    <div id="llm-models-list" class="llm-models-list">
+                        <!-- Models will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Authentication Section -->
+                <div class="llm-auth-section" id="llm-auth-section" style="display: none;">
+                    <h4>Authenticate</h4>
+
+                    <!-- API Key Method -->
+                    <div id="llm-apikey-method" class="llm-auth-method" style="display: none;">
+                        <div class="auth-method-header">
+                            <input type="radio" id="auth-method-apikey" name="auth_method" value="api_key">
+                            <label for="auth-method-apikey">API Key</label>
+                        </div>
+                        <div class="auth-method-content">
+                            <input
+                                type="password"
+                                id="llm-apikey-input"
+                                placeholder="Enter your API key..."
+                                class="form-input"
+                            >
+                            <div class="auth-method-help">
+                                <span>Your API key will be encrypted and stored locally at <code>~/.myragdb/credentials.json</code></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- OAuth Method -->
+                    <div id="llm-oauth-method" class="llm-auth-method" style="display: none;">
+                        <div class="auth-method-header">
+                            <input type="radio" id="auth-method-oauth" name="auth_method" value="oauth">
+                            <label for="auth-method-oauth">OAuth (Browser)</label>
+                        </div>
+                        <div class="auth-method-content">
+                            <p class="auth-method-help">
+                                Click below to open your provider's login page in a new window. You'll be logged in securely.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Device Code Method (CLI) -->
+                    <div id="llm-cli-method" class="llm-auth-method" style="display: none;">
+                        <div class="auth-method-header">
+                            <input type="radio" id="auth-method-cli" name="auth_method" value="device_code">
+                            <label for="auth-method-cli">CLI Device Code</label>
+                        </div>
+                        <div class="auth-method-content">
+                            <p class="auth-method-help">
+                                Authenticate from the command line. A device code will be generated for you to enter on the provider's website.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="llm-auth-actions">
+                        <button id="llm-validate-button" class="secondary-button" style="display: none;">✓ Validate Credentials</button>
+                        <button id="llm-switch-button" class="primary-button" style="display: none;">✅ Switch to This Provider</button>
+                        <button id="llm-oauth-login-button" class="primary-button" style="display: none;">🌐 Login with OAuth</button>
+                        <button id="llm-cli-login-button" class="primary-button" style="display: none;">🖥️ Login via CLI</button>
+                    </div>
+
+                    <!-- Status Message -->
+                    <div id="llm-auth-status" class="llm-auth-status" style="display: none;">
+                        <div class="status-message" id="llm-auth-message"></div>
+                    </div>
+                </div>
+
+                <!-- Authenticated Providers List -->
+                <div class="llm-authenticated-section">
+                    <h4>Quick Switch</h4>
+                    <div id="llm-authenticated-list" class="llm-authenticated-list">
+                        <div class="empty-state">No authenticated providers yet. Choose one above to get started.</div>
+                    </div>
+                </div>
+
+                <!-- Health Status -->
+                <div class="llm-health-section">
+                    <h4>Health Status</h4>
+                    <div id="llm-health-status" class="llm-health-status">
+                        <p>Loading health information...</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -864,6 +1018,7 @@
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
     <script src="static/js/activity-monitor.js?v=2026.01.07.2.76.0"></script>
     <script src="static/js/observability.js?v=2026.01.07.2.76.0"></script>
-    <script src="static/js/app.js?v=2026.01.08.2.83.0"></script>
+    <script src="static/js/cloud-llm.js?v=2026.01.08.2.83.0"></script>
+    <script src="static/js/app.js?v=2026.01.08.2.84.0"></script>
 </body>
 </html>
