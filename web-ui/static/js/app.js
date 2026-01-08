@@ -46,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadFromLocalStorage();
     loadVersion();
     updateLLMStatusBadge();
+    loadCloudLLMSelector();
 });
 
 // Tab Management
@@ -275,6 +276,67 @@ function initializeSearch() {
             });
             updateDirectoryFilterValues();
         });
+    }
+}
+
+/**
+ * Load and populate the cloud LLM selector on the search page
+ */
+async function loadCloudLLMSelector() {
+    try {
+        const selector = document.getElementById('cloud-llm-selector');
+        if (!selector) return; // Selector not on this page
+
+        // Fetch available cloud LLM providers
+        const response = await fetch(`${API_BASE_URL}/llm/providers`);
+        const data = await response.json();
+
+        if (!data.providers || data.providers.length === 0) {
+            selector.innerHTML = `
+                <option value="">None (Use Local LLM)</option>
+                <option disabled>No cloud providers available</option>
+            `;
+            return;
+        }
+
+        // Build options for cloud LLMs
+        const options = [
+            '<option value="">None (Use Local LLM)</option>'
+        ];
+
+        data.providers.forEach(provider => {
+            const isCurrentProvider = data.current_provider === provider.provider_type;
+            const indicator = isCurrentProvider ? '✅' : '○';
+            options.push(
+                `<option value="${provider.provider_type}" ${isCurrentProvider ? 'selected' : ''}>${indicator} ${provider.name}</option>`
+            );
+        });
+
+        selector.innerHTML = options.join('');
+
+        // Add change listener to save selection
+        selector.addEventListener('change', (e) => {
+            localStorage.setItem('selected_cloud_llm', e.target.value);
+            if (e.target.value) {
+                addActivityLog('info', `Selected cloud LLM provider: ${e.target.options[e.target.selectedIndex].text}`);
+            }
+        });
+
+        // Restore previous selection from localStorage
+        const savedSelection = localStorage.getItem('selected_cloud_llm');
+        if (savedSelection) {
+            selector.value = savedSelection;
+        }
+
+    } catch (error) {
+        console.error('Failed to load cloud LLM selector:', error);
+        const selector = document.getElementById('cloud-llm-selector');
+        if (selector) {
+            selector.innerHTML = `
+                <option value="">None (Use Local LLM)</option>
+                <option disabled>Error loading cloud LLMs</option>
+            `;
+        }
     }
 }
 

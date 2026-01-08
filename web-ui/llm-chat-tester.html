@@ -335,6 +335,14 @@
 
         <div class="controls">
             <div class="control-group">
+                <label>LLM Type</label>
+                <select id="llm-type-selector">
+                    <option value="local">Local LLM</option>
+                    <option value="cloud">Cloud LLM</option>
+                </select>
+            </div>
+
+            <div class="control-group">
                 <label>Select LLM</label>
                 <select id="llm-selector">
                     <option value="">Loading...</option>
@@ -536,7 +544,18 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             loadModels();
+            loadCloudLLMs();
             checkServices();
+
+            // Handle LLM type switching
+            const typeSelector = document.getElementById('llm-type-selector');
+            typeSelector.addEventListener('change', (e) => {
+                if (e.target.value === 'local') {
+                    loadModels();
+                } else {
+                    loadCloudLLMs();
+                }
+            });
 
             // Enter to send (Shift+Enter for new line)
             document.getElementById('user-input').addEventListener('keydown', (e) => {
@@ -597,6 +616,82 @@
                     isRunning ? 'connected' : 'error'
                 );
             });
+        }
+
+        async function loadCloudLLMs() {
+            const selector = document.getElementById('llm-selector');
+
+            try {
+                // Fetch available cloud LLM providers
+                const response = await fetch('http://localhost:3003/llm/providers');
+                const data = await response.json();
+
+                if (!data.providers || data.providers.length === 0) {
+                    selector.innerHTML = '<option value="">No cloud providers configured</option>';
+                    selectedModel = null;
+                    updateStatus('No cloud LLM providers available', 'error');
+                    return;
+                }
+
+                // Build dropdown with cloud providers
+                const options = [];
+                data.providers.forEach(provider => {
+                    const isConfigured = data.current_provider === provider.provider_type;
+                    const indicator = isConfigured ? '✅' : '○';
+                    const status = isConfigured ? '(configured)' : '(not configured)';
+                    options.push(
+                        `<option value="${provider.provider_type}" ${isConfigured ? 'selected' : ''}>${indicator} ${provider.name} ${status}</option>`
+                    );
+                });
+
+                selector.innerHTML = options.join('');
+
+                // Select configured provider or first one
+                const configuredProvider = data.providers.find(p => p.provider_type === data.current_provider);
+                if (configuredProvider) {
+                    selectedModel = {
+                        id: configuredProvider.provider_type,
+                        name: configuredProvider.display_name || configuredProvider.name,
+                        isCloudLLM: true,
+                        models: configuredProvider.models
+                    };
+                    selector.value = configuredProvider.provider_type;
+                    updateStatus(`Selected: ${selectedModel.name} (configured)`, 'connected');
+                } else if (data.providers.length > 0) {
+                    selectedModel = {
+                        id: data.providers[0].provider_type,
+                        name: data.providers[0].display_name || data.providers[0].name,
+                        isCloudLLM: true,
+                        models: data.providers[0].models
+                    };
+                    selector.value = data.providers[0].provider_type;
+                    updateStatus(`Selected: ${selectedModel.name} (not configured yet)`, 'error');
+                }
+
+                // Add change listener
+                selector.addEventListener('change', (e) => {
+                    const provider = data.providers.find(p => p.provider_type === e.target.value);
+                    if (provider) {
+                        selectedModel = {
+                            id: provider.provider_type,
+                            name: provider.display_name || provider.name,
+                            isCloudLLM: true,
+                            models: provider.models
+                        };
+                        const isConfigured = data.current_provider === provider.provider_type;
+                        updateStatus(
+                            `Selected: ${selectedModel.name} ${isConfigured ? '(configured)' : '(not configured)'}`,
+                            isConfigured ? 'connected' : 'error'
+                        );
+                    }
+                });
+
+            } catch (error) {
+                console.error('Failed to load cloud LLMs:', error);
+                selector.innerHTML = '<option value="">Error loading cloud LLMs</option>';
+                selectedModel = null;
+                updateStatus(`Failed to load cloud LLMs: ${error.message}`, 'error');
+            }
         }
 
         async function checkServices() {
