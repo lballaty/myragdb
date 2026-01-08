@@ -686,6 +686,30 @@
                                                 maximum: 100,
                                                 default: 10,
                                                 description: 'Maximum number of results'
+                                            },
+                                            repositories: {
+                                                type: 'array',
+                                                items: { type: 'string' },
+                                                description: 'Optional: Specific repository names to search in (empty = search all)'
+                                            },
+                                            directories: {
+                                                type: 'array',
+                                                items: { type: 'integer' },
+                                                description: 'Optional: Specific directory IDs to search in (empty = search all)'
+                                            },
+                                            folder_filter: {
+                                                type: 'string',
+                                                description: 'Optional: Filter by folder path (e.g., "src/components")'
+                                            },
+                                            extension_filter: {
+                                                type: 'string',
+                                                description: 'Optional: Filter by file extension (e.g., ".py", ".ts")'
+                                            },
+                                            min_score: {
+                                                type: 'number',
+                                                minimum: 0,
+                                                maximum: 1,
+                                                description: 'Optional: Minimum relevance score (0-1)'
                                             }
                                         },
                                         required: ['query']
