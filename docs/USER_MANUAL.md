@@ -4,7 +4,7 @@
 **Description:** Complete user manual for MyRAGDB hybrid search system
 **Author:** Libor Ballaty <libor@arionetworks.com>
 **Created:** 2026-01-07
-**Last Updated:** 2026-01-07
+**Last Updated:** 2026-01-08
 **Last Updated By:** Libor Ballaty <libor@arionetworks.com>
 
 ---
@@ -16,13 +16,14 @@
 3. [Web UI Guide](#web-ui-guide)
 4. [Search Features](#search-features)
 5. [Repository Management](#repository-management)
-6. [Indexing & Reindexing](#indexing--reindexing)
-7. [MCP Integration](#mcp-integration)
-8. [LLM Integration](#llm-integration)
-9. [API Reference](#api-reference)
-10. [Configuration](#configuration)
-11. [Troubleshooting](#troubleshooting)
-12. [Best Practices](#best-practices)
+6. [Directory Management](#directory-management)
+7. [Indexing & Reindexing](#indexing--reindexing)
+8. [MCP Integration](#mcp-integration)
+9. [LLM Integration](#llm-integration)
+10. [API Reference](#api-reference)
+11. [Configuration](#configuration)
+12. [Troubleshooting](#troubleshooting)
+13. [Best Practices](#best-practices)
 
 ---
 
@@ -835,6 +836,146 @@ Edit `config/repositories.yaml` and remove the repository entry.
 ```bash
 curl -X DELETE "http://localhost:3003/repositories/myproject"
 ```
+
+---
+
+## Directory Management
+
+**Purpose:** Index non-repository directories for searching alongside repositories.
+
+MyRAGDB allows you to index standalone directories (folders) that aren't git repositories. This is useful for:
+- Documentation directories
+- Configuration files
+- Project notes and wikis
+- Archived code
+- External libraries
+
+### Adding Directories
+
+The **Directories Tab** provides three ways to add directories:
+
+#### Method 1: Directory Browser (Recommended)
+
+The visual directory browser provides an intuitive way to navigate and select directories:
+
+1. **Open Directory Browser**
+   - Click the **📂 Browse** button in the "Add Directory" section
+   - A modal dialog opens showing your home directory
+
+2. **Navigate the Filesystem**
+   - Click any folder to open it and see its contents
+   - Use the **breadcrumb trail** at the top to navigate back to parent directories
+   - Click the **🏠 Home** button to quickly return to your home directory
+   - Directories are sorted alphabetically for easy browsing
+
+3. **Select Your Directory**
+   - Click on the target directory to select it
+   - The path displays in the "Selected:" field at the bottom
+   - Click **✓ Select This Directory** to confirm
+   - The path auto-fills in the form, and focus moves to the name field
+
+4. **Complete the Form**
+   - **Directory Name**: Enter a friendly name (e.g., "Project Documentation")
+   - **Priority**: Choose Normal/High/Low priority
+     - **🔴 High**: Results appear first in search results
+     - **⚪ Normal**: Standard ranking
+     - **🟡 Low**: Results appear last
+   - **Optional Notes**: Add any notes about this directory
+   - Click **Add Directory** to add it
+
+#### Method 2: Manual Path Entry
+
+If you prefer typing paths:
+
+1. Directly enter the absolute path in the path input field
+   - Example: `/Users/username/documents/notes`
+   - Example: `/var/www/documentation`
+
+2. Fill in the Directory Name, Priority, and Notes
+
+3. Click **Add Directory**
+
+#### Method 3: Edit Existing Directories
+
+After a directory is added, you can modify it:
+
+1. Find the directory in the **Managed Directories** list
+2. Click the **✏️ Edit** button
+3. Modify any fields
+4. Click **Save Changes**
+
+### Managing Directories
+
+#### Directory Status
+
+Each directory shows its current status:
+
+- **✓ Enabled** (green badge): Directory is indexed and searchable
+- **✗ Disabled** (red badge): Directory is not indexed
+- Click the status to toggle enabled/disabled state
+
+#### Priority Indicators
+
+Directories display priority levels that affect search result ranking:
+
+- **🔴 High**: Prioritized in search results
+- **⚪ Normal**: Standard priority
+- **🟡 Low**: Lower priority in results
+
+#### Bulk Actions
+
+Apply actions to all directories at once:
+
+- **✅ Enable All**: Enable all disabled directories
+- **❌ Disable All**: Disable all enabled directories
+- **🔄 Reindex All**: Reindex all directories to update content
+
+### Directory Statistics
+
+The **Directory Statistics** section displays:
+
+- **Total Directories**: Number of directories added
+- **Enabled Directories**: How many are currently active
+- **Total Files Indexed**: Combined file count across all directories
+- **Total Size**: Total disk space used by indexed directories
+
+### Removing Directories
+
+**Option 1: Web UI**
+
+1. Find the directory in the **Managed Directories** list
+2. Click the **🗑️ Delete** button
+3. Confirm the deletion
+4. Directory is removed from indexing
+
+**Option 2: API**
+
+```bash
+curl -X DELETE "http://localhost:3003/directories/{directory_id}"
+```
+
+### Directory Indexing
+
+When a directory is added or reindexed:
+
+1. Files are scanned for supported types (.md, .py, .ts, .txt, etc.)
+2. Content is extracted and indexed
+3. Keywords are added to Meilisearch
+4. Embeddings are generated and stored in ChromaDB
+5. Progress is shown in the Activity Log
+
+**Indexing Times:**
+- Small directories (<100 files): ~10-30 seconds
+- Medium directories (100-1000 files): ~1-5 minutes
+- Large directories (1000+ files): ~5-20+ minutes
+
+### Best Practices
+
+- **Use Descriptive Names**: Make directory names meaningful for search
+- **Set Appropriate Priority**: Use High priority for frequently searched directories
+- **Add Notes**: Document the purpose of important directories
+- **Regular Reindexing**: Reindex directories after significant changes
+- **Exclude Hidden Directories**: Browser automatically hides hidden directories (starting with `.`)
 
 ---
 
