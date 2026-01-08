@@ -285,11 +285,19 @@ async function performSearch() {
     // Handle directories filter - from hidden input
     const directoriesInput = document.getElementById('directory-filter-values');
     let selectedDirs = [];
+    let selectedDirNames = [];
     if (directoriesInput && directoriesInput.value) {
         selectedDirs = directoriesInput.value
             .split(',')
             .map(id => parseInt(id.trim()))
             .filter(id => !isNaN(id));
+
+        // Get directory names for display
+        selectedDirNames = selectedDirs
+            .map(dirId => {
+                const dir = state.directories.find(d => d.id === dirId);
+                return dir ? dir.name : `Directory ${dirId}`;
+            });
     }
 
     const folderFilter = document.getElementById('folder-filter').value.trim();
@@ -364,7 +372,7 @@ async function performSearch() {
         addActivityLog('search', searchLogMsg);
 
         // Render results with request info and search scope
-        renderSearchResults(data, responseTime, requestBody, searchType, selectedRepoValue, selectedDirs);
+        renderSearchResults(data, responseTime, requestBody, searchType, selectedRepoValue, selectedDirNames);
 
         // Save to local storage
         saveToLocalStorage();
@@ -416,7 +424,9 @@ function renderSearchResults(data, responseTime, requestBody, searchType, select
     // If user selected "None" repository, show directory-only search
     if (selectedRepoValue === '') {
         if (selectedDirs && selectedDirs.length > 0) {
-            searchScopeHtml = `<div class="repos-searched">📁 Searched ${selectedDirs.length} selected directory(ies) only</div>`;
+            const dirList = selectedDirs.slice(0, 3).join(', ');
+            const moreDirs = selectedDirs.length > 3 ? ` and ${selectedDirs.length - 3} more` : '';
+            searchScopeHtml = `<div class="repos-searched">📁 Searched directories: ${dirList}${moreDirs}</div>`;
         } else {
             searchScopeHtml = `<div class="repos-searched">📁 Searched all directories (no repository filtering)</div>`;
         }
@@ -429,7 +439,9 @@ function renderSearchResults(data, responseTime, requestBody, searchType, select
 
         // Add directory info if specific directories were selected
         if (selectedDirs && selectedDirs.length > 0) {
-            searchScopeHtml += `<div class="repos-searched">📁 Within ${selectedDirs.length} selected directory(ies)</div>`;
+            const dirList = selectedDirs.slice(0, 3).join(', ');
+            const moreDirs = selectedDirs.length > 3 ? ` and ${selectedDirs.length - 3} more` : '';
+            searchScopeHtml += `<div class="repos-searched">📁 Within directories: ${dirList}${moreDirs}</div>`;
         }
     }
 
