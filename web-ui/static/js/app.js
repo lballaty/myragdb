@@ -272,8 +272,15 @@ async function performSearch() {
     const searchType = document.getElementById('search-type').value;
     const limit = parseInt(document.getElementById('result-limit').value);
     const repositorySelect = document.getElementById('repository-filter');
-    const selectedRepo = repositorySelect.value;
-    const selectedRepos = selectedRepo ? [selectedRepo] : []; // Convert single selection to array for API
+    const selectedRepoValue = repositorySelect.value;
+
+    // Handle repository filter values
+    let selectedRepos = [];
+    if (selectedRepoValue && selectedRepoValue !== 'all') {
+        // Specific repository selected (not "All Repositories" or "None")
+        selectedRepos = [selectedRepoValue];
+    }
+    // If value is "" (None) or "all", selectedRepos stays empty (search all or directories only)
 
     // Handle directories filter - from hidden input
     const directoriesInput = document.getElementById('directory-filter-values');
@@ -343,7 +350,9 @@ async function performSearch() {
 
         // Build detailed search log message with filters
         let searchLogMsg = `Query: "${query}" | Type: ${searchType}`;
-        if (selectedRepos.length > 0) {
+        if (selectedRepoValue === '') {
+            searchLogMsg += ` | Repository: None (Directories Only)`;
+        } else if (selectedRepos.length > 0) {
             searchLogMsg += ` | Repository: ${selectedRepos.join(', ')}`;
         }
         if (selectedDirs.length > 0) {
@@ -750,8 +759,8 @@ function populateRepositoryFilter() {
     const filterSelect = document.getElementById('repository-filter');
     if (!filterSelect) return;
 
-    // Keep the "All Repositories" option
-    filterSelect.innerHTML = '<option value="">All Repositories</option>';
+    // Keep the default options
+    filterSelect.innerHTML = '<option value="">None (Directories Only)</option><option value="all">All Repositories</option>';
 
     // Sort repositories alphabetically by name
     const sortedRepos = [...state.repositories].sort((a, b) =>

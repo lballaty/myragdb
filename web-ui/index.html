@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.08.2.89.0">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.08.2.90.0">
     <link rel="stylesheet" href="static/css/activity-observability.css?v=2026.01.07.2.76.0">
     <link rel="stylesheet" href="static/css/cloud-llm.css?v=2026.01.08.2.83.0">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -99,12 +99,13 @@
                     <label>
                         <span>Repository:</span>
                         <select id="repository-filter" style="min-width: 200px;">
-                            <option value="">All Repositories</option>
+                            <option value="">None (Directories Only)</option>
+                            <option value="all">All Repositories</option>
                         </select>
                     </label>
-                    <label title="Select specific directories to search. Leave repository as 'All' to search these directories across all repositories.">
+                    <label title="Select specific directories to search. Use with 'All Repositories' or 'None' repository option.">
                         <span>Directories:</span>
-                        <button id="directory-filter-button" class="secondary-button" style="padding: 6px 12px; font-size: 0.95em;" title="Select specific directories to search. Leave repository as 'All' to search these directories across all repositories.">
+                        <button id="directory-filter-button" class="secondary-button" style="padding: 6px 12px; font-size: 0.95em;" title="Select specific directories. With 'None' repository option = search only these directories. With 'All Repositories' = search these directories across all repos.">
                             📁 Select Directories
                         </button>
                     </label>
@@ -1030,6 +1031,6 @@
     <script src="static/js/activity-monitor.js?v=2026.01.07.2.76.0"></script>
     <script src="static/js/observability.js?v=2026.01.07.2.76.0"></script>
     <script src="static/js/cloud-llm.js?v=2026.01.08.2.83.0"></script>
-    <script src="static/js/app.js?v=2026.01.08.2.89.0"></script>
+    <script src="static/js/app.js?v=2026.01.08.2.90.0"></script>
 </body>
 </html>
