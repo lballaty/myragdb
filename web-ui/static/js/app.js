@@ -363,8 +363,8 @@ async function performSearch() {
         // Add to activity log
         addActivityLog('search', searchLogMsg);
 
-        // Render results with request info
-        renderSearchResults(data, responseTime, requestBody, searchType);
+        // Render results with request info and search scope
+        renderSearchResults(data, responseTime, requestBody, searchType, selectedRepoValue, selectedDirs);
 
         // Save to local storage
         saveToLocalStorage();
@@ -378,7 +378,7 @@ async function performSearch() {
     }
 }
 
-function renderSearchResults(data, responseTime, requestBody, searchType) {
+function renderSearchResults(data, responseTime, requestBody, searchType, selectedRepoValue, selectedDirs) {
     const resultsDiv = document.getElementById('search-results');
 
     if (data.results.length === 0) {
@@ -410,20 +410,34 @@ function renderSearchResults(data, responseTime, requestBody, searchType) {
         `;
     }
 
-    // Build repositories searched message
-    let reposSearchedHtml = '';
-    if (data.repositories_searched && data.repositories_searched.length > 0) {
+    // Build search scope message based on user selections
+    let searchScopeHtml = '';
+
+    // If user selected "None" repository, show directory-only search
+    if (selectedRepoValue === '') {
+        if (selectedDirs && selectedDirs.length > 0) {
+            searchScopeHtml = `<div class="repos-searched">📁 Searched ${selectedDirs.length} selected directory(ies) only</div>`;
+        } else {
+            searchScopeHtml = `<div class="repos-searched">📁 Searched all directories (no repository filtering)</div>`;
+        }
+    } else if (data.repositories_searched && data.repositories_searched.length > 0) {
+        // User searched in repositories, show which ones were searched
         const repoCount = data.repositories_searched.length;
         const repoList = data.repositories_searched.slice(0, 3).join(', ');
         const moreRepos = repoCount > 3 ? ` and ${repoCount - 3} more` : '';
-        reposSearchedHtml = `<div class="repos-searched">📚 Searched ${repoCount} repositories: ${repoList}${moreRepos}</div>`;
+        searchScopeHtml = `<div class="repos-searched">📚 Searched ${repoCount} repositories: ${repoList}${moreRepos}</div>`;
+
+        // Add directory info if specific directories were selected
+        if (selectedDirs && selectedDirs.length > 0) {
+            searchScopeHtml += `<div class="repos-searched">📁 Within ${selectedDirs.length} selected directory(ies)</div>`;
+        }
     }
 
     const metaHtml = `
         ${apiCallHtml}
         <div class="search-meta">
             Found ${data.total_results} results in ${responseTime.toFixed(0)}ms
-            ${reposSearchedHtml}
+            ${searchScopeHtml}
         </div>
     `;
 
