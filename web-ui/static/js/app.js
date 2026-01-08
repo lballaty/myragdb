@@ -3615,7 +3615,7 @@ function updateDirectoryStatistics() {
 function openBrowserModal() {
     const modal = document.getElementById('directory-browser-modal');
     if (modal) {
-        modal.style.display = 'flex';
+        modal.classList.add('active');
         // Start from home directory
         navigateToHome();
     }
@@ -3624,7 +3624,7 @@ function openBrowserModal() {
 function closeBrowserModal() {
     const modal = document.getElementById('directory-browser-modal');
     if (modal) {
-        modal.style.display = 'none';
+        modal.classList.remove('active');
     }
 }
 
