@@ -226,6 +226,70 @@ class CredentialStore:
         except Exception:
             return []
 
+    def store_credential(
+        self,
+        provider: str,
+        auth_method: str,
+        credentials: Dict[str, Any],
+        expires_at: Optional[datetime] = None
+    ) -> None:
+        """
+        Store credentials using new unified interface.
+
+        Args:
+            provider: Provider name (gemini, openai, anthropic)
+            auth_method: Auth method (api_key, oauth, device_code)
+            credentials: Credentials dictionary
+            expires_at: Optional expiration datetime
+        """
+        # Convert auth_method string to AuthMethodType
+        auth_type_map = {
+            "api_key": AuthMethodType.API_KEY,
+            "oauth": AuthMethodType.SUBSCRIPTION,
+            "device_code": AuthMethodType.CLI,
+        }
+
+        auth_type = auth_type_map.get(auth_method, AuthMethodType.API_KEY)
+
+        config = LLMAuthConfig(
+            provider=provider,
+            auth_method=auth_type,
+            credentials=credentials,
+            expires_at=expires_at
+        )
+
+        self.save_credentials(provider, config)
+
+    def retrieve_credential(
+        self,
+        provider: str,
+        auth_method: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve credentials using new unified interface.
+
+        Args:
+            provider: Provider name
+            auth_method: Auth method to filter (optional, ignored for backwards compatibility)
+
+        Returns:
+            Credentials dictionary or None
+        """
+        config = self.load_credentials(provider)
+        if config and config.is_valid():
+            return config.credentials
+        return None
+
+    def delete_credential(self, provider: str, auth_method: str = None) -> None:
+        """
+        Delete credentials using new unified interface.
+
+        Args:
+            provider: Provider name
+            auth_method: Auth method (optional, ignored for backwards compatibility)
+        """
+        self.delete_credentials(provider)
+
     def _encrypt_credentials(self, credentials: Dict[str, Any]) -> str:
         """Encrypt credentials dictionary"""
         plaintext = json.dumps(credentials).encode()
