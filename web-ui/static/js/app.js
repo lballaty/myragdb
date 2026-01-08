@@ -179,9 +179,9 @@ async function restartServer() {
         }, 3000); // Wait 3 seconds before starting checks
 
     } catch (error) {
-        // If server is completely offline, suggest manual restart
+        // If server is completely offline, suggest manual restart options
         if (error.message.includes('fetch') || error.message.includes('Failed to fetch')) {
-            addActivityLog('error', 'Server is offline. To restart, run ./start.sh from the terminal.');
+            addActivityLog('error', 'Server is offline. To restart: (1) Run ./start.sh from terminal, or (2) Use the MyRAGDB application icon if installed.');
         } else {
             addActivityLog('error', `Restart failed: ${error.message}`);
         }
