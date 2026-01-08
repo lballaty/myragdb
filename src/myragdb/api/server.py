@@ -392,7 +392,7 @@ async def health_check():
     Health check endpoint with dependency checks.
 
     Business Purpose: Allows monitoring systems to verify service health
-    and detect if critical dependencies (Meilisearch, ChromaDB) are unavailable.
+    and detect if critical dependencies (Meilisearch, ChromaDB, LLM) are unavailable.
     """
     try:
         # Check if search engines can be initialized
@@ -412,27 +412,67 @@ async def health_check():
         except Exception:
             chromadb_ok = False
 
-        # Determine overall health
-        if meilisearch_ok and chromadb_ok:
-            return HealthResponse(
-                status="healthy",
-                message="MyRAGDB service is healthy (Meilisearch + ChromaDB OK)"
-            )
-        elif meilisearch_ok or chromadb_ok:
-            issues = []
-            if not meilisearch_ok:
-                issues.append("Meilisearch unavailable")
-            if not chromadb_ok:
-                issues.append("ChromaDB unavailable")
-            return HealthResponse(
-                status="degraded",
-                message=f"MyRAGDB service degraded: {', '.join(issues)}"
-            )
+        # Check if cloud LLM is configured and available
+        try:
+            session_mgr, cred_store, _, _ = get_llm_services()
+            session = session_mgr.get_active_session()
+
+            # LLM is healthy if configured and valid
+            llm_ok = session is not None and session.health_check_passed
+            llm_configured = session is not None
+        except Exception:
+            llm_ok = False
+            llm_configured = False
+
+        # Build status message with all components
+        issues = []
+        components = []
+
+        if meilisearch_ok:
+            components.append("Meilisearch")
         else:
-            return HealthResponse(
-                status="unhealthy",
-                message="MyRAGDB service unhealthy: Meilisearch and ChromaDB unavailable"
-            )
+            issues.append("Meilisearch unavailable")
+
+        if chromadb_ok:
+            components.append("ChromaDB")
+        else:
+            issues.append("ChromaDB unavailable")
+
+        if llm_configured:
+            components.append(f"LLM ({session.provider_type.value})")
+            if not llm_ok:
+                issues.append("LLM unavailable or expired")
+        else:
+            components.append("LLM (not configured)")
+
+        # Determine overall health
+        search_ok = meilisearch_ok and chromadb_ok
+
+        if search_ok:
+            if llm_ok or not llm_configured:
+                # Search is healthy, LLM is either healthy or not critical
+                return HealthResponse(
+                    status="healthy",
+                    message=f"MyRAGDB service is healthy ({', '.join(components)})"
+                )
+            else:
+                # Search is healthy but LLM is unhealthy
+                return HealthResponse(
+                    status="degraded",
+                    message=f"MyRAGDB service degraded: {', '.join(issues)}"
+                )
+        else:
+            # Search has issues
+            if issues:
+                return HealthResponse(
+                    status="unhealthy",
+                    message=f"MyRAGDB service unhealthy: {', '.join(issues)}"
+                )
+            else:
+                return HealthResponse(
+                    status="unhealthy",
+                    message="MyRAGDB service unhealthy: Critical components unavailable"
+                )
     except Exception as e:
         return HealthResponse(
             status="unhealthy",
@@ -2981,6 +3021,81 @@ async def logout_llm_provider(provider: str):
             status="error",
             message=f"Failed to logout: {str(e)}",
             provider=provider
+        )
+
+
+@app.get("/llm/health", response_model=LLMHealthCheckResponse)
+async def get_llm_health():
+    """
+    Detailed LLM-specific health check endpoint.
+
+    Business Purpose: Provides comprehensive health information about cloud LLM
+    provider configuration, authentication status, and availability. Enables
+    monitoring systems and UI to display detailed LLM health information.
+
+    Returns:
+        LLMHealthCheckResponse with detailed LLM health information
+
+    Example:
+        GET /llm/health
+
+        Response:
+        {
+            "status": "healthy",
+            "cloud_llm_available": true,
+            "current_provider": "gemini",
+            "authenticated_providers": ["gemini", "chatgpt"],
+            "message": "Cloud LLM is configured and healthy"
+        }
+    """
+    try:
+        session_mgr, cred_store, _, api_key_validator = get_llm_services()
+
+        # Get current session
+        session = session_mgr.get_active_session()
+
+        # Get all authenticated providers
+        authenticated = cred_store.list_authenticated_providers()
+
+        # Determine LLM availability
+        cloud_llm_available = session is not None
+
+        # If LLM is configured, check its health
+        llm_status = "unknown"
+        if cloud_llm_available:
+            if session.health_check_passed:
+                llm_status = "healthy"
+            else:
+                llm_status = "unhealthy"
+
+        # Build response with detailed information
+        if cloud_llm_available:
+            if llm_status == "healthy":
+                response_status = "healthy"
+                message = f"Cloud LLM is configured and healthy (Provider: {session.provider_type.value}, Model: {session.model_id})"
+            else:
+                response_status = "degraded"
+                message = f"Cloud LLM is configured but unhealthy (Provider: {session.provider_type.value})"
+        else:
+            response_status = "available"
+            message = f"Cloud LLM not configured. {len(authenticated)} provider(s) authenticated and ready for use"
+
+        return LLMHealthCheckResponse(
+            status=response_status,
+            cloud_llm_available=cloud_llm_available,
+            current_provider=session.provider_type.value if cloud_llm_available else None,
+            authenticated_providers=authenticated,
+            message=message
+        )
+
+    except Exception as e:
+        logger.error("Failed to check LLM health", error=str(e), exc_info=True)
+        return LLMHealthCheckResponse(
+            status="error",
+            cloud_llm_available=False,
+            current_provider=None,
+            authenticated_providers=[],
+            message=f"Failed to check LLM health: {str(e)}"
         )
 
 

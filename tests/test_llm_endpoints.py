@@ -344,6 +344,202 @@ class TestLogoutEndpoint:
         mock_session_manager.switch_to_local.assert_called_once_with("phi3")
 
 
+class TestLLMHealthEndpoint:
+    """Tests for GET /llm/health detailed health check endpoint."""
+
+    @patch('myragdb.api.server.get_llm_services')
+    def test_llm_health_configured_and_healthy(self, mock_services, client):
+        """Test LLM health when configured and healthy."""
+        mock_session_manager = MagicMock()
+        mock_cred_store = MagicMock()
+
+        # Mock healthy session
+        mock_session = MagicMock()
+        mock_session.provider_type = ProviderType.GEMINI
+        mock_session.model_id = "gemini-pro"
+        mock_session.health_check_passed = True
+
+        mock_session_manager.get_active_session.return_value = mock_session
+        mock_cred_store.list_authenticated_providers.return_value = ["gemini", "chatgpt"]
+
+        mock_services.return_value = (mock_session_manager, mock_cred_store, None, None)
+
+        response = client.get("/llm/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "healthy"
+        assert data["cloud_llm_available"] is True
+        assert data["current_provider"] == "gemini"
+        assert data["authenticated_providers"] == ["gemini", "chatgpt"]
+
+    @patch('myragdb.api.server.get_llm_services')
+    def test_llm_health_configured_but_unhealthy(self, mock_services, client):
+        """Test LLM health when configured but unhealthy."""
+        mock_session_manager = MagicMock()
+        mock_cred_store = MagicMock()
+
+        # Mock unhealthy session
+        mock_session = MagicMock()
+        mock_session.provider_type = ProviderType.CHATGPT
+        mock_session.model_id = "gpt-4"
+        mock_session.health_check_passed = False
+
+        mock_session_manager.get_active_session.return_value = mock_session
+        mock_cred_store.list_authenticated_providers.return_value = ["chatgpt"]
+
+        mock_services.return_value = (mock_session_manager, mock_cred_store, None, None)
+
+        response = client.get("/llm/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "degraded"
+        assert data["cloud_llm_available"] is True
+        assert data["current_provider"] == "chatgpt"
+
+    @patch('myragdb.api.server.get_llm_services')
+    def test_llm_health_not_configured(self, mock_services, client):
+        """Test LLM health when not configured."""
+        mock_session_manager = MagicMock()
+        mock_cred_store = MagicMock()
+
+        mock_session_manager.get_active_session.return_value = None
+        mock_cred_store.list_authenticated_providers.return_value = []
+
+        mock_services.return_value = (mock_session_manager, mock_cred_store, None, None)
+
+        response = client.get("/llm/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "available"
+        assert data["cloud_llm_available"] is False
+        assert data["current_provider"] is None
+        assert data["authenticated_providers"] == []
+
+    @patch('myragdb.api.server.get_llm_services')
+    def test_llm_health_with_authenticated_providers(self, mock_services, client):
+        """Test LLM health reports authenticated providers."""
+        mock_session_manager = MagicMock()
+        mock_cred_store = MagicMock()
+
+        mock_session_manager.get_active_session.return_value = None
+        mock_cred_store.list_authenticated_providers.return_value = ["gemini", "claude"]
+
+        mock_services.return_value = (mock_session_manager, mock_cred_store, None, None)
+
+        response = client.get("/llm/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "available"
+        assert data["authenticated_providers"] == ["gemini", "claude"]
+        assert "2 provider(s) authenticated" in data["message"]
+
+
+class TestHealthEndpointEnhancement:
+    """Tests for enhanced /health endpoint with LLM checks."""
+
+    @patch('myragdb.api.server.get_search_engines')
+    @patch('myragdb.api.server.get_llm_services')
+    def test_health_all_components_healthy(self, mock_llm_services, mock_search_services, client):
+        """Test health check when all components are healthy."""
+        # Mock search engines
+        mock_keyword_indexer = MagicMock()
+        mock_vector_indexer = MagicMock()
+        mock_hybrid_engine = MagicMock()
+
+        mock_keyword_indexer.get_document_count.return_value = 100
+        mock_vector_indexer.get_document_count.return_value = 100
+
+        mock_search_services.return_value = (
+            mock_keyword_indexer,
+            mock_vector_indexer,
+            mock_hybrid_engine
+        )
+
+        # Mock LLM
+        mock_session_manager = MagicMock()
+        mock_cred_store = MagicMock()
+
+        mock_session = MagicMock()
+        mock_session.provider_type = ProviderType.GEMINI
+        mock_session.health_check_passed = True
+
+        mock_session_manager.get_active_session.return_value = mock_session
+        mock_llm_services.return_value = (mock_session_manager, mock_cred_store, None, None)
+
+        response = client.get("/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "healthy"
+        assert "Meilisearch" in data["message"]
+        assert "ChromaDB" in data["message"]
+        assert "gemini" in data["message"]
+
+    @patch('myragdb.api.server.get_search_engines')
+    @patch('myragdb.api.server.get_llm_services')
+    def test_health_search_ok_llm_unhealthy(self, mock_llm_services, mock_search_services, client):
+        """Test health check when search is healthy but LLM is unhealthy."""
+        # Mock healthy search engines
+        mock_keyword_indexer = MagicMock()
+        mock_vector_indexer = MagicMock()
+        mock_hybrid_engine = MagicMock()
+
+        mock_keyword_indexer.get_document_count.return_value = 100
+        mock_vector_indexer.get_document_count.return_value = 100
+
+        mock_search_services.return_value = (
+            mock_keyword_indexer,
+            mock_vector_indexer,
+            mock_hybrid_engine
+        )
+
+        # Mock unhealthy LLM
+        mock_session_manager = MagicMock()
+        mock_cred_store = MagicMock()
+
+        mock_session = MagicMock()
+        mock_session.provider_type = ProviderType.CHATGPT
+        mock_session.health_check_passed = False
+
+        mock_session_manager.get_active_session.return_value = mock_session
+        mock_llm_services.return_value = (mock_session_manager, mock_cred_store, None, None)
+
+        response = client.get("/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "degraded"
+        assert "LLM unavailable" in data["message"]
+
+    @patch('myragdb.api.server.get_search_engines')
+    @patch('myragdb.api.server.get_llm_services')
+    def test_health_meilisearch_down(self, mock_llm_services, mock_search_services, client):
+        """Test health check when Meilisearch is down."""
+        # Mock search engines with Meilisearch down
+        mock_keyword_indexer = MagicMock()
+        mock_vector_indexer = MagicMock()
+        mock_hybrid_engine = MagicMock()
+
+        mock_keyword_indexer.get_document_count.side_effect = Exception("Meilisearch unavailable")
+        mock_vector_indexer.get_document_count.return_value = 100
+
+        mock_search_services.return_value = (
+            mock_keyword_indexer,
+            mock_vector_indexer,
+            mock_hybrid_engine
+        )
+
+        # Mock LLM
+        mock_session_manager = MagicMock()
+        mock_cred_store = MagicMock()
+        mock_session_manager.get_active_session.return_value = None
+        mock_llm_services.return_value = (mock_session_manager, mock_cred_store, None, None)
+
+        response = client.get("/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "unhealthy"
+        assert "Meilisearch" in data["message"]
+
+
 class TestLLMEndpointsErrorHandling:
     """Tests for error handling in LLM endpoints."""
 
@@ -378,3 +574,15 @@ class TestLLMEndpointsErrorHandling:
         data = response.json()
         assert data["providers"] == []
         assert data["total_authenticated"] == 0
+
+    @patch('myragdb.api.server.get_llm_services')
+    def test_llm_health_error_handling(self, mock_services, client):
+        """Test error handling in LLM health endpoint."""
+        mock_services.side_effect = Exception("Service error")
+
+        response = client.get("/llm/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "error"
+        assert data["cloud_llm_available"] is False
+        assert data["authenticated_providers"] == []
