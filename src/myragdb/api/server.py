@@ -56,12 +56,25 @@ from myragdb.api.models import (
     ToggleAutoReindexRequest,
     ToggleAutoReindexResponse,
     ReadmeRequest,
-    ReadmeResponse
+    ReadmeResponse,
+    ProviderInfo,
+    LLMSessionResponse,
+    ProvidersListResponse,
+    ValidateCredentialsRequest,
+    ValidateCredentialsResponse,
+    SwitchLLMRequest,
+    SwitchLLMResponse,
+    AuthenticatedProvidersResponse,
+    LogoutResponse,
+    LLMHealthCheckResponse
 )
 from myragdb.search.hybrid_search import HybridSearchEngine, HybridSearchResult
 from myragdb.indexers.meilisearch_indexer import MeilisearchIndexer
 from myragdb.indexers.vector_indexer import VectorIndexer
 from myragdb.llm.query_rewriter import QueryRewriter
+from myragdb.llm.session_manager import SessionManager
+from myragdb.llm.auth_config import CredentialStore
+from myragdb.llm.auth.api_key_auth import ApiKeyAuthManager, ApiKeyValidator
 from myragdb.db.file_metadata import get_metadata_db
 from myragdb.db.observability import ObservabilityDatabase
 from myragdb.config import settings, load_repositories_config
@@ -81,6 +94,12 @@ hybrid_engine = None
 metadata_store = None
 observability_db = None
 watcher_manager = None
+
+# Initialize LLM cloud provider services (singleton pattern)
+session_manager = None
+credential_store = None
+api_key_auth_manager = None
+api_key_validator = None
 
 # Indexing state - supports independent Keyword (Meilisearch) and Vector indexing
 indexing_state = {
@@ -170,6 +189,38 @@ def get_search_engines():
         )
 
     return meilisearch_indexer, vector_indexer, hybrid_engine
+
+
+def get_llm_services():
+    """
+    Get or initialize LLM cloud provider services.
+
+    Business Purpose: Lazy initialization of cloud LLM authentication managers
+    to avoid unnecessary dependencies at import time. Services are created on
+    first use and reused as singletons.
+
+    Returns:
+        Tuple of (session_manager, credential_store, api_key_auth_manager, api_key_validator)
+    """
+    global session_manager, credential_store, api_key_auth_manager, api_key_validator
+
+    if session_manager is None:
+        logger.info("Initializing LLM session manager")
+        session_manager = SessionManager()
+
+    if credential_store is None:
+        logger.info("Initializing credential store for cloud LLMs")
+        credential_store = CredentialStore()
+
+    if api_key_auth_manager is None:
+        logger.info("Initializing API key authentication manager")
+        api_key_auth_manager = ApiKeyAuthManager(credential_store=credential_store)
+
+    if api_key_validator is None:
+        logger.info("Initializing API key validator")
+        api_key_validator = ApiKeyValidator()
+
+    return session_manager, credential_store, api_key_auth_manager, api_key_validator
 
 
 # Import version
@@ -2547,6 +2598,389 @@ async def toggle_auto_reindex(repository: str, request: ToggleAutoReindexRequest
         raise HTTPException(
             status_code=500,
             detail=f"Failed to toggle auto-reindex: {str(e)}"
+        )
+
+
+# ============================================================================
+# Cloud LLM Provider Endpoints (Phase 2.1)
+# ============================================================================
+
+@app.get("/llm/session", response_model=LLMSessionResponse)
+async def get_llm_session():
+    """
+    Get current active LLM session.
+
+    Business Purpose: Returns information about which LLM provider (local or cloud)
+    is currently active, enabling the UI to display and manage the current session.
+
+    Returns:
+        LLMSessionResponse with current provider, model, auth method and status
+
+    Example:
+        GET /llm/session
+
+        Response:
+        {
+            "provider_type": "gemini",
+            "model_id": "gemini-pro",
+            "auth_method": "api_key",
+            "status": "authenticated"
+        }
+    """
+    try:
+        session_mgr, _, _, _ = get_llm_services()
+        session = session_mgr.get_active_session()
+
+        if not session:
+            return LLMSessionResponse(
+                provider_type=None,
+                model_id=None,
+                auth_method=None,
+                status="not_configured"
+            )
+
+        return LLMSessionResponse(
+            provider_type=session.provider_type.value,
+            model_id=session.model_id,
+            auth_method=session.auth_method.value,
+            status=session.status
+        )
+
+    except Exception as e:
+        logger.error("Failed to get LLM session", error=str(e), exc_info=True)
+        return LLMSessionResponse(
+            provider_type=None,
+            model_id=None,
+            auth_method=None,
+            status="error"
+        )
+
+
+@app.get("/llm/providers", response_model=ProvidersListResponse)
+async def get_llm_providers():
+    """
+    List all available cloud LLM providers.
+
+    Business Purpose: Returns information about available LLM providers and their
+    supported authentication methods and models.
+
+    Returns:
+        ProvidersListResponse with list of available providers and current active
+
+    Example:
+        GET /llm/providers
+
+        Response:
+        {
+            "providers": [
+                {
+                    "name": "Google Gemini",
+                    "provider_type": "gemini",
+                    "description": "Google's Gemini AI models",
+                    "auth_methods": ["api_key", "oauth"],
+                    "models": ["gemini-pro", "gemini-pro-vision"]
+                },
+                {
+                    "name": "OpenAI ChatGPT",
+                    "provider_type": "chatgpt",
+                    "description": "OpenAI's ChatGPT and GPT-4 models",
+                    "auth_methods": ["api_key", "oauth"],
+                    "models": ["gpt-4", "gpt-3.5-turbo"]
+                }
+            ],
+            "current_provider": "gemini"
+        }
+    """
+    try:
+        session_mgr, _, _, _ = get_llm_services()
+        session = session_mgr.get_active_session()
+
+        # Define available providers with their capabilities
+        providers = [
+            ProviderInfo(
+                name="Google Gemini",
+                provider_type="gemini",
+                description="Google's Gemini AI models for text generation and multimodal tasks",
+                auth_methods=["api_key", "oauth"],
+                models=["gemini-pro", "gemini-pro-vision", "gemini-1.5-pro"]
+            ),
+            ProviderInfo(
+                name="OpenAI ChatGPT",
+                provider_type="chatgpt",
+                description="OpenAI's ChatGPT and GPT-4 models for advanced text generation",
+                auth_methods=["api_key", "oauth"],
+                models=["gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"]
+            ),
+            ProviderInfo(
+                name="Anthropic Claude",
+                provider_type="claude",
+                description="Anthropic's Claude models for safe and helpful AI",
+                auth_methods=["api_key", "oauth"],
+                models=["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"]
+            )
+        ]
+
+        current_provider = session.provider_type.value if session else None
+
+        return ProvidersListResponse(
+            providers=providers,
+            current_provider=current_provider
+        )
+
+    except Exception as e:
+        logger.error("Failed to list LLM providers", error=str(e), exc_info=True)
+        return ProvidersListResponse(providers=[], current_provider=None)
+
+
+@app.post("/llm/validate-credentials", response_model=ValidateCredentialsResponse)
+async def validate_llm_credentials(request: ValidateCredentialsRequest):
+    """
+    Validate cloud LLM credentials before storing.
+
+    Business Purpose: Tests credentials with the provider's API to ensure they are
+    valid before persisting them, preventing storage of invalid credentials.
+
+    Args:
+        request: ValidateCredentialsRequest with provider, auth_method and credentials
+
+    Returns:
+        ValidateCredentialsResponse with validation result and error details if failed
+
+    Example:
+        POST /llm/validate-credentials
+
+        Request:
+        {
+            "provider": "gemini",
+            "auth_method": "api_key",
+            "credentials": {"api_key": "..."}
+        }
+
+        Response:
+        {
+            "is_valid": true,
+            "provider": "gemini",
+            "message": "Credentials validated successfully"
+        }
+    """
+    try:
+        _, _, _, api_key_validator = get_llm_services()
+
+        # Validate API key using provider-specific validation
+        if request.auth_method == "api_key":
+            validation_result = await api_key_validator.validate_key(
+                request.provider,
+                request.credentials.get("api_key", "")
+            )
+
+            return ValidateCredentialsResponse(
+                is_valid=validation_result.is_valid,
+                provider=request.provider,
+                message=validation_result.message,
+                error_code=validation_result.error_code if not validation_result.is_valid else None
+            )
+        else:
+            # For non-API-key methods, return error
+            return ValidateCredentialsResponse(
+                is_valid=False,
+                provider=request.provider,
+                message=f"Validation not implemented for auth method: {request.auth_method}",
+                error_code="unsupported_auth_method"
+            )
+
+    except Exception as e:
+        logger.error("Failed to validate credentials", provider=request.provider, error=str(e), exc_info=True)
+        return ValidateCredentialsResponse(
+            is_valid=False,
+            provider=request.provider,
+            message=f"Validation error: {str(e)}",
+            error_code="validation_error"
+        )
+
+
+@app.post("/llm/switch", response_model=SwitchLLMResponse)
+async def switch_llm_provider(request: SwitchLLMRequest):
+    """
+    Switch to a different cloud LLM provider.
+
+    Business Purpose: Main endpoint to switch the active LLM without restarting
+    the server. Validates credentials, stores them securely, and updates the
+    active session. This enables seamless provider switching in the UI.
+
+    Args:
+        request: SwitchLLMRequest with provider, model_id, auth_method and credentials
+
+    Returns:
+        SwitchLLMResponse with new session information or error details
+
+    Example:
+        POST /llm/switch
+
+        Request:
+        {
+            "provider": "gemini",
+            "model_id": "gemini-pro",
+            "auth_method": "api_key",
+            "credentials": {"api_key": "..."}
+        }
+
+        Response:
+        {
+            "status": "success",
+            "message": "Successfully switched to gemini provider",
+            "new_session": {
+                "provider_type": "gemini",
+                "model_id": "gemini-pro",
+                "auth_method": "api_key",
+                "status": "active"
+            }
+        }
+    """
+    try:
+        session_mgr, cred_store, api_key_auth_mgr, api_key_validator = get_llm_services()
+
+        # Validate credentials first
+        if request.auth_method == "api_key":
+            api_key = request.credentials.get("api_key", "")
+            validation_result = await api_key_validator.validate_key(
+                request.provider,
+                api_key
+            )
+
+            if not validation_result.is_valid:
+                return SwitchLLMResponse(
+                    status="error",
+                    message=f"Invalid credentials: {validation_result.message}",
+                    new_session=None
+                )
+
+            # Store credentials securely
+            api_key_auth_mgr.store_api_key(request.provider, api_key)
+        else:
+            return SwitchLLMResponse(
+                status="error",
+                message=f"Unsupported auth method: {request.auth_method}",
+                new_session=None
+            )
+
+        # Switch to new provider
+        new_session = await session_mgr.switch_to_cloud(
+            provider=request.provider,
+            model_id=request.model_id,
+            auth_method=request.auth_method,
+            credentials=request.credentials,
+            credential_store=cred_store
+        )
+
+        return SwitchLLMResponse(
+            status="success",
+            message=f"Successfully switched to {request.provider} provider",
+            new_session=LLMSessionResponse(
+                provider_type=new_session.provider_type.value,
+                model_id=new_session.model_id,
+                auth_method=new_session.auth_method.value,
+                status=new_session.status
+            )
+        )
+
+    except ValueError as e:
+        logger.error("Validation error switching LLM", error=str(e), exc_info=True)
+        return SwitchLLMResponse(
+            status="error",
+            message=f"Validation error: {str(e)}",
+            new_session=None
+        )
+    except Exception as e:
+        logger.error("Failed to switch LLM provider", provider=request.provider, error=str(e), exc_info=True)
+        return SwitchLLMResponse(
+            status="error",
+            message=f"Failed to switch provider: {str(e)}",
+            new_session=None
+        )
+
+
+@app.get("/llm/authenticated", response_model=AuthenticatedProvidersResponse)
+async def get_authenticated_providers():
+    """
+    List providers with valid stored credentials.
+
+    Business Purpose: Returns list of providers the user has already authenticated
+    with, enabling the UI to show which providers are available for quick switching.
+
+    Returns:
+        AuthenticatedProvidersResponse with list of authenticated provider names
+
+    Example:
+        GET /llm/authenticated
+
+        Response:
+        {
+            "providers": ["gemini", "chatgpt"],
+            "total_authenticated": 2
+        }
+    """
+    try:
+        _, cred_store, _, _ = get_llm_services()
+        authenticated = cred_store.list_authenticated_providers()
+
+        return AuthenticatedProvidersResponse(
+            providers=authenticated,
+            total_authenticated=len(authenticated)
+        )
+
+    except Exception as e:
+        logger.error("Failed to list authenticated providers", error=str(e), exc_info=True)
+        return AuthenticatedProvidersResponse(providers=[], total_authenticated=0)
+
+
+@app.post("/llm/logout/{provider}", response_model=LogoutResponse)
+async def logout_llm_provider(provider: str):
+    """
+    Logout from a cloud LLM provider.
+
+    Business Purpose: Revokes credentials for a provider, requiring re-authentication
+    for future use. This enables secure multi-user scenarios where users need to
+    log out from providers they've authenticated with.
+
+    Args:
+        provider: Provider name (gemini, chatgpt, claude)
+
+    Returns:
+        LogoutResponse with logout status and confirmation
+
+    Example:
+        POST /llm/logout/gemini
+
+        Response:
+        {
+            "status": "success",
+            "message": "Successfully logged out from gemini provider",
+            "provider": "gemini"
+        }
+    """
+    try:
+        session_mgr, cred_store, _, _ = get_llm_services()
+
+        # Delete credentials from store
+        cred_store.delete_credentials(provider)
+
+        # If this was the active provider, switch back to local
+        current_session = session_mgr.get_active_session()
+        if current_session and current_session.provider_type.value == provider:
+            await session_mgr.switch_to_local("phi3")
+
+        return LogoutResponse(
+            status="success",
+            message=f"Successfully logged out from {provider} provider",
+            provider=provider
+        )
+
+    except Exception as e:
+        logger.error("Failed to logout from LLM provider", provider=provider, error=str(e), exc_info=True)
+        return LogoutResponse(
+            status="error",
+            message=f"Failed to logout: {str(e)}",
+            provider=provider
         )
 
 

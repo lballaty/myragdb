@@ -1102,3 +1102,253 @@ class ReadmeResponse(BaseModel):
     content: Optional[str] = None
     file_name: Optional[str] = None
     error: Optional[str] = None
+
+
+# ====================
+# Cloud LLM API Models
+# ====================
+
+class ProviderInfo(BaseModel):
+    """
+    Information about a cloud LLM provider.
+
+    Business Purpose: Describes available cloud providers and their capabilities.
+
+    Example:
+        provider = ProviderInfo(
+            name="Gemini",
+            provider_type="gemini",
+            description="Google's Gemini API",
+            auth_methods=["api_key", "oauth"]
+        )
+    """
+    name: str = Field(..., description="Display name of the provider")
+    provider_type: str = Field(..., description="Type: gemini, openai, anthropic")
+    description: str = Field(..., description="Provider description")
+    auth_methods: List[str] = Field(..., description="Supported auth methods: api_key, oauth, device_code")
+    models: List[str] = Field(..., description="Available models")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "Google Gemini",
+                "provider_type": "gemini",
+                "description": "Google's Generative AI API",
+                "auth_methods": ["api_key"],
+                "models": ["gemini-pro", "gemini-pro-vision"]
+            }
+        }
+
+
+class LLMSessionResponse(BaseModel):
+    """
+    Current LLM session information.
+
+    Business Purpose: Shows which cloud/local LLM is currently active.
+
+    Example:
+        session = LLMSessionResponse(
+            provider_type="gemini",
+            model_id="gemini-pro",
+            auth_method="api_key",
+            status="authenticated"
+        )
+    """
+    provider_type: Optional[str] = Field(None, description="Type: gemini, openai, anthropic, or local")
+    model_id: Optional[str] = Field(None, description="Active model ID")
+    auth_method: Optional[str] = Field(None, description="Auth method used: api_key, oauth, device_code, or none")
+    status: str = Field(..., description="Status: authenticated, expired, not_configured")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "provider_type": "gemini",
+                "model_id": "gemini-pro",
+                "auth_method": "api_key",
+                "status": "authenticated"
+            }
+        }
+
+
+class ProvidersListResponse(BaseModel):
+    """
+    List of all available providers.
+
+    Business Purpose: Show users which cloud LLM providers they can authenticate with.
+    """
+    providers: List[ProviderInfo] = Field(..., description="List of available providers")
+    current_provider: Optional[str] = Field(None, description="Currently active provider type")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "providers": [],
+                "current_provider": "gemini"
+            }
+        }
+
+
+class ValidateCredentialsRequest(BaseModel):
+    """
+    Request to validate cloud LLM credentials.
+
+    Business Purpose: Allow users to test credentials before saving them.
+
+    Example:
+        request = ValidateCredentialsRequest(
+            provider="gemini",
+            auth_method="api_key",
+            credentials={"api_key": "..."}
+        )
+    """
+    provider: str = Field(..., description="Provider type")
+    auth_method: str = Field(..., description="Authentication method")
+    credentials: dict = Field(..., description="Credentials dictionary (varies by auth method)")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "provider": "gemini",
+                "auth_method": "api_key",
+                "credentials": {"api_key": "test-key"}
+            }
+        }
+
+
+class ValidateCredentialsResponse(BaseModel):
+    """
+    Response from credential validation.
+
+    Business Purpose: Confirm if credentials are valid before storing.
+    """
+    is_valid: bool = Field(..., description="Whether credentials are valid")
+    provider: str = Field(..., description="Provider that was validated")
+    message: str = Field(..., description="Validation result message")
+    error_code: Optional[str] = Field(None, description="Error code if invalid")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "is_valid": True,
+                "provider": "gemini",
+                "message": "Valid API key. 5 models available.",
+                "error_code": None
+            }
+        }
+
+
+class SwitchLLMRequest(BaseModel):
+    """
+    Request to switch to a different cloud LLM.
+
+    Business Purpose: Change active LLM provider with authentication.
+
+    Example:
+        request = SwitchLLMRequest(
+            provider="gemini",
+            model_id="gemini-pro",
+            auth_method="api_key",
+            credentials={"api_key": "..."}
+        )
+    """
+    provider: str = Field(..., description="Provider type")
+    model_id: str = Field(..., description="Model ID to use")
+    auth_method: str = Field(..., description="Authentication method")
+    credentials: dict = Field(..., description="Credentials for authentication")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "provider": "gemini",
+                "model_id": "gemini-pro",
+                "auth_method": "api_key",
+                "credentials": {"api_key": "test-key"}
+            }
+        }
+
+
+class SwitchLLMResponse(BaseModel):
+    """
+    Response from switching LLM.
+
+    Business Purpose: Confirm LLM switch was successful.
+    """
+    status: str = Field(..., description="Status: success or error")
+    message: str = Field(..., description="Status message")
+    new_session: Optional[LLMSessionResponse] = Field(None, description="New session info if successful")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "success",
+                "message": "Switched to Gemini successfully",
+                "new_session": {
+                    "provider_type": "gemini",
+                    "model_id": "gemini-pro",
+                    "auth_method": "api_key",
+                    "status": "authenticated"
+                }
+            }
+        }
+
+
+class AuthenticatedProvidersResponse(BaseModel):
+    """
+    List of providers with authenticated credentials.
+
+    Business Purpose: Show users which providers they can access.
+    """
+    providers: List[str] = Field(..., description="List of authenticated provider types")
+    total_authenticated: int = Field(..., description="Count of authenticated providers")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "providers": ["gemini", "openai"],
+                "total_authenticated": 2
+            }
+        }
+
+
+class LogoutResponse(BaseModel):
+    """
+    Response from logout operation.
+
+    Business Purpose: Confirm credentials were deleted.
+    """
+    status: str = Field(..., description="Status: success or error")
+    message: str = Field(..., description="Status message")
+    provider: str = Field(..., description="Provider that was logged out from")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "success",
+                "message": "Logged out from Gemini successfully",
+                "provider": "gemini"
+            }
+        }
+
+
+class LLMHealthCheckResponse(BaseModel):
+    """
+    Health check specific to LLM functionality.
+
+    Business Purpose: Show LLM service health status.
+    """
+    status: str = Field(..., description="Overall status")
+    cloud_llm_available: bool = Field(..., description="Whether cloud LLM system is available")
+    current_provider: Optional[str] = Field(None, description="Currently active provider")
+    authenticated_providers: List[str] = Field(..., description="List of authenticated providers")
+    message: str = Field(..., description="Health check message")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "healthy",
+                "cloud_llm_available": True,
+                "current_provider": "gemini",
+                "authenticated_providers": ["gemini", "openai"],
+                "message": "Cloud LLM system is operational"
+            }
+        }
