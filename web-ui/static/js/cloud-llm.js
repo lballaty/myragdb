@@ -35,6 +35,7 @@ class CloudLLMManager {
         this.loadCurrentSession();
         this.loadAvailableProviders();
         this.loadAuthenticatedProviders();
+        this.loadPersistedProvider();
 
         // Set up event listeners
         this.setupProviderTabListeners();
@@ -108,6 +109,45 @@ class CloudLLMManager {
     }
 
     /**
+     * Load previously selected provider from backend database
+     * Persists provider selection across browser sessions and server restarts
+     */
+    async loadPersistedProvider() {
+        try {
+            const response = await fetch('/api/v1/llm-config/provider');
+
+            if (!response.ok) {
+                console.debug('[CloudLLM] No persisted provider found');
+                return;
+            }
+
+            const data = await response.json();
+
+            if (data.provider_name) {
+                console.log('[CloudLLM] Restoring persisted provider:', data.provider_name);
+                this.selected_provider = data.provider_name;
+                this.selected_auth_method = data.auth_method || 'api_key';
+
+                // Update UI to reflect persisted selection
+                this.showProviderDetails(data.provider_name);
+                this.showAuthenticationOptions(data.provider_name);
+
+                // Mark the provider tab as active
+                document.querySelectorAll('.llm-provider-tab').forEach(tab => {
+                    if (tab.dataset.provider === data.provider_name) {
+                        tab.classList.add('active');
+                    } else {
+                        tab.classList.remove('active');
+                    }
+                });
+            }
+        } catch (error) {
+            console.debug('[CloudLLM] Error loading persisted provider:', error);
+            // Non-critical - just continue with defaults
+        }
+    }
+
+    /**
      * Set up provider tab click listeners
      */
     setupProviderTabListeners() {
@@ -169,6 +209,7 @@ class CloudLLMManager {
     /**
      * Handle provider selection
      * Shows appropriate auth methods for the selected provider
+     * Persists selection to backend database
      */
     selectProvider(provider) {
         this.selected_provider = provider;
@@ -177,11 +218,37 @@ class CloudLLMManager {
         document.querySelectorAll('.llm-provider-tab').forEach(tab => {
             tab.classList.remove('active');
         });
-        event.target.closest('.llm-provider-tab').classList.add('active');
+        if (event && event.target) {
+            const tabElement = event.target.closest('.llm-provider-tab');
+            if (tabElement) {
+                tabElement.classList.add('active');
+            }
+        }
+
+        // Persist provider selection to backend database
+        this.persistProviderSelection(provider);
 
         // Show provider details and auth options
         this.showProviderDetails(provider);
         this.showAuthenticationOptions(provider);
+    }
+
+    /**
+     * Persist provider selection to backend database
+     * Ensures selection persists across browser sessions and server restarts
+     */
+    persistProviderSelection(provider) {
+        fetch('/api/v1/llm-config/provider', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                provider_name: provider,
+                auth_method: this.selected_auth_method || 'api_key'
+            })
+        }).catch(err => {
+            console.debug('[CloudLLM] Failed to persist provider selection:', err);
+            // Non-critical error - selection still works for this session
+        });
     }
 
     /**
@@ -403,6 +470,9 @@ class CloudLLMManager {
                     `✅ Successfully switched to ${data.provider_type}!`,
                     'success'
                 );
+
+                // Persist the switch to database
+                this.persistProviderSelection(this.selected_provider);
 
                 // Reload session and refresh UI
                 setTimeout(() => {
@@ -767,6 +837,10 @@ class CloudLLMManager {
     async quickSwitch(provider) {
         try {
             this.showAuthStatus(`Switching to ${this.getProviderName(provider)}...`, 'info');
+
+            // Persist the selection to database
+            this.selected_provider = provider;
+            this.persistProviderSelection(provider);
 
             // Retrieve stored credentials and switch
             // This is a simplified flow - in production, credentials are already stored
