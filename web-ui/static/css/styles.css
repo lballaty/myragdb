@@ -2650,6 +2650,32 @@ body {
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
+.browser-search-container {
+    display: flex;
+    margin: 0.75rem 0;
+}
+
+.browser-search-input {
+    flex: 1;
+    padding: 10px 12px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 0.9em;
+    transition: all 0.2s;
+}
+
+.browser-search-input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.browser-search-input::placeholder {
+    color: var(--text-secondary);
+}
+
 /* Directory Tree */
 .directory-tree-container {
     flex: 1;
@@ -2682,6 +2708,10 @@ body {
     background: rgba(16, 185, 129, 0.3);
     border-left: 3px solid #10b981;
     padding-left: 9px;
+}
+
+.tree-item.hidden {
+    display: none;
 }
 
 .tree-item-icon {

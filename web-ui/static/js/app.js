@@ -3779,6 +3779,45 @@ function handleBrowserPathKeypress(event) {
     }
 }
 
+function filterDirectoryTree() {
+    const searchInput = document.getElementById('browser-search-input');
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    const treeItems = document.querySelectorAll('.tree-item');
+
+    treeItems.forEach(item => {
+        const itemName = item.textContent.toLowerCase();
+
+        // Show item if search term is empty or item name contains search term
+        if (searchTerm === '' || itemName.includes(searchTerm)) {
+            item.classList.remove('hidden');
+        } else {
+            item.classList.add('hidden');
+        }
+    });
+
+    // Show no results message if all items are hidden
+    const visibleItems = document.querySelectorAll('.tree-item:not(.hidden)');
+    const treeContainer = document.getElementById('directory-tree');
+
+    if (visibleItems.length === 0 && searchTerm !== '') {
+        // Check if there's already a no results message
+        let noResultsMsg = treeContainer.querySelector('.no-search-results');
+        if (!noResultsMsg) {
+            noResultsMsg = document.createElement('div');
+            noResultsMsg.className = 'no-search-results';
+            noResultsMsg.textContent = `No directories match "${searchTerm}"`;
+            noResultsMsg.style.cssText = 'text-align: center; color: var(--text-secondary); padding: 1rem; font-style: italic;';
+            treeContainer.appendChild(noResultsMsg);
+        }
+    } else {
+        // Remove no results message if results are visible
+        const noResultsMsg = treeContainer.querySelector('.no-search-results');
+        if (noResultsMsg) {
+            noResultsMsg.remove();
+        }
+    }
+}
+
 // Make directories functions globally available
 window.loadDirectories = loadDirectories;
 window.editDirectory = editDirectory;
@@ -3794,4 +3833,5 @@ window.navigateToHome = navigateToHome;
 window.browsePath = browsePath;
 window.confirmDirectorySelection = confirmDirectorySelection;
 window.handleBrowserPathKeypress = handleBrowserPathKeypress;
+window.filterDirectoryTree = filterDirectoryTree;
 window.searchManual = searchManual;
