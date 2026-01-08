@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.07.2.79.0">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.08.2.80.0">
     <link rel="stylesheet" href="static/css/activity-observability.css?v=2026.01.07.2.76.0">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -494,6 +494,62 @@
             </div>
         </div>
 
+        <!-- Directory Browser Modal -->
+        <div id="directory-browser-modal" class="modal" style="display: none;">
+            <div class="modal-content directory-browser-modal">
+                <div class="modal-header">
+                    <h2>📁 Browse Directory</h2>
+                    <button class="modal-close" onclick="closeBrowserModal()" title="Close">✕</button>
+                </div>
+
+                <div class="modal-body">
+                    <!-- Breadcrumb Navigation -->
+                    <div class="breadcrumb-nav">
+                        <button class="breadcrumb-item" onclick="navigateToHome()">
+                            🏠 Home
+                        </button>
+                        <span class="breadcrumb-separator">/</span>
+                        <div id="breadcrumb-path" class="breadcrumb-path">
+                            <!-- Dynamic breadcrumbs inserted here -->
+                        </div>
+                    </div>
+
+                    <!-- Path Input -->
+                    <div class="browser-path-input-container">
+                        <input
+                            type="text"
+                            id="browser-path-input"
+                            class="browser-path-input"
+                            placeholder="Enter path or navigate below"
+                            onkeypress="handleBrowserPathKeypress(event)"
+                        >
+                    </div>
+
+                    <!-- Directory Tree -->
+                    <div class="directory-tree-container">
+                        <div id="directory-tree" class="directory-tree">
+                            <div class="loading">Loading directories...</div>
+                        </div>
+                    </div>
+
+                    <!-- Current Selection Display -->
+                    <div class="browser-current-selection">
+                        <strong>Selected:</strong>
+                        <code id="browser-selected-path">/Users/liborballaty</code>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button id="browser-select-button" class="primary-button" onclick="confirmDirectorySelection()">
+                        ✓ Select This Directory
+                    </button>
+                    <button class="secondary-button" onclick="closeBrowserModal()">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Observability Tab -->
         <div id="observability-tab" class="tab-content">
             <div class="observability-section">
@@ -808,6 +864,6 @@
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
     <script src="static/js/activity-monitor.js?v=2026.01.07.2.76.0"></script>
     <script src="static/js/observability.js?v=2026.01.07.2.76.0"></script>
-    <script src="static/js/app.js?v=2026.01.07.2.79.0"></script>
+    <script src="static/js/app.js?v=2026.01.08.2.80.0"></script>
 </body>
 </html>

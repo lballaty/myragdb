@@ -3064,6 +3064,7 @@ function initializeDirectories() {
     const disableAllButton = document.getElementById('disable-dirs-button');
     const reindexAllButton = document.getElementById('reindex-all-dirs-button');
     const selectAllCheckbox = document.getElementById('select-all-dirs');
+    const browseButton = document.getElementById('browse-dir-button');
 
     if (addButton) {
         addButton.addEventListener('click', handleAddDirectory);
@@ -3083,6 +3084,9 @@ function initializeDirectories() {
                 cb.checked = e.target.checked;
             });
         });
+    }
+    if (browseButton) {
+        browseButton.addEventListener('click', openBrowserModal);
     }
 
     // Load directories on initialization
@@ -3586,6 +3590,137 @@ function updateDirectoryStatistics() {
     }
 }
 
+// Directory Browser Functions
+
+function openBrowserModal() {
+    const modal = document.getElementById('directory-browser-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        // Start from home directory
+        navigateToHome();
+    }
+}
+
+function closeBrowserModal() {
+    const modal = document.getElementById('directory-browser-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function navigateToHome() {
+    const homeDir = '/Users/liborballaty';
+    browsePath(homeDir);
+}
+
+async function browsePath(path) {
+    const treeContainer = document.getElementById('directory-tree');
+    const pathInput = document.getElementById('browser-path-input');
+    const selectedPath = document.getElementById('browser-selected-path');
+
+    if (!treeContainer) return;
+
+    // Update path input
+    pathInput.value = path;
+    selectedPath.textContent = path;
+
+    // Show loading
+    treeContainer.innerHTML = '<div class="loading">Loading directories...</div>';
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/directories/browse?path=${encodeURIComponent(path)}`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Update breadcrumbs
+        updateBreadcrumbs(path);
+
+        // Render directory tree
+        if (data.children && data.children.length > 0) {
+            const html = data.children
+                .map(child => renderTreeItem(child))
+                .join('');
+            treeContainer.innerHTML = html;
+        } else if (data.error) {
+            treeContainer.innerHTML = `<div class="error">⚠️ ${escapeHtml(data.error)}</div>`;
+        } else {
+            treeContainer.innerHTML = '<div style="padding: 20px; color: var(--text-secondary); text-align: center;">No subdirectories found</div>';
+        }
+
+        addActivityLog('info', `Browsed directory: ${path}`);
+
+    } catch (error) {
+        treeContainer.innerHTML = `<div class="error">Error loading directory: ${escapeHtml(error.message)}</div>`;
+        addActivityLog('error', `Failed to browse directory ${path}: ${error.message}`);
+    }
+}
+
+function renderTreeItem(item) {
+    return `
+        <div class="tree-item" onclick="browsePath('${item.path}')">
+            <div class="tree-item-icon">📁</div>
+            <div class="tree-item-name">${escapeHtml(item.name)}</div>
+        </div>
+    `;
+}
+
+function updateBreadcrumbs(path) {
+    const breadcrumbPath = document.getElementById('breadcrumb-path');
+    if (!breadcrumbPath) return;
+
+    const parts = path.split('/').filter(p => p);
+
+    const breadcrumbs = parts.map((part, idx) => {
+        const fullPath = '/' + parts.slice(0, idx + 1).join('/');
+        return `
+            <button class="breadcrumb-item" onclick="browsePath('${fullPath}')">
+                ${escapeHtml(part)}
+            </button>
+        `;
+    }).join(`<span class="breadcrumb-separator">/</span>`);
+
+    breadcrumbPath.innerHTML = breadcrumbs;
+}
+
+function confirmDirectorySelection() {
+    const pathInput = document.getElementById('browser-path-input');
+    const selectedPath = pathInput.value.trim();
+
+    if (!selectedPath) {
+        addActivityLog('warn', 'Please select a valid directory path');
+        return;
+    }
+
+    // Fill in the directory form
+    const dirPathInput = document.getElementById('dir-path-input');
+    if (dirPathInput) {
+        dirPathInput.value = selectedPath;
+    }
+
+    // Close modal
+    closeBrowserModal();
+
+    // Focus on directory name field
+    const dirNameInput = document.getElementById('dir-name-input');
+    if (dirNameInput) {
+        dirNameInput.focus();
+    }
+
+    addActivityLog('info', `Selected directory: ${selectedPath}`);
+}
+
+function handleBrowserPathKeypress(event) {
+    if (event.key === 'Enter') {
+        const path = event.target.value.trim();
+        if (path) {
+            browsePath(path);
+        }
+    }
+}
+
 // Make directories functions globally available
 window.loadDirectories = loadDirectories;
 window.editDirectory = editDirectory;
@@ -3595,4 +3730,10 @@ window.handleAddDirectory = handleAddDirectory;
 window.handleEnableAllDirectories = handleEnableAllDirectories;
 window.handleDisableAllDirectories = handleDisableAllDirectories;
 window.handleReindexAllDirectories = handleReindexAllDirectories;
+window.openBrowserModal = openBrowserModal;
+window.closeBrowserModal = closeBrowserModal;
+window.navigateToHome = navigateToHome;
+window.browsePath = browsePath;
+window.confirmDirectorySelection = confirmDirectorySelection;
+window.handleBrowserPathKeypress = handleBrowserPathKeypress;
 window.searchManual = searchManual;

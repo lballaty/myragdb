@@ -480,8 +480,64 @@ class DirectoryDiscoveryInfo(BaseModel):
         }
 
 
-# Enable forward references for DirectoryDiscoveryInfo
+class DirectoryBrowseInfo(BaseModel):
+    """
+    Directory browsing information for filesystem navigator.
+
+    Business Purpose: Represents a directory in a browsable tree structure
+    for UI components allowing users to browse and select any filesystem directory
+    for adding to MyRAGDB.
+
+    Example:
+        item = DirectoryBrowseInfo(
+            path="/Users/user/documents",
+            name="documents",
+            is_directory=True,
+            parent_path="/Users/user",
+            children=[...],
+            error=None
+        )
+    """
+    path: str = Field(..., description="Absolute directory path")
+    name: str = Field(..., description="Directory name (basename)")
+    is_directory: bool = Field(..., description="Whether this is a directory (True) or file (False)")
+    parent_path: Optional[str] = Field(None, description="Parent directory path")
+    children: Optional[List["DirectoryBrowseInfo"]] = Field(None, description="Child directories in tree structure (only subdirectories)")
+    error: Optional[str] = Field(None, description="Error message if directory could not be read (e.g., permission denied)")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "path": "/Users/user",
+                "name": "user",
+                "is_directory": True,
+                "parent_path": "/Users",
+                "children": [
+                    {
+                        "path": "/Users/user/documents",
+                        "name": "documents",
+                        "is_directory": True,
+                        "parent_path": "/Users/user",
+                        "children": None,
+                        "error": None
+                    },
+                    {
+                        "path": "/Users/user/downloads",
+                        "name": "downloads",
+                        "is_directory": True,
+                        "parent_path": "/Users/user",
+                        "children": None,
+                        "error": None
+                    }
+                ],
+                "error": None
+            }
+        }
+
+
+# Enable forward references for DirectoryDiscoveryInfo and DirectoryBrowseInfo
 DirectoryDiscoveryInfo.update_forward_refs()
+DirectoryBrowseInfo.update_forward_refs()
 
 
 class ReindexRequest(BaseModel):

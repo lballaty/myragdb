@@ -11,7 +11,8 @@ from myragdb.api.models import (
     DirectoryInfo,
     DirectoryRequest,
     DirectoryStatsInfo,
-    DirectoryDiscoveryInfo
+    DirectoryDiscoveryInfo,
+    DirectoryBrowseInfo
 )
 from myragdb.db.file_metadata import get_metadata_db
 import structlog
@@ -192,6 +193,125 @@ async def create_directory(request: DirectoryRequest):
     except Exception as e:
         logger.error("Error creating directory", error=str(e), path=request.path, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error creating directory: {str(e)}")
+
+
+@router.get("/browse", response_model=DirectoryBrowseInfo)
+async def browse_filesystem(path: str):
+    """
+    Browse filesystem for directory selection.
+
+    Business Purpose: Allows UI directory picker to browse any filesystem path
+    and discover subdirectories for selection during directory addition.
+
+    Query Parameters:
+        path: Directory path to browse
+
+    Returns:
+        DirectoryBrowseInfo with subdirectories at the given path
+
+    Example:
+        GET /directories/browse?path=/Users/username
+        GET /directories/browse?path=/private/tmp
+
+        Response:
+        {
+            "path": "/Users/username",
+            "name": "username",
+            "is_directory": true,
+            "parent_path": "/Users",
+            "children": [
+                {
+                    "path": "/Users/username/documents",
+                    "name": "documents",
+                    "is_directory": true,
+                    "parent_path": "/Users/username",
+                    "children": null,
+                    "error": null
+                }
+            ],
+            "error": null
+        }
+    """
+    try:
+        path_obj = Path(path).expanduser().resolve()
+
+        # Validate path exists
+        if not path_obj.exists():
+            return DirectoryBrowseInfo(
+                path=str(path_obj),
+                name=path_obj.name or str(path_obj),
+                is_directory=False,
+                parent_path=str(path_obj.parent) if path_obj.parent != path_obj else None,
+                children=None,
+                error=f"Path does not exist: {path}"
+            )
+
+        # Validate it's a directory
+        if not path_obj.is_dir():
+            return DirectoryBrowseInfo(
+                path=str(path_obj),
+                name=path_obj.name,
+                is_directory=False,
+                parent_path=str(path_obj.parent),
+                children=None,
+                error=f"Path is not a directory: {path}"
+            )
+
+        # Try to read directory contents
+        children = None
+        error = None
+
+        try:
+            children = []
+            # List subdirectories and filter out hidden directories (starting with .)
+            # Limit to 100 items to avoid overwhelming the UI
+            items_found = 0
+            for item in sorted(path_obj.iterdir()):
+                if items_found >= 100:
+                    break
+
+                # Skip hidden directories and files for cleaner UI
+                if item.name.startswith('.'):
+                    continue
+
+                # Only include directories
+                if item.is_dir():
+                    children.append(
+                        DirectoryBrowseInfo(
+                            path=str(item),
+                            name=item.name,
+                            is_directory=True,
+                            parent_path=str(path_obj),
+                            children=None,  # Don't recurse in browse endpoint
+                            error=None
+                        )
+                    )
+                    items_found += 1
+
+        except PermissionError:
+            error = f"Permission denied: {path}"
+        except OSError as e:
+            error = f"Error reading directory: {str(e)}"
+
+        return DirectoryBrowseInfo(
+            path=str(path_obj),
+            name=path_obj.name or str(path_obj),
+            is_directory=True,
+            parent_path=str(path_obj.parent) if path_obj.parent != path_obj else None,
+            children=children,
+            error=error
+        )
+
+    except Exception as e:
+        logger.error("Error browsing filesystem", path=path, error=str(e), exc_info=True)
+        return DirectoryBrowseInfo(
+            path=path,
+            name=Path(path).name or path,
+            is_directory=False,
+            parent_path=None,
+            children=None,
+            error=f"Error browsing path: {str(e)}"
+        )
 
 
 @router.get("/{directory_id}", response_model=DirectoryInfo)
