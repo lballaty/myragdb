@@ -2740,3 +2740,149 @@ body {
     word-break: break-all;
     font-size: 0.9em;
 }
+
+/* Directory Cards - Professional card-based display */
+.directories-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.repository-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.repository-card:hover {
+    border-color: var(--accent-color);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.repository-card.disabled {
+    opacity: 0.7;
+    background: var(--bg-secondary);
+}
+
+.repository-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.repository-header label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    flex: 1;
+}
+
+.repository-header input[type="checkbox"] {
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+}
+
+.repository-header strong {
+    font-size: 1.1em;
+    color: var(--text-primary);
+    word-break: break-word;
+}
+
+.repo-priority {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8em;
+    background: rgba(0, 0, 0, 0.1);
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.repository-details {
+    flex: 1;
+    margin-bottom: 1rem;
+}
+
+.repo-path {
+    margin: 0.5rem 0;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    word-break: break-all;
+    font-family: monospace;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 0.5rem;
+    border-radius: 4px;
+}
+
+.repo-description {
+    margin: 0.75rem 0;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.repository-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9em;
+    color: var(--text-secondary);
+}
+
+.repository-stats span {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.repository-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.action-button {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: all 0.2s ease;
+    flex: 1;
+    min-width: 80px;
+}
+
+.action-button:hover {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
+}
+
+.action-button.danger {
+    color: #ef4444;
+    border-color: #ef4444;
+}
+
+.action-button.danger:hover {
+    background: #ef4444;
+    color: white;
+}
