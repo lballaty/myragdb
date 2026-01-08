@@ -309,9 +309,11 @@ class MeilisearchIndexer:
                 batch_docs.append(doc)
 
                 # Update metadata database
+                # Use dir_{directory_id} as repository name for directory-sourced files
+                repo_name = scanned_file.repository_name or f"dir_{scanned_file.directory_id}"
                 self.metadata_db.update_file_metadata(
                     scanned_file.file_path,
-                    scanned_file.repository_name,
+                    repo_name,
                     'keyword'
                 )
 
