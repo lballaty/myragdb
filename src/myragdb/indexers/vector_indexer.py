@@ -289,9 +289,10 @@ Type: {scanned_file.file_type}
             )
 
             # Update metadata database
+            # repository can be None for directory-sourced files
             self.metadata_db.update_file_metadata(
                 scanned_file.file_path,
-                scanned_file.repository_name or f"dir_{scanned_file.directory_id}",
+                scanned_file.repository_name,
                 'vector'
             )
 

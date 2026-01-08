@@ -100,7 +100,7 @@ class FileMetadataDatabase:
     def update_file_metadata(
         self,
         file_path: str,
-        repository: str,
+        repository: Optional[str],
         index_type: str,
         last_modified: Optional[int] = None,
         content_hash: Optional[str] = None,
@@ -110,22 +110,31 @@ class FileMetadataDatabase:
         Update or insert file metadata after indexing.
 
         Business Purpose: Records that a file has been indexed, enabling
-        incremental indexing on next run.
+        incremental indexing on next run. Supports both repository-sourced and
+        directory-sourced files (repository=None for directory files).
 
         Args:
             file_path: Absolute path to file
-            repository: Repository name
+            repository: Repository name (None for directory-sourced files)
             index_type: 'keyword', 'vector', or 'both'
             last_modified: File's mtime (optional, will fetch if not provided)
             content_hash: SHA256 hash of content (optional)
             file_size: File size in bytes (optional)
 
         Example:
+            # Repository-sourced file
             db.update_file_metadata(
                 '/path/to/file.py',
                 'xLLMArionComply',
                 'keyword',
                 last_modified=1704067200
+            )
+
+            # Directory-sourced file
+            db.update_file_metadata(
+                '/Users/user/Documents/report.md',
+                None,  # No repository
+                'vector'
             )
         """
         now = int(time.time())
