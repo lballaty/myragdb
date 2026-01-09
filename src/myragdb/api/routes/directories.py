@@ -23,7 +23,7 @@ import structlog
 logger = structlog.get_logger()
 
 # Create router for directory endpoints
-router = APIRouter(prefix="/directories", tags=["directories"])
+router = APIRouter(prefix="/api/v1/directories", tags=["directories"])
 
 
 @router.get("", response_model=List[DirectoryInfo])
@@ -316,6 +316,305 @@ async def browse_filesystem(path: str):
         )
 
 
+@router.patch("/bulk-update")
+async def bulk_update_directories(action: str):
+    """
+    Perform bulk operations on all directories.
+
+    Business Purpose: Efficiently enable/disable all directories without
+    making individual API calls for each directory.
+
+    Query Parameters:
+        action: Type of bulk update ('enable_all' or 'disable_all')
+
+    Returns:
+        Status message with count of updated directories
+
+    Example:
+        PATCH /api/v1/directories/bulk-update?action=enable_all
+        PATCH /api/v1/directories/bulk-update?action=disable_all
+
+        Response:
+        {
+            "status": "success",
+            "action": "enable_all",
+            "updated_count": 5,
+            "message": "Updated 5 directories"
+        }
+    """
+    try:
+        db = get_metadata_db()
+
+        # Validate action
+        if action not in ['enable_all', 'disable_all']:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid action: {action}. Must be 'enable_all' or 'disable_all'"
+            )
+
+        # Determine enabled value based on action
+        enabled = action == 'enable_all'
+
+        # Get all directories
+        directories = db.list_directories(enabled_only=False)
+
+        updated_count = 0
+        for dir_data in directories:
+            try:
+                # Only update if status is different
+                if dir_data['enabled'] != enabled:
+                    with db._get_connection() as conn:
+                        conn.execute(
+                            'UPDATE directories SET enabled = ?, updated_at = ? WHERE id = ?',
+                            (enabled, int(time.time()), dir_data['id'])
+                        )
+                        conn.commit()
+                    updated_count += 1
+            except Exception as e:
+                logger.error(f"Error updating directory {dir_data['id']}", error=str(e))
+
+        action_name = "enabled" if enabled else "disabled"
+        logger.info(f"Bulk {action} completed", updated_count=updated_count)
+
+        return {
+            "status": "success",
+            "action": action,
+            "updated_count": updated_count,
+            "message": f"Updated {updated_count} directories to {action_name}"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error bulk updating directories", action=action, error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error bulk updating directories: {str(e)}")
+
+
+@router.post("/reindex")
+async def bulk_reindex_directories(background_tasks: BackgroundTasks, directory_ids: Optional[List[int]] = None, index_keyword: bool = True, index_vector: bool = True, full_rebuild: bool = False):
+    """
+    Trigger re-indexing of multiple directories or all directories.
+
+    Business Purpose: Efficiently reindex multiple directories in background,
+    allowing users to update indexes for selected directories or all at once.
+
+    Query Parameters:
+        directory_ids: List of directory IDs to reindex (null = all directories)
+        index_keyword: Whether to reindex with Meilisearch (default: true)
+        index_vector: Whether to reindex with vector embeddings (default: true)
+        full_rebuild: If true, clears and rebuilds index. If false, incremental update (default: false)
+
+    Returns:
+        Status message indicating reindexing has started
+
+    Example:
+        POST /api/v1/directories/reindex?index_keyword=true&index_vector=true&full_rebuild=false
+        POST /api/v1/directories/reindex?directory_ids=1&directory_ids=2&index_keyword=true
+
+        Response:
+        {
+            "status": "started",
+            "message": "Re-indexing 2 directories (Keyword, Vector - incremental update)",
+            "directory_count": 2,
+            "started_at": 1704067200
+        }
+    """
+    try:
+        db = get_metadata_db()
+
+        # Validate at least one index type selected
+        if not index_keyword and not index_vector:
+            raise HTTPException(
+                status_code=400,
+                detail="At least one index type (Keyword or Vector) must be selected"
+            )
+
+        # Get list of directories to reindex
+        if directory_ids is None:
+            # Reindex all directories
+            all_dirs = db.list_directories(enabled_only=False)
+            target_directories = [d['id'] for d in all_dirs]
+        else:
+            target_directories = directory_ids
+
+        if not target_directories:
+            raise HTTPException(
+                status_code=400,
+                detail="No directories to reindex"
+            )
+
+        # Validate all directory IDs exist
+        for dir_id in target_directories:
+            dir_data = db.get_directory(dir_id)
+            if not dir_data:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Directory not found: {dir_id}"
+                )
+
+        mode = "full rebuild" if full_rebuild else "incremental update"
+        index_types = []
+        if index_keyword:
+            index_types.append("Keyword")
+        if index_vector:
+            index_types.append("Vector")
+
+        logger.info(
+            "Bulk reindex directories requested",
+            directory_count=len(target_directories),
+            index_types=index_types,
+            mode=mode
+        )
+
+        async def perform_bulk_indexing():
+            """Background task to reindex multiple directories."""
+            try:
+                from pathlib import Path as PathlibPath
+
+                for dir_id in target_directories:
+                    try:
+                        dir_data = db.get_directory(dir_id)
+                        if not dir_data:
+                            logger.warning(f"Directory {dir_id} not found during bulk reindex")
+                            continue
+
+                        directory_path = dir_data['path']
+                        incremental = not full_rebuild
+                        keyword_count = 0
+                        vector_count = 0
+                        keyword_time = 0
+                        vector_time = 0
+                        total_size = 0
+
+                        # Index with Keyword (Meilisearch)
+                        if index_keyword:
+                            try:
+                                start_time = time.time()
+                                meilisearch_indexer = MeilisearchIndexer()
+                                keyword_count = meilisearch_indexer.index_directory(
+                                    directory_path=directory_path,
+                                    directory_id=dir_id,
+                                    incremental=incremental
+                                )
+                                keyword_time = time.time() - start_time
+
+                                # Calculate directory size
+                                try:
+                                    total_size = sum(
+                                        f.stat().st_size for f in PathlibPath(directory_path).rglob('*')
+                                        if f.is_file()
+                                    )
+                                except Exception:
+                                    total_size = 0
+
+                                # Store stats
+                                db.store_directory_stats(
+                                    directory_id=dir_id,
+                                    index_type='keyword',
+                                    files_indexed=keyword_count,
+                                    total_size_bytes=total_size,
+                                    indexing_time_seconds=keyword_time,
+                                    is_initial=dir_data.get('last_indexed') is None
+                                )
+
+                                logger.info(
+                                    "Keyword indexing completed",
+                                    directory_id=dir_id,
+                                    files_indexed=keyword_count,
+                                    time_seconds=keyword_time
+                                )
+                            except Exception as e:
+                                logger.error(
+                                    "Keyword indexing failed",
+                                    directory_id=dir_id,
+                                    error=str(e),
+                                    exc_info=True
+                                )
+
+                        # Index with Vector (Embeddings)
+                        if index_vector:
+                            try:
+                                start_time = time.time()
+                                vector_indexer = VectorIndexer()
+                                vector_count = vector_indexer.index_directory(
+                                    directory_path=directory_path,
+                                    directory_id=dir_id,
+                                    incremental=incremental
+                                )
+                                vector_time = time.time() - start_time
+
+                                # Store stats
+                                db.store_directory_stats(
+                                    directory_id=dir_id,
+                                    index_type='vector',
+                                    files_indexed=vector_count,
+                                    total_size_bytes=total_size,
+                                    indexing_time_seconds=vector_time,
+                                    is_initial=dir_data.get('last_indexed') is None
+                                )
+
+                                logger.info(
+                                    "Vector indexing completed",
+                                    directory_id=dir_id,
+                                    files_indexed=vector_count,
+                                    time_seconds=vector_time
+                                )
+                            except Exception as e:
+                                logger.error(
+                                    "Vector indexing failed",
+                                    directory_id=dir_id,
+                                    error=str(e),
+                                    exc_info=True
+                                )
+
+                        # Update last_indexed timestamp
+                        try:
+                            with db._get_connection() as conn:
+                                conn.execute(
+                                    'UPDATE directories SET last_indexed = ?, updated_at = ? WHERE id = ?',
+                                    (int(time.time()), int(time.time()), dir_id)
+                                )
+                                conn.commit()
+                        except Exception as e:
+                            logger.error("Failed to update last_indexed timestamp", directory_id=dir_id, error=str(e))
+
+                        logger.info("Directory indexed successfully", directory_id=dir_id, keyword_count=keyword_count, vector_count=vector_count)
+
+                    except Exception as e:
+                        logger.error(
+                            "Error indexing directory in bulk operation",
+                            directory_id=dir_id,
+                            error=str(e),
+                            exc_info=True
+                        )
+
+                logger.info("Bulk indexing completed successfully", total_directories=len(target_directories))
+
+            except Exception as e:
+                logger.error(
+                    "Bulk indexing task failed",
+                    error=str(e),
+                    exc_info=True
+                )
+
+        # Schedule the background task
+        background_tasks.add_task(perform_bulk_indexing)
+
+        return {
+            "status": "started",
+            "message": f"Re-indexing {len(target_directories)} directories ({', '.join(index_types)} - {mode})",
+            "directory_count": len(target_directories),
+            "directory_ids": target_directories,
+            "started_at": time.time()
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error bulk reindexing directories", error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error bulk reindexing directories: {str(e)}")
+
+
 @router.get("/{directory_id}", response_model=DirectoryInfo)
 async def get_directory(directory_id: int):
     """
@@ -549,7 +848,7 @@ async def delete_directory(directory_id: int):
 
 
 @router.post("/{directory_id}/reindex")
-async def reindex_directory(directory_id: int, index_keyword: bool = True, index_vector: bool = True, full_rebuild: bool = False, background_tasks: BackgroundTasks = None):
+async def reindex_directory(directory_id: int, background_tasks: BackgroundTasks, index_keyword: bool = True, index_vector: bool = True, full_rebuild: bool = False):
     """
     Trigger re-indexing of a specific directory.
 

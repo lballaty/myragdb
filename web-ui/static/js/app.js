@@ -3962,7 +3962,7 @@ async function reindexDirectory(directoryId) {
 
     try {
         const response = await fetch(
-            `${API_BASE_URL}/directories/${directoryId}/reindex?index_keyword=${indexKeyword}&index_vector=${indexVector}&full_rebuild=${fullRebuild}`,
+            `${API_BASE_URL}/api/v1/directories/${directoryId}/reindex?index_keyword=${indexKeyword}&index_vector=${indexVector}&full_rebuild=${fullRebuild}`,
             {
                 method: 'POST'
             }
@@ -4000,37 +4000,24 @@ async function handleEnableAllDirectories() {
         return;
     }
 
-    let successCount = 0;
-    let failureCount = 0;
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/directories/bulk-update?action=enable_all`, {
+            method: 'PATCH'
+        });
 
-    for (const dir of disabledDirs) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/directories/${dir.id}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    path: dir.path,
-                    name: dir.name,
-                    enabled: true,
-                    priority: dir.priority,
-                    notes: dir.notes
-                })
-            });
-
-            if (response.ok) {
-                successCount++;
-            } else {
-                failureCount++;
-            }
-        } catch (error) {
-            failureCount++;
+        if (response.ok) {
+            const data = await response.json();
+            addActivityLog('info', `Enabled ${data.updated_count} directory(ies)`);
+            await loadDirectories();
+        } else {
+            const error = await response.json();
+            addActivityLog('error', `Failed to enable directories: ${error.detail}`);
+            alert(`Failed to enable directories: ${error.detail}`);
         }
+    } catch (error) {
+        addActivityLog('error', `Failed to enable directories: ${error.message}`);
+        alert(`Failed to enable directories: ${error.message}`);
     }
-
-    addActivityLog('info', `Enabled ${successCount} directory(ies)${failureCount > 0 ? `, ${failureCount} failed` : ''}`);
-    await loadDirectories();
 }
 
 // Disable all directories
@@ -4050,37 +4037,24 @@ async function handleDisableAllDirectories() {
         return;
     }
 
-    let successCount = 0;
-    let failureCount = 0;
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/directories/bulk-update?action=disable_all`, {
+            method: 'PATCH'
+        });
 
-    for (const dir of enabledDirs) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/directories/${dir.id}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    path: dir.path,
-                    name: dir.name,
-                    enabled: false,
-                    priority: dir.priority,
-                    notes: dir.notes
-                })
-            });
-
-            if (response.ok) {
-                successCount++;
-            } else {
-                failureCount++;
-            }
-        } catch (error) {
-            failureCount++;
+        if (response.ok) {
+            const data = await response.json();
+            addActivityLog('info', `Disabled ${data.updated_count} directory(ies)`);
+            await loadDirectories();
+        } else {
+            const error = await response.json();
+            addActivityLog('error', `Failed to disable directories: ${error.detail}`);
+            alert(`Failed to disable directories: ${error.detail}`);
         }
+    } catch (error) {
+        addActivityLog('error', `Failed to disable directories: ${error.message}`);
+        alert(`Failed to disable directories: ${error.message}`);
     }
-
-    addActivityLog('info', `Disabled ${successCount} directory(ies)${failureCount > 0 ? `, ${failureCount} failed` : ''}`);
-    await loadDirectories();
 }
 
 // Reindex all directories
@@ -4113,30 +4087,33 @@ async function handleReindexAllDirectories() {
         return;
     }
 
-    let successCount = 0;
-    let failureCount = 0;
+    try {
+        const params = new URLSearchParams({
+            index_keyword: indexKeyword,
+            index_vector: indexVector,
+            full_rebuild: fullRebuild
+        });
 
-    for (const dir of state.directories) {
-        try {
-            const response = await fetch(
-                `${API_BASE_URL}/directories/${dir.id}/reindex?index_keyword=${indexKeyword}&index_vector=${indexVector}&full_rebuild=${fullRebuild}`,
-                {
-                    method: 'POST'
-                }
-            );
-
-            if (response.ok) {
-                successCount++;
-            } else {
-                failureCount++;
+        const response = await fetch(
+            `${API_BASE_URL}/api/v1/directories/reindex?${params.toString()}`,
+            {
+                method: 'POST'
             }
-        } catch (error) {
-            failureCount++;
-        }
-    }
+        );
 
-    addActivityLog('info', `Reindexing started for ${successCount} directory(ies)${failureCount > 0 ? `, ${failureCount} failed` : ''}`);
-    await loadDirectories();
+        if (response.ok) {
+            const data = await response.json();
+            addActivityLog('info', `Reindexing started for ${data.directory_count} directory(ies)`);
+            await loadDirectories();
+        } else {
+            const error = await response.json();
+            addActivityLog('error', `Failed to reindex directories: ${error.detail}`);
+            alert(`Failed to reindex directories: ${error.detail}`);
+        }
+    } catch (error) {
+        addActivityLog('error', `Failed to reindex directories: ${error.message}`);
+        alert(`Failed to reindex directories: ${error.message}`);
+    }
 }
 
 // Update directory statistics
