@@ -13,10 +13,10 @@ from datetime import datetime
 # - MINOR: Minor version (new features, backward compatible)
 # - PATCH: Patch version (bug fixes only)
 # Example: 2026.01.05.1.0.0 = January 5, 2026, major version 1.0.0
-_BUILD_DATE = datetime(2026, 1, 9)  # Update this when creating new releases
+_BUILD_DATE = datetime(2026, 1, 10)  # Update this when creating new releases
 _MAJOR_VERSION = 2  # Increment for breaking changes
-_MINOR_VERSION = 102  # Increment for new features (backward compatible)
-_PATCH_VERSION = 1  # Increment for bug fixes only
+_MINOR_VERSION = 103  # Increment for new features (backward compatible)
+_PATCH_VERSION = 0  # Increment for bug fixes only
 
 __version__ = f"{_BUILD_DATE.year}.{_BUILD_DATE.month:02d}.{_BUILD_DATE.day:02d}.{_MAJOR_VERSION}.{_MINOR_VERSION}.{_PATCH_VERSION}"
 __version_info__ = (_BUILD_DATE.year, _BUILD_DATE.month, _BUILD_DATE.day, _MAJOR_VERSION, _MINOR_VERSION, _PATCH_VERSION)
