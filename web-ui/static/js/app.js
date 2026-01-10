@@ -3962,7 +3962,7 @@ async function reindexDirectory(directoryId) {
 
     try {
         const response = await fetch(
-            `${API_BASE_URL}/api/v1/directories/${directoryId}/reindex?index_keyword=${indexKeyword}&index_vector=${indexVector}&full_rebuild=${fullRebuild}`,
+            `${API_BASE_URL}/directories/${directoryId}/reindex?index_keyword=${indexKeyword}&index_vector=${indexVector}&full_rebuild=${fullRebuild}`,
             {
                 method: 'POST'
             }
@@ -4001,7 +4001,7 @@ async function handleEnableAllDirectories() {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/directories/bulk-update?action=enable_all`, {
+        const response = await fetch(`${API_BASE_URL}/directories/bulk-update?action=enable_all`, {
             method: 'PATCH'
         });
 
@@ -4038,7 +4038,7 @@ async function handleDisableAllDirectories() {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/directories/bulk-update?action=disable_all`, {
+        const response = await fetch(`${API_BASE_URL}/directories/bulk-update?action=disable_all`, {
             method: 'PATCH'
         });
 
@@ -4095,7 +4095,7 @@ async function handleReindexAllDirectories() {
         });
 
         const response = await fetch(
-            `${API_BASE_URL}/api/v1/directories/reindex?${params.toString()}`,
+            `${API_BASE_URL}/directories/reindex?${params.toString()}`,
             {
                 method: 'POST'
             }
