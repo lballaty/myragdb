@@ -100,6 +100,7 @@ class SearchRequest(BaseModel):
     query: str = Field(..., description="Search query text")
     search_type: str = Field(default="hybrid", description="Search type: hybrid, semantic, or keyword")
     repositories: Optional[List[str]] = Field(default=None, description="Filter by repository names")
+    directories: Optional[List[int]] = Field(default=None, description="Filter by directory IDs")
     file_types: Optional[List[str]] = Field(default=None, description="Filter by file extensions")
     folder_filter: Optional[str] = Field(default=None, description="Filter by folder path")
     limit: int = Field(default=10, ge=1, le=100, description="Maximum results")
@@ -230,6 +231,8 @@ async def search(request_body: SearchRequest, request: Request):
     print(f"Limit: {request_body.limit}")
     if request_body.repositories:
         print(f"Repositories: {', '.join(request_body.repositories)}")
+    if request_body.directories:
+        print(f"Directories: {request_body.directories}")
     if request_body.file_types:
         print(f"File Types: {', '.join(request_body.file_types)}")
     print(f"{'='*60}\n")
@@ -254,6 +257,8 @@ async def search(request_body: SearchRequest, request: Request):
         # Add optional filters
         if request_body.repositories:
             payload["repositories"] = request_body.repositories
+        if request_body.directories:
+            payload["directories"] = request_body.directories
         if request_body.file_types:
             payload["file_types"] = request_body.file_types
         if request_body.folder_filter:
