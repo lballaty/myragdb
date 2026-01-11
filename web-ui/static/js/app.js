@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadFromLocalStorage();
     loadVersion();
     updateLLMStatusBadge();
-    loadCloudLLMSelector();
+    initializeLLMSelectors();
 });
 
 // Tab Management
@@ -280,63 +280,134 @@ function initializeSearch() {
 }
 
 /**
- * Load and populate the cloud LLM selector on the search page
+ * Initialize LLM selection dropdowns on the search page
  */
-async function loadCloudLLMSelector() {
-    try {
-        const selector = document.getElementById('cloud-llm-selector');
-        if (!selector) return; // Selector not on this page
+async function initializeLLMSelectors() {
+    const typeSelector = document.getElementById('llm-type-selector');
+    const llmSelector = document.getElementById('llm-selector');
 
+    if (!typeSelector || !llmSelector) return;
+
+    // Load saved preferences
+    const savedType = localStorage.getItem('selected_llm_type') || 'local';
+    typeSelector.value = savedType;
+
+    // Add event listener for type changes
+    typeSelector.addEventListener('change', async (e) => {
+        const selectedType = e.target.value;
+        localStorage.setItem('selected_llm_type', selectedType);
+
+        if (selectedType === 'local') {
+            await loadLocalLLMs();
+        } else {
+            await loadCloudLLMs();
+        }
+    });
+
+    // Initialize with saved type
+    if (savedType === 'local') {
+        await loadLocalLLMs();
+    } else {
+        await loadCloudLLMs();
+    }
+}
+
+/**
+ * Load and populate local LLM models
+ */
+async function loadLocalLLMs() {
+    const selector = document.getElementById('llm-selector');
+    if (!selector) return;
+
+    try {
+        // Fetch models from backend API
+        const response = await fetch(`${API_BASE_URL}/llm/models`);
+        const models = await response.json();
+
+        if (!models || models.length === 0) {
+            selector.innerHTML = '<option value="">No local LLMs configured</option>';
+            return;
+        }
+
+        // Build dropdown with status indicators
+        selector.innerHTML = models.map(m => {
+            const indicator = m.status === 'running' ? '🟢' : '⭕';
+            return `<option value="${m.id}" data-status="${m.status}">${indicator} ${m.name} (Port: ${m.port})</option>`;
+        }).join('');
+
+        // Select first running model, or first model if none running
+        const firstRunning = models.find(m => m.status === 'running');
+        const savedModel = localStorage.getItem('selected_local_llm');
+
+        if (savedModel && models.find(m => m.id === savedModel)) {
+            selector.value = savedModel;
+        } else if (firstRunning) {
+            selector.value = firstRunning.id;
+        } else if (models.length > 0) {
+            selector.value = models[0].id;
+        }
+
+        // Add change listener to save selection
+        selector.addEventListener('change', (e) => {
+            localStorage.setItem('selected_local_llm', e.target.value);
+            const selectedOption = e.target.options[e.target.selectedIndex];
+            if (e.target.value) {
+                addActivityLog('info', `Selected local LLM: ${selectedOption.text}`);
+            }
+        });
+
+    } catch (error) {
+        console.error('Failed to load local LLMs:', error);
+        selector.innerHTML = '<option value="">Error loading local LLMs</option>';
+    }
+}
+
+/**
+ * Load and populate cloud LLM providers
+ */
+async function loadCloudLLMs() {
+    const selector = document.getElementById('llm-selector');
+    if (!selector) return;
+
+    try {
         // Fetch available cloud LLM providers
         const response = await fetch(`${API_BASE_URL}/llm/providers`);
         const data = await response.json();
 
         if (!data.providers || data.providers.length === 0) {
-            selector.innerHTML = `
-                <option value="">None (Use Local LLM)</option>
-                <option disabled>No cloud providers available</option>
-            `;
+            selector.innerHTML = '<option value="">No cloud providers available</option>';
             return;
         }
 
-        // Build options for cloud LLMs
-        const options = [
-            '<option value="">None (Use Local LLM)</option>'
-        ];
+        // Build dropdown with configuration status
+        selector.innerHTML = data.providers.map(provider => {
+            const isConfigured = data.current_provider === provider.provider_type;
+            const indicator = isConfigured ? '✅' : '❌';
+            return `<option value="${provider.provider_type}" data-configured="${isConfigured}">${indicator} ${provider.name}</option>`;
+        }).join('');
 
-        data.providers.forEach(provider => {
-            const isCurrentProvider = data.current_provider === provider.provider_type;
-            const indicator = isCurrentProvider ? '✅' : '○';
-            options.push(
-                `<option value="${provider.provider_type}" ${isCurrentProvider ? 'selected' : ''}>${indicator} ${provider.name}</option>`
-            );
-        });
-
-        selector.innerHTML = options.join('');
+        // Select configured provider or first one
+        const savedProvider = localStorage.getItem('selected_cloud_llm');
+        if (savedProvider && data.providers.find(p => p.provider_type === savedProvider)) {
+            selector.value = savedProvider;
+        } else if (data.current_provider) {
+            selector.value = data.current_provider;
+        } else if (data.providers.length > 0) {
+            selector.value = data.providers[0].provider_type;
+        }
 
         // Add change listener to save selection
         selector.addEventListener('change', (e) => {
             localStorage.setItem('selected_cloud_llm', e.target.value);
+            const selectedOption = e.target.options[e.target.selectedIndex];
             if (e.target.value) {
-                addActivityLog('info', `Selected cloud LLM provider: ${e.target.options[e.target.selectedIndex].text}`);
+                addActivityLog('info', `Selected cloud LLM: ${selectedOption.text}`);
             }
         });
 
-        // Restore previous selection from localStorage
-        const savedSelection = localStorage.getItem('selected_cloud_llm');
-        if (savedSelection) {
-            selector.value = savedSelection;
-        }
-
     } catch (error) {
-        console.error('Failed to load cloud LLM selector:', error);
-        const selector = document.getElementById('cloud-llm-selector');
-        if (selector) {
-            selector.innerHTML = `
-                <option value="">None (Use Local LLM)</option>
-                <option disabled>Error loading cloud LLMs</option>
-            `;
-        }
+        console.error('Failed to load cloud LLMs:', error);
+        selector.innerHTML = '<option value="">Error loading cloud LLMs</option>';
     }
 }
 
