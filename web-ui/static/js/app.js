@@ -3517,6 +3517,7 @@ function initializeDirectories() {
     const addButton = document.getElementById('add-directory-button');
     const enableAllButton = document.getElementById('enable-dirs-button');
     const disableAllButton = document.getElementById('disable-dirs-button');
+    const reindexSelectedButton = document.getElementById('reindex-selected-dirs-button');
     const reindexAllButton = document.getElementById('reindex-all-dirs-button');
     const selectAllCheckbox = document.getElementById('select-all-dirs');
     const browseButton = document.getElementById('browse-dir-button');
@@ -3529,6 +3530,9 @@ function initializeDirectories() {
     }
     if (disableAllButton) {
         disableAllButton.addEventListener('click', handleDisableAllDirectories);
+    }
+    if (reindexSelectedButton) {
+        reindexSelectedButton.addEventListener('click', handleReindexSelectedDirectories);
     }
     if (reindexAllButton) {
         reindexAllButton.addEventListener('click', handleReindexAllDirectories);
@@ -3557,7 +3561,7 @@ async function loadDirectories() {
 
     try {
         // Add cache-busting timestamp to force fresh data from server
-        const response = await fetch(`${API_BASE_URL}/directories?timestamp=${Date.now()}`);
+        const response = await fetch(`${API_BASE_URL}/api/v1/directories?timestamp=${Date.now()}`);
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
@@ -3761,7 +3765,7 @@ async function handleAddDirectory() {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/directories`, {
+        const response = await fetch(`${API_BASE_URL}/api/v1/directories`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -3804,7 +3808,7 @@ async function toggleDirectoryEnabled(directoryId, enabled) {
     if (!directory) return;
 
     try {
-        const response = await fetch(`${API_BASE_URL}/directories/${directoryId}`, {
+        const response = await fetch(`${API_BASE_URL}/api/v1/directories/${directoryId}`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json'
@@ -3860,7 +3864,7 @@ async function editDirectory(directoryId) {
     addButton.textContent = 'Update Directory';
     addButton.onclick = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/directories/${directoryId}`, {
+            const response = await fetch(`${API_BASE_URL}/api/v1/directories/${directoryId}`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json'
@@ -3914,7 +3918,7 @@ async function deleteDirectory(directoryId) {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/directories/${directoryId}`, {
+        const response = await fetch(`${API_BASE_URL}/api/v1/directories/${directoryId}`, {
             method: 'DELETE'
         });
 
@@ -3962,7 +3966,7 @@ async function reindexDirectory(directoryId) {
 
     try {
         const response = await fetch(
-            `${API_BASE_URL}/directories/${directoryId}/reindex?index_keyword=${indexKeyword}&index_vector=${indexVector}&full_rebuild=${fullRebuild}`,
+            `${API_BASE_URL}/api/v1/directories/${directoryId}/reindex?index_keyword=${indexKeyword}&index_vector=${indexVector}&full_rebuild=${fullRebuild}`,
             {
                 method: 'POST'
             }
@@ -4001,7 +4005,7 @@ async function handleEnableAllDirectories() {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/directories/bulk-update?action=enable_all`, {
+        const response = await fetch(`${API_BASE_URL}/api/v1/directories/bulk-update?action=enable_all`, {
             method: 'PATCH'
         });
 
@@ -4038,7 +4042,7 @@ async function handleDisableAllDirectories() {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/directories/bulk-update?action=disable_all`, {
+        const response = await fetch(`${API_BASE_URL}/api/v1/directories/bulk-update?action=disable_all`, {
             method: 'PATCH'
         });
 
@@ -4054,6 +4058,92 @@ async function handleDisableAllDirectories() {
     } catch (error) {
         addActivityLog('error', `Failed to disable directories: ${error.message}`);
         alert(`Failed to disable directories: ${error.message}`);
+    }
+}
+
+// Reindex selected directories
+async function handleReindexSelectedDirectories() {
+    // Get selected directories via checkboxes
+    const selectedCheckboxes = document.querySelectorAll('.directory-checkbox:checked');
+
+    if (selectedCheckboxes.length === 0) {
+        alert('Please select at least one directory to reindex');
+        return;
+    }
+
+    // Get selected reindex options
+    const indexKeyword = document.getElementById('dir-index-keyword').checked;
+    const indexVector = document.getElementById('dir-index-vector').checked;
+    const fullRebuild = document.getElementById('dir-mode-full').checked;
+
+    // Validate that at least one index type is selected
+    if (!indexKeyword && !indexVector) {
+        alert('Please select at least one index type (Keyword or Vector).');
+        return;
+    }
+
+    // Build description for confirmation
+    const indexTypes = [];
+    if (indexKeyword) indexTypes.push('Keyword');
+    if (indexVector) indexTypes.push('Vector');
+    const mode = fullRebuild ? 'full rebuild' : 'incremental update';
+
+    const confirmMsg = `Reindex ${selectedCheckboxes.length} selected directory(ies)?\n\nIndex Types: ${indexTypes.join(' + ')}\nMode: ${mode}\n\nThis may take several minutes.`;
+
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+
+    try {
+        const params = new URLSearchParams({
+            index_keyword: indexKeyword,
+            index_vector: indexVector,
+            full_rebuild: fullRebuild
+        });
+
+        // Reindex each selected directory
+        let successCount = 0;
+        let failureCount = 0;
+
+        for (const checkbox of selectedCheckboxes) {
+            const directoryId = checkbox.value;
+
+            try {
+                const response = await fetch(
+                    `${API_BASE_URL}/api/v1/directories/${directoryId}/reindex?${params.toString()}`,
+                    {
+                        method: 'POST'
+                    }
+                );
+
+                if (response.ok) {
+                    successCount++;
+                } else {
+                    const error = await response.json();
+                    console.error(`Failed to reindex directory ${directoryId}: ${error.detail}`);
+                    failureCount++;
+                }
+            } catch (error) {
+                console.error(`Failed to reindex directory ${directoryId}: ${error.message}`);
+                failureCount++;
+            }
+        }
+
+        // Show result message
+        let resultMsg = `Reindexing started for ${successCount} directory(ies)`;
+        if (failureCount > 0) {
+            resultMsg += ` (${failureCount} failed)`;
+        }
+        addActivityLog('info', resultMsg);
+
+        if (failureCount > 0) {
+            alert(`${successCount} directory(ies) reindexed, ${failureCount} failed. Check logs for details.`);
+        }
+
+        await loadDirectories();
+    } catch (error) {
+        addActivityLog('error', `Failed to reindex selected directories: ${error.message}`);
+        alert(`Failed to reindex selected directories: ${error.message}`);
     }
 }
 
@@ -4095,7 +4185,7 @@ async function handleReindexAllDirectories() {
         });
 
         const response = await fetch(
-            `${API_BASE_URL}/directories/reindex?${params.toString()}`,
+            `${API_BASE_URL}/api/v1/directories/reindex?${params.toString()}`,
             {
                 method: 'POST'
             }
@@ -4193,7 +4283,7 @@ async function browsePath(path) {
     treeContainer.innerHTML = '<div class="loading">Loading directories...</div>';
 
     try {
-        const response = await fetch(`${API_BASE_URL}/directories/browse?path=${encodeURIComponent(path)}`);
+        const response = await fetch(`${API_BASE_URL}/api/v1/directories/browse?path=${encodeURIComponent(path)}`);
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }

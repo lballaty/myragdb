@@ -23,7 +23,7 @@ import structlog
 logger = structlog.get_logger()
 
 # Create router for directory endpoints
-router = APIRouter(prefix="/directories", tags=["directories"])
+router = APIRouter(prefix="/api/v1/directories", tags=["directories"])
 
 
 @router.get("", response_model=List[DirectoryInfo])

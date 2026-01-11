@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.10.2.103.3">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.01.11.2.103.4">
     <link rel="stylesheet" href="static/css/activity-observability.css?v=2026.01.07.2.76.0">
     <link rel="stylesheet" href="static/css/cloud-llm.css?v=2026.01.08.2.83.0">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -97,10 +97,16 @@
                         </select>
                     </label>
                     <label>
-                        <span>Cloud LLM:</span>
-                        <select id="cloud-llm-selector">
-                            <option value="">None (Use Local LLM)</option>
-                            <option value="loading">Loading cloud LLMs...</option>
+                        <span>LLM Type:</span>
+                        <select id="llm-type-selector">
+                            <option value="local">Local LLM</option>
+                            <option value="cloud">Cloud LLM</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Select LLM:</span>
+                        <select id="llm-selector">
+                            <option value="">Loading...</option>
                         </select>
                     </label>
                     <label>
@@ -474,6 +480,7 @@
                     <div class="bulk-actions">
                         <button id="enable-dirs-button" class="bulk-btn enable-all">✅ Enable All</button>
                         <button id="disable-dirs-button" class="bulk-btn disable-all">❌ Disable All</button>
+                        <button id="reindex-selected-dirs-button" class="bulk-btn primary">🔄 Reindex Selected</button>
                         <button id="reindex-all-dirs-button" class="bulk-btn primary">🔄 Reindex All</button>
                     </div>
                 </div>
@@ -1067,6 +1074,6 @@
     <script src="static/js/activity-monitor.js?v=2026.01.07.2.76.0"></script>
     <script src="static/js/observability.js?v=2026.01.07.2.76.0"></script>
     <script src="static/js/cloud-llm.js?v=2026.01.08.2.83.0"></script>
-    <script src="static/js/app.js?v=2026.01.10.2.103.3"></script>
+    <script src="static/js/app.js?v=2026.01.11.2.103.4"></script>
 </body>
 </html>
