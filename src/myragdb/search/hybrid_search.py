@@ -183,7 +183,7 @@ class HybridSearchEngine:
         self,
         query: str,
         limit: int = 10,
-        rewrite_query: bool = True,
+        rewrite_query: bool = False,
         repository_filter: Optional[str] = None,
         folder_filter: Optional[str] = None,
         extension_filter: Optional[str] = None,
