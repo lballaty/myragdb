@@ -461,13 +461,16 @@ class MeilisearchIndexer:
                 filters.append(f'repository = "{repository_filter}"')
 
             # Add directory filtering (multiple directories with OR logic)
+            # Must check both source_type='directory' AND source_id matches
             if directories:
+                # Build filter: source_type = "directory" AND (source_id = "1" OR source_id = "2" ...)
                 dir_filters = [f'source_id = "{d}"' for d in directories]
                 if len(dir_filters) == 1:
-                    filters.append(dir_filters[0])
+                    # Single directory: source_type = "directory" AND source_id = "X"
+                    filters.append(f'(source_type = "directory" AND {dir_filters[0]})')
                 else:
-                    # Multiple directories: (dir1 OR dir2 OR dir3)
-                    filters.append(f"({' OR '.join(dir_filters)})")
+                    # Multiple directories: source_type = "directory" AND (id1 OR id2 OR id3)
+                    filters.append(f'(source_type = "directory" AND ({" OR ".join(dir_filters)}))')
 
             # Add date range filtering (last_modified is Unix timestamp in seconds)
             if date_from or date_to:
