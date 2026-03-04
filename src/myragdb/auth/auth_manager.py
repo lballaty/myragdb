@@ -533,11 +533,16 @@ class AuthenticationManager:
 
             # If setting as default, unset others for this provider
             if credential.is_default:
-                for cred_id, cred_data in credentials.items():
-                    cred = UserCredential.from_dict(cred_data)
-                    if cred.provider == credential.provider:
-                        cred.is_default = False
-                        credentials[cred_id] = cred.to_dict()
+                for cred_id, cred_data in list(credentials.items()):
+                    try:
+                        cred = UserCredential.from_dict(cred_data)
+                        if cred.provider == credential.provider:
+                            cred.is_default = False
+                            credentials[cred_id] = cred.to_dict()
+                    except (KeyError, ValueError) as e:
+                        # Skip malformed credentials from old storage format
+                        logger.warning(f"Skipping malformed credential {cred_id}: {e}")
+                        continue
 
             credentials[credential.credential_id] = credential.to_dict()
 
@@ -546,7 +551,7 @@ class AuthenticationManager:
 
             return credential
         except Exception as e:
-            print(f"Error saving credential: {e}")
+            logger.error(f"Error saving credential: {e}", exc_info=True)
             return None
 
     def _load_credentials(self) -> dict:
