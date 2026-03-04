@@ -84,6 +84,8 @@ from myragdb.api.routes.directories import router as directories_router
 from myragdb.api.routes.activities import router as activities_router
 from myragdb.api.routes.observability import router as observability_router
 from myragdb.api.routes.llm_config import router as llm_config_router
+from myragdb.api.auth_routes import router as auth_router
+from myragdb.auth import AuthenticationManager
 from myragdb.agent.skills import (
     SkillRegistry,
     SearchSkill,
@@ -332,6 +334,9 @@ app.include_router(directories_router)
 app.include_router(activities_router)
 app.include_router(observability_router)
 
+# Register authentication routes
+app.include_router(auth_router)
+
 # Register LLM configuration routes
 app.include_router(llm_config_router)
 
@@ -421,6 +426,55 @@ async def startup_event():
         logger.info("Repository watchers started successfully")
     except Exception as e:
         logger.error("Failed to start repository watchers", error=str(e), exc_info=True)
+
+    # Register OAuth providers with credentials from environment
+    try:
+        auth_mgr = AuthenticationManager()
+
+        # Register Anthropic (Claude) OAuth provider
+        anthropic_client_id = os.getenv('ANTHROPIC_OAUTH_CLIENT_ID')
+        anthropic_client_secret = os.getenv('ANTHROPIC_OAUTH_CLIENT_SECRET')
+        if anthropic_client_id and anthropic_client_secret:
+            auth_mgr.register_oauth_provider(
+                provider='anthropic',
+                client_id=anthropic_client_id,
+                client_secret=anthropic_client_secret,
+                redirect_uri=os.getenv('OAUTH_REDIRECT_URI', 'http://localhost:3003/api/v1/auth/oauth/callback')
+            )
+            logger.info("Registered Anthropic OAuth provider")
+        else:
+            logger.warning("Anthropic OAuth credentials not configured. Set ANTHROPIC_OAUTH_CLIENT_ID and ANTHROPIC_OAUTH_CLIENT_SECRET environment variables.")
+
+        # Register OpenAI (ChatGPT) OAuth provider
+        openai_client_id = os.getenv('OPENAI_OAUTH_CLIENT_ID')
+        openai_client_secret = os.getenv('OPENAI_OAUTH_CLIENT_SECRET')
+        if openai_client_id and openai_client_secret:
+            auth_mgr.register_oauth_provider(
+                provider='openai',
+                client_id=openai_client_id,
+                client_secret=openai_client_secret,
+                redirect_uri=os.getenv('OAUTH_REDIRECT_URI', 'http://localhost:3003/api/v1/auth/oauth/callback')
+            )
+            logger.info("Registered OpenAI OAuth provider")
+        else:
+            logger.warning("OpenAI OAuth credentials not configured. Set OPENAI_OAUTH_CLIENT_ID and OPENAI_OAUTH_CLIENT_SECRET environment variables.")
+
+        # Register Google (Gemini) OAuth provider
+        google_client_id = os.getenv('GOOGLE_OAUTH_CLIENT_ID')
+        google_client_secret = os.getenv('GOOGLE_OAUTH_CLIENT_SECRET')
+        if google_client_id and google_client_secret:
+            auth_mgr.register_oauth_provider(
+                provider='google',
+                client_id=google_client_id,
+                client_secret=google_client_secret,
+                redirect_uri=os.getenv('OAUTH_REDIRECT_URI', 'http://localhost:3003/api/v1/auth/oauth/callback')
+            )
+            logger.info("Registered Google OAuth provider")
+        else:
+            logger.warning("Google OAuth credentials not configured. Set GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET environment variables.")
+
+    except Exception as e:
+        logger.error("Failed to register OAuth providers", error=str(e), exc_info=True)
 
 
 @app.on_event("shutdown")
