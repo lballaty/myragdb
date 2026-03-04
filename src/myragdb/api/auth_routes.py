@@ -184,10 +184,10 @@ async def initiate_oauth(
         authorization_url: URL for user to visit
         description: Instructions for user
     """
-    auth_url = auth_manager.initiate_oauth(provider)
+    auth_url = await auth_manager.initiate_oauth(provider)
 
     if not auth_url:
-        raise HTTPException(status_code=400, detail=f"Failed to initiate OAuth for {provider}")
+        raise HTTPException(status_code=400, detail=f"Failed to initiate OAuth for {provider}. Make sure provider is registered with OAuth credentials.")
 
     return OAuthInitiateResponse(
         provider=provider,
@@ -211,7 +211,7 @@ async def complete_oauth(request: OAuthCompleteRequest) -> CredentialResponse:
     Response:
         Credential details
     """
-    credential = auth_manager.complete_oauth(
+    credential = await auth_manager.complete_oauth(
         provider=request.provider,
         auth_code=request.auth_code,
         state=request.state,
@@ -219,7 +219,7 @@ async def complete_oauth(request: OAuthCompleteRequest) -> CredentialResponse:
     )
 
     if not credential:
-        raise HTTPException(status_code=400, detail="Failed to complete OAuth authentication")
+        raise HTTPException(status_code=400, detail="Failed to complete OAuth authentication. Ensure authorization code is valid.")
 
     return CredentialResponse(
         credential_id=credential.credential_id,
