@@ -8,10 +8,12 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 import json
+import logging
 
 from .flows.api_key_flow import APIKeyFlow, APIKey
-from .flows.oauth_flow import OAuthFlow, OAuthToken
 from .flows.device_code_flow import DeviceCodeFlow, DeviceCode
+
+logger = logging.getLogger(__name__)
 
 
 class AuthMethod(Enum):
@@ -103,8 +105,10 @@ class AuthenticationManager:
 
         # Initialize flows
         self.api_key_flow = APIKeyFlow(str(self.storage_dir / 'keys'))
-        self.oauth_flow = OAuthFlow(str(self.storage_dir / 'oauth'))
         self.device_code_flow = DeviceCodeFlow(str(self.storage_dir / 'device'))
+
+        # Initialize proper OAuth manager (lazy-loaded to avoid circular imports)
+        self._oauth_auth_manager = None
 
     # ========================================================================
     # API Key Authentication
@@ -167,7 +171,38 @@ class AuthenticationManager:
     # OAuth Authentication
     # ========================================================================
 
-    def initiate_oauth(self, provider: str) -> Optional[str]:
+    def _get_oauth_manager(self):
+        """
+        Lazy-load OAuth auth manager to avoid circular imports.
+
+        Returns:
+            OAuthAuthManager instance
+        """
+        if self._oauth_auth_manager is None:
+            from myragdb.llm.auth.oauth_auth import OAuthAuthManager
+            self._oauth_auth_manager = OAuthAuthManager()
+        return self._oauth_auth_manager
+
+    def register_oauth_provider(
+        self,
+        provider: str,
+        client_id: str,
+        client_secret: str,
+        redirect_uri: str,
+    ) -> None:
+        """
+        Register an OAuth provider.
+
+        Args:
+            provider: Provider name (anthropic, openai, google)
+            client_id: OAuth client ID
+            client_secret: OAuth client secret
+            redirect_uri: OAuth redirect URI
+        """
+        manager = self._get_oauth_manager()
+        manager.register_provider(provider, client_id, client_secret, redirect_uri)
+
+    async def initiate_oauth(self, provider: str) -> Optional[str]:
         """
         Initiate OAuth authentication.
 
@@ -178,12 +213,23 @@ class AuthenticationManager:
             Authorization URL to redirect user to
         """
         try:
-            return self.oauth_flow.get_authorization_url(provider)
-        except ValueError as e:
-            print(f"OAuth initiation failed: {e}")
+            manager = self._get_oauth_manager()
+            # Map friendly names to provider names used in oauth_auth.py
+            provider_map = {
+                'claude': 'anthropic',
+                'gpt': 'openai',
+                'gemini': 'google',
+            }
+            oauth_provider = provider_map.get(provider.lower(), provider.lower())
+
+            # Get authorization URL with default scopes
+            scopes = self._get_default_scopes(oauth_provider)
+            return await manager.get_authorization_url(oauth_provider, scopes)
+        except Exception as e:
+            logger.error(f"OAuth initiation failed for {provider}: {e}")
             return None
 
-    def complete_oauth(
+    async def complete_oauth(
         self,
         provider: str,
         auth_code: str,
@@ -203,31 +249,53 @@ class AuthenticationManager:
             UserCredential instance if successful
         """
         try:
-            token = self.oauth_flow.exchange_code_for_token(
-                provider=provider,
-                auth_code=auth_code,
-                state=state,
-            )
+            manager = self._get_oauth_manager()
+            # Map friendly names to provider names used in oauth_auth.py
+            provider_map = {
+                'claude': 'anthropic',
+                'gpt': 'openai',
+                'gemini': 'google',
+            }
+            oauth_provider = provider_map.get(provider.lower(), provider.lower())
+
+            token = await manager.exchange_code(oauth_provider, auth_code)
 
             if not token:
                 return None
 
-            if not self.oauth_flow.save_token(token):
-                return None
+            # Create credential reference with unique ID
+            import uuid
+            credential_id = f"oauth-{provider}-{uuid.uuid4().hex[:8]}"
 
-            # Create credential reference
             credential = UserCredential(
-                credential_id=token.token_id,
+                credential_id=credential_id,
                 provider=provider,
                 auth_method=AuthMethod.OAUTH,
-                identifier=token.user_email or token.token_id,
+                identifier=getattr(token, 'user_email', credential_id) or credential_id,
                 is_default=set_as_default,
             )
 
             return self._save_credential(credential)
         except Exception as e:
-            print(f"OAuth completion failed: {e}")
+            logger.error(f"OAuth completion failed for {provider}: {e}")
             return None
+
+    def _get_default_scopes(self, provider: str) -> list:
+        """
+        Get default OAuth scopes for a provider.
+
+        Args:
+            provider: Provider name (anthropic, openai, google)
+
+        Returns:
+            List of scopes
+        """
+        scopes_map = {
+            'anthropic': ['read', 'write'],
+            'openai': ['openai'],
+            'google': ['https://www.googleapis.com/auth/generativeai'],
+        }
+        return scopes_map.get(provider.lower(), [])
 
     def list_oauth_credentials(self, provider: Optional[str] = None) -> list[UserCredential]:
         """List OAuth credentials"""
@@ -418,8 +486,6 @@ class AuthenticationManager:
             # Also revoke from underlying flow
             if cred.auth_method == AuthMethod.API_KEY:
                 self.api_key_flow.revoke_api_key(credential_id)
-            elif cred.auth_method == AuthMethod.OAUTH:
-                self.oauth_flow.revoke_token(credential_id)
 
             return True
         except Exception as e:
@@ -450,8 +516,6 @@ class AuthenticationManager:
             # Also delete from underlying flow
             if cred.auth_method == AuthMethod.API_KEY:
                 self.api_key_flow.delete_api_key(credential_id)
-            elif cred.auth_method == AuthMethod.OAUTH:
-                self.oauth_flow.revoke_token(credential_id)
 
             return True
         except Exception as e:
