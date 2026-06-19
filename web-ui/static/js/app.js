@@ -2475,46 +2475,42 @@ const MODE_DESCRIPTIONS = {
     extended: 'Function calling + extended context (32k)'
 };
 
+// Tracks in-flight model loads: modelId → intervalId
+// Prevents tab re-click from destroying poll DOM references mid-load
+const _activeLLMPolls = new Map();
+
 async function loadLLMModels() {
     const container = document.getElementById('llm-models-grid');
     if (!container) return;
 
-    // Show loading state immediately - UI renders instantly
-    const loadingModels = [
-        {"id": "qwen-coder-7b", "name": "Qwen Coder 7B", "port": 8085, "status": "checking", "category": "best"},
-        {"id": "qwen2.5-32b", "name": "Qwen 2.5 32B Instruct", "port": 8084, "status": "checking", "category": "best"},
-        {"id": "deepseek-r1-qwen-32b", "name": "DeepSeek R1 Qwen 32B", "port": 8092, "status": "checking", "category": "best"},
-        {"id": "llama-3.1-8b", "name": "Llama 3.1 8B", "port": 8087, "status": "checking", "category": "best"},
-        {"id": "llama-4-scout-17b", "name": "Llama 4 Scout 17B (Q3_K_S)", "port": 8088, "status": "checking", "category": "best"},
-        {"id": "hermes-3-llama-8b", "name": "Hermes 3 Llama 8B", "port": 8086, "status": "checking", "category": "best"},
-        {"id": "mistral-7b", "name": "Mistral 7B", "port": 8083, "status": "checking", "category": "limited"},
-        {"id": "mistral-small-24b", "name": "Mistral Small 24B", "port": 8089, "status": "checking", "category": "limited"},
-        {"id": "phi3", "name": "Phi-3", "port": 8081, "status": "checking", "category": "limited"},
-        {"id": "smollm3", "name": "SmolLM3", "port": 8082, "status": "checking", "category": "limited"}
-    ];
+    // If models are actively loading, don't wipe the grid — polls manage their own DOM state.
+    // Re-rendering here would detach the DOM nodes the poll closures hold references to,
+    // causing status updates to silently apply to invisible detached elements.
+    if (_activeLLMPolls.size > 0 && container.children.length > 0) {
+        return;
+    }
 
-    renderLLMModels(loadingModels);
+    // Generic loading spinner — no hardcoded model list
+    container.innerHTML = `
+        <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">
+            <span class="spinner" style="width:20px;height:20px;border-width:3px;display:inline-block;margin-bottom:12px;"></span>
+            <p>Loading models from llamaCPPManager…</p>
+        </div>`;
 
-    // Fetch actual status in background
     try {
         const response = await fetch(`${API_BASE_URL}/llm/models`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch LLM models');
-        }
-
+        if (!response.ok) throw new Error('Failed to fetch LLM models');
         const models = await response.json();
         renderLLMModels(models);
         addActivityLog('info', `Loaded ${models.length} LLM models`);
     } catch (error) {
         console.error('Error loading LLM models:', error);
         addActivityLog('error', `Failed to load LLM models: ${error.message}`);
-
         container.innerHTML = `
             <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">
                 <p>Failed to load LLM models</p>
                 <p style="font-size: 14px; margin-top: 8px;">${error.message}</p>
-            </div>
-        `;
+            </div>`;
     }
 }
 
@@ -2660,38 +2656,23 @@ async function startLLM(modelId) {
         const result = await response.json();
 
         if (result.status === 'success') {
-            // Show success message
             messageElement.className = 'llm-model-message success';
             messageElement.textContent = result.message;
             messageElement.style.display = 'block';
 
-            // Update card appearance
             card.classList.add('running');
             card.classList.remove('stopped');
 
-            // Replace start button with stop button
             const actionsContainer = card.querySelector('.llm-model-actions');
             if (actionsContainer) {
-                actionsContainer.innerHTML = `
-                    <button id="llm-stop-${modelId}" class="llm-stop-button">
-                        🛑 Stop LLM
-                    </button>
-                `;
-
-                // Re-attach event listener to new stop button
+                actionsContainer.innerHTML = `<button id="llm-stop-${modelId}" class="llm-stop-button">🛑 Stop LLM</button>`;
                 const newStopButton = document.getElementById(`llm-stop-${modelId}`);
-                if (newStopButton) {
-                    newStopButton.addEventListener('click', () => stopLLM(modelId));
-                }
+                if (newStopButton) newStopButton.addEventListener('click', () => stopLLM(modelId));
             }
 
-            // Hide mode selector when running
             const modeSelector = document.getElementById(`llm-mode-selector-${modelId}`);
-            if (modeSelector) {
-                modeSelector.style.display = 'none';
-            }
+            if (modeSelector) modeSelector.style.display = 'none';
 
-            // Update status in card
             const statusElement = card.querySelector('.llm-model-status');
             if (statusElement) {
                 statusElement.className = 'llm-model-status running';
@@ -2699,22 +2680,83 @@ async function startLLM(modelId) {
             }
 
             addActivityLog('success', `${modelId} started successfully in ${mode} mode`);
-
-            // Update header LLM status badge immediately
             updateLLMStatusBadge();
+            setTimeout(() => { messageElement.style.display = 'none'; }, 5000);
 
-            // Auto-hide success message after 5 seconds
-            setTimeout(() => {
-                messageElement.style.display = 'none';
-            }, 5000);
+        } else if (result.status === 'starting') {
+            // Process spawned but model still loading — poll until port comes up
+            messageElement.className = 'llm-model-message success';
+            messageElement.innerHTML = '<span class="spinner" style="width:12px;height:12px;border-width:2px;margin-right:6px;display:inline-block;"></span>Loading model… this may take a few minutes';
+            messageElement.style.display = 'block';
+
+            const statusElement = card.querySelector('.llm-model-status');
+            if (statusElement) {
+                statusElement.className = 'llm-model-status checking';
+                statusElement.innerHTML = '<span class="llm-model-status-dot"></span>Loading…';
+            }
+
+            addActivityLog('info', `${modelId} process launched (PID ${result.pid}), waiting for model to load…`);
+
+            // Poll /llm/models every 4s for up to 10 minutes (150 attempts)
+            let attempts = 0;
+            const maxAttempts = 150;
+            const pollStart = Date.now();
+            const poll = setInterval(async () => {
+                attempts++;
+                const elapsed = Math.floor((Date.now() - pollStart) / 1000);
+                const mins = Math.floor(elapsed / 60);
+                const secs = elapsed % 60;
+                const elapsedStr = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+                messageElement.innerHTML = `<span class="spinner" style="width:12px;height:12px;border-width:2px;margin-right:6px;display:inline-block;"></span>Loading model… ${elapsedStr}`;
+                try {
+                    const r = await fetch(`${API_BASE_URL}/llm/models`);
+                    const models = await r.json();
+                    const m = models.find(x => x.id === modelId);
+                    if (m && m.status === 'running') {
+                        clearInterval(poll);
+                        _activeLLMPolls.delete(modelId);
+                        messageElement.className = 'llm-model-message success';
+                        messageElement.textContent = `${m.name || modelId} is running`;
+
+                        card.classList.add('running');
+                        card.classList.remove('stopped');
+
+                        const ac = card.querySelector('.llm-model-actions');
+                        if (ac) {
+                            ac.innerHTML = `<button id="llm-stop-${modelId}" class="llm-stop-button">🛑 Stop LLM</button>`;
+                            const sb = document.getElementById(`llm-stop-${modelId}`);
+                            if (sb) sb.addEventListener('click', () => stopLLM(modelId));
+                        }
+                        const ms = document.getElementById(`llm-mode-selector-${modelId}`);
+                        if (ms) ms.style.display = 'none';
+                        if (statusElement) {
+                            statusElement.className = 'llm-model-status running';
+                            statusElement.innerHTML = '<span class="llm-model-status-dot"></span>Running';
+                        }
+                        addActivityLog('success', `${modelId} is now running (loaded in ${elapsedStr})`);
+                        updateLLMStatusBadge();
+                        setTimeout(() => { messageElement.style.display = 'none'; }, 5000);
+                    } else if (attempts >= maxAttempts) {
+                        clearInterval(poll);
+                        _activeLLMPolls.delete(modelId);
+                        messageElement.className = 'llm-model-message error';
+                        messageElement.textContent = `Timed out after ${elapsedStr} waiting for ${modelId}. Check logs: ${result.log_file || '~/llms/logs/'}`;
+                        button.disabled = false;
+                        button.innerHTML = '🚀 Start LLM';
+                        if (statusElement) {
+                            statusElement.className = 'llm-model-status stopped';
+                            statusElement.innerHTML = '<span class="llm-model-status-dot"></span>Timeout';
+                        }
+                    }
+                } catch (_) { /* network hiccup, keep polling */ }
+            }, 4000);
+            _activeLLMPolls.set(modelId, poll);
 
         } else {
-            // Show error message
             messageElement.className = 'llm-model-message error';
             messageElement.textContent = result.message;
             messageElement.style.display = 'block';
 
-            // Re-enable button
             button.disabled = false;
             button.innerHTML = '🚀 Start LLM';
 

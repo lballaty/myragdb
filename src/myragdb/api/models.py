@@ -3,7 +3,7 @@
 # Author: Libor Ballaty <libor@arionetworks.com>
 # Created: 2026-01-04
 
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from enum import Enum
 from pydantic import BaseModel, Field
 
@@ -187,16 +187,23 @@ class HealthResponse(BaseModel):
     """
     Health check response.
 
-    Business Purpose: Confirms service is running and responsive.
+    Business Purpose: Confirms service is running and responsive,
+    with per-component status for dashboard display.
     """
     status: str = Field(..., description="Service status")
     message: str = Field(..., description="Health check message")
+    services: Optional[Dict[str, Any]] = Field(None, description="Per-service health status")
 
     class Config:
         json_schema_extra = {
             "example": {
                 "status": "healthy",
-                "message": "MyRAGDB service is running"
+                "message": "MyRAGDB service is running",
+                "services": {
+                    "meilisearch": {"status": "operational", "response_time_ms": 12},
+                    "chromadb": {"status": "operational", "response_time_ms": 8},
+                    "mcp_middleware": {"status": "operational", "response_time_ms": 5}
+                }
             }
         }
 
@@ -1355,5 +1362,120 @@ class LLMHealthCheckResponse(BaseModel):
                 "current_provider": "gemini",
                 "authenticated_providers": ["gemini", "openai"],
                 "message": "Cloud LLM system is operational"
+            }
+        }
+
+
+class MeilisearchStatusResponse(BaseModel):
+    """
+    Meilisearch status and statistics.
+
+    Business Purpose: Provide real-time status of Meilisearch database.
+    """
+    is_running: bool = Field(..., description="Whether Meilisearch is running")
+    document_count: Optional[int] = Field(None, description="Total documents indexed")
+    uptime_seconds: Optional[float] = Field(None, description="Uptime in seconds")
+    version: Optional[str] = Field(None, description="Meilisearch version")
+    index_name: str = Field(..., description="Name of the search index")
+    status: str = Field(..., description="Status: running, stopped, or error")
+    message: str = Field(..., description="Status message")
+    health_check: Optional[str] = Field(None, description="Health check URL endpoint")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "is_running": True,
+                "document_count": 50000,
+                "uptime_seconds": 3600.5,
+                "version": "1.8.0",
+                "index_name": "documents",
+                "status": "running",
+                "message": "Meilisearch is healthy and operational",
+                "health_check": "http://localhost:7700/health"
+            }
+        }
+
+
+class MeilisearchStartRequest(BaseModel):
+    """
+    Request to start Meilisearch service.
+
+    Business Purpose: Start the Meilisearch server.
+    """
+    wait_for_ready: bool = Field(default=True, description="Wait for server to be ready")
+    timeout_seconds: int = Field(default=30, description="Timeout waiting for server to start")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "wait_for_ready": True,
+                "timeout_seconds": 30
+            }
+        }
+
+
+class MeilisearchStartResponse(BaseModel):
+    """
+    Response from starting Meilisearch.
+
+    Business Purpose: Confirm Meilisearch start status.
+    """
+    status: str = Field(..., description="Status: success or error")
+    message: str = Field(..., description="Status message")
+    is_running: bool = Field(..., description="Whether Meilisearch is now running")
+    pid: Optional[int] = Field(None, description="Process ID if started successfully")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "success",
+                "message": "Meilisearch started successfully",
+                "is_running": True,
+                "pid": 12345
+            }
+        }
+
+
+class MeilisearchStopResponse(BaseModel):
+    """
+    Response from stopping Meilisearch.
+
+    Business Purpose: Confirm Meilisearch stop status.
+    """
+    status: str = Field(..., description="Status: success or error")
+    message: str = Field(..., description="Status message")
+    is_running: bool = Field(..., description="Whether Meilisearch is still running")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "success",
+                "message": "Meilisearch stopped successfully",
+                "is_running": False
+            }
+        }
+
+
+class MeilisearchLogsResponse(BaseModel):
+    """
+    Recent Meilisearch logs.
+
+    Business Purpose: Display recent server activity and errors.
+    """
+    status: str = Field(..., description="Status: success or error")
+    lines: List[str] = Field(..., description="Recent log lines")
+    total_lines: int = Field(..., description="Total number of lines available")
+    is_running: bool = Field(..., description="Whether Meilisearch is running")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "success",
+                "lines": [
+                    "[INFO] Starting Meilisearch...",
+                    "[INFO] Database loaded successfully"
+                ],
+                "total_lines": 150,
+                "is_running": True
             }
         }

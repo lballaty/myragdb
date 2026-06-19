@@ -3,6 +3,6 @@
 # Author: Libor Ballaty <libor@arionetworks.com>
 # Created: 2026-01-07
 
-from .auth_manager import AuthenticationManager, UserCredential
+from .auth_manager import AuthenticationManager, UserCredential, AuthMethod
 
-__all__ = ['AuthenticationManager', 'UserCredential']
+__all__ = ['AuthenticationManager', 'UserCredential', 'AuthMethod']

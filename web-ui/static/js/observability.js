@@ -63,22 +63,67 @@ const Observability = {
     },
 
     /**
-     * Load metrics from server
+     * Load metrics from server and service health from /health
      */
     async loadMetrics() {
         try {
             const timeRange = this.getTimeRange();
-            const response = await fetch(`/api/v1/observability/metrics?time_range=${timeRange}`);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const [metricsResponse, healthResponse] = await Promise.all([
+                fetch(`/api/v1/observability/metrics?time_range=${timeRange}`),
+                fetch(`/health`)
+            ]);
 
-            const data = await response.json();
+            if (!metricsResponse.ok) throw new Error(`HTTP ${metricsResponse.status}`);
+
+            const data = await metricsResponse.json();
             this.metrics = data;
             this.renderMetrics();
             this.updateCharts();
             this.checkAlerts();
+
+            if (healthResponse.ok) {
+                const healthData = await healthResponse.json();
+                this.renderServiceStatus(healthData);
+            }
         } catch (error) {
             console.error('Failed to load observability metrics:', error);
             this.addAlert('error', 'Failed to load observability metrics', error.message);
+        }
+    },
+
+    /**
+     * Render per-service status cards from /health response
+     */
+    renderServiceStatus(health) {
+        const services = health.services || {};
+        const svcMap = {
+            meilisearch:    { statusEl: 'obs-svc-meilisearch-status', msEl: 'obs-svc-meilisearch-ms', cardEl: 'obs-svc-meilisearch' },
+            chromadb:       { statusEl: 'obs-svc-chromadb-status',    msEl: 'obs-svc-chromadb-ms',    cardEl: 'obs-svc-chromadb' },
+            mcp_middleware: { statusEl: 'obs-svc-mcp-status',         msEl: 'obs-svc-mcp-ms',         cardEl: 'obs-svc-mcp' }
+        };
+
+        for (const [key, els] of Object.entries(svcMap)) {
+            const svc = services[key];
+            const statusEl = document.getElementById(els.statusEl);
+            const msEl = document.getElementById(els.msEl);
+            const cardEl = document.getElementById(els.cardEl);
+
+            if (!statusEl) continue;
+
+            if (!svc) {
+                statusEl.textContent = 'Unknown';
+                statusEl.className = 'svc-status-badge svc-status-checking';
+                if (msEl) msEl.textContent = '—';
+                continue;
+            }
+
+            const isUp = svc.status === 'operational';
+            statusEl.textContent = isUp ? 'Operational' : 'Down';
+            statusEl.className = `svc-status-badge ${isUp ? 'svc-status-up' : 'svc-status-down'}`;
+            if (msEl) msEl.textContent = svc.response_time_ms != null ? `${svc.response_time_ms}ms` : '—';
+            if (cardEl) {
+                cardEl.style.borderColor = isUp ? '#10b981' : '#ef4444';
+            }
         }
     },
 
@@ -367,6 +412,154 @@ const Observability = {
         `).join('');
 
         container.innerHTML = html;
+    },
+
+    /**
+     * Start all stopped services via /admin/start-services, then re-check health
+     */
+    async startAllServices() {
+        const btn = document.getElementById('obs-start-services-btn');
+        const log = document.getElementById('obs-start-log');
+
+        const logLine = (msg, color = '#94a3b8') => {
+            if (!log) return;
+            log.style.display = 'block';
+            const ts = new Date().toLocaleTimeString();
+            const line = document.createElement('div');
+            line.style.color = color;
+            line.textContent = `[${ts}] ${msg}`;
+            log.appendChild(line);
+            log.scrollTop = log.scrollHeight;
+        };
+
+        if (log) { log.innerHTML = ''; log.style.display = 'block'; }
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Starting…'; }
+
+        logLine('Requesting service startup…');
+
+        try {
+            const response = await fetch('/admin/start-services', { method: 'POST' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const results = await response.json();
+
+            for (const [svc, status] of Object.entries(results)) {
+                const name = svc.replace('_', ' ');
+                if (status === 'started') logLine(`▶ ${name} — launch command sent`, '#60a5fa');
+                else if (status === 'already_running') logLine(`✓ ${name} — already running`, '#10b981');
+                else logLine(`✗ ${name} — ${status}`, '#ef4444');
+            }
+
+            logLine('Waiting for services to become ready…');
+
+            // Poll health up to 15s
+            let attempts = 0;
+            const poll = setInterval(async () => {
+                attempts++;
+                try {
+                    const h = await fetch('/health');
+                    if (h.ok) {
+                        const data = await h.json();
+                        this.renderServiceStatus(data);
+                        const svcs = data.services || {};
+
+                        const svcLabels = {
+                            meilisearch: 'Meilisearch',
+                            chromadb: 'ChromaDB',
+                            mcp_middleware: 'MCP middleware'
+                        };
+                        for (const [key, label] of Object.entries(svcLabels)) {
+                            if (svcs[key]?.status === 'operational') {
+                                logLine(`✓ ${label} operational (${svcs[key].response_time_ms ?? '?'}ms)`, '#10b981');
+                            }
+                        }
+
+                        const allUp = svcs.meilisearch?.status === 'operational' &&
+                                      svcs.chromadb?.status === 'operational' &&
+                                      svcs.mcp_middleware?.status === 'operational';
+
+                        if (allUp) {
+                            logLine('All services operational.', '#10b981');
+                            clearInterval(poll);
+                            if (btn) { btn.disabled = false; btn.textContent = '▶ Start All Services'; }
+                            return;
+                        }
+                    }
+                } catch (_) {}
+
+                if (attempts >= 15) {
+                    logLine('Timed out waiting — check logs if a service is still down.', '#f59e0b');
+                    clearInterval(poll);
+                    if (btn) { btn.disabled = false; btn.textContent = '▶ Start All Services'; }
+                } else {
+                    logLine(`Checking… (${attempts}/15)`);
+                }
+            }, 1000);
+
+        } catch (error) {
+            logLine(`Error: ${error.message}`, '#ef4444');
+            this.addAlert('error', 'Failed to start services', error.message);
+            if (btn) { btn.disabled = false; btn.textContent = '▶ Start All Services'; }
+        }
+    },
+
+    /**
+     * Stop Meilisearch and MCP middleware. API server stays running.
+     */
+    async stopAllServices() {
+        if (!confirm('Stop Meilisearch and MCP middleware?')) return;
+
+        const btn = document.getElementById('obs-stop-services-btn');
+        const startBtn = document.getElementById('obs-start-services-btn');
+        const log = document.getElementById('obs-start-log');
+
+        const logLine = (msg, color = '#94a3b8') => {
+            if (!log) return;
+            log.style.display = 'block';
+            const ts = new Date().toLocaleTimeString();
+            const line = document.createElement('div');
+            line.style.color = color;
+            line.textContent = `[${ts}] ${msg}`;
+            log.appendChild(line);
+            log.scrollTop = log.scrollHeight;
+        };
+
+        if (log) { log.innerHTML = ''; log.style.display = 'block'; }
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Stopping…'; }
+        if (startBtn) startBtn.disabled = true;
+
+        logLine('Sending stop command…');
+
+        try {
+            const response = await fetch('/admin/stop-services', { method: 'POST' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const results = await response.json();
+
+            const labels = { mcp_middleware: 'MCP middleware', meilisearch: 'Meilisearch' };
+            for (const [key, status] of Object.entries(results)) {
+                const name = labels[key] || key;
+                const color = status.startsWith('stopped') ? '#f87171' : '#94a3b8';
+                logLine(`■ ${name} — ${status}`, color);
+            }
+
+            logLine('Services stopped. Refreshing status…', '#fbbf24');
+
+            // Re-poll health so badges update
+            setTimeout(async () => {
+                try {
+                    const h = await fetch('/health');
+                    const health = await h.json();
+                    Observability.renderServiceStatus(health);
+                    logLine('Status updated.', '#10b981');
+                } catch (_) {}
+                if (btn) { btn.disabled = false; btn.textContent = '■ Stop All Services'; }
+                if (startBtn) startBtn.disabled = false;
+            }, 1500);
+
+        } catch (error) {
+            logLine(`Error: ${error.message}`, '#ef4444');
+            if (btn) { btn.disabled = false; btn.textContent = '■ Stop All Services'; }
+            if (startBtn) startBtn.disabled = false;
+        }
     },
 
     /**

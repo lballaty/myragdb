@@ -1,7 +1,7 @@
 repositories:
 - name: xLLMArionComply
   path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/xLLMArionComply
-  enabled: false
+  enabled: true
   priority: high
   file_patterns:
     include:
@@ -41,7 +41,7 @@ repositories:
     - '**/coverage/**'
 - name: RepoTools
   path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/RepoTools
-  enabled: false
+  enabled: true
   priority: high
   file_patterns:
     include:
@@ -68,7 +68,7 @@ repositories:
   excluded: false
 - name: ISO27001DocumentGenerator
   path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/ISO27001DocumentGenerator
-  enabled: false
+  enabled: true
   priority: medium
   file_patterns:
     include:
@@ -109,7 +109,7 @@ repositories:
   excluded: false
 - name: gettingThroughTheDay
   path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/gettingThroughTheDay
-  enabled: false
+  enabled: true
   priority: medium
   file_patterns:
     include:
@@ -149,7 +149,7 @@ repositories:
     - '**/coverage/**'
 - name: iframe-test
   path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/iframe-test
-  enabled: false
+  enabled: true
   priority: medium
   file_patterns:
     include:
@@ -230,7 +230,7 @@ repositories:
     - '**/coverage/**'
 - name: usefulScritpts
   path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/usefulScritpts
-  enabled: false
+  enabled: true
   priority: medium
   file_patterns:
     include:
@@ -270,7 +270,7 @@ repositories:
     - '**/coverage/**'
 - name: project-config
   path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/project-config
-  enabled: false
+  enabled: true
   priority: medium
   file_patterns:
     include:
@@ -890,6 +890,46 @@ repositories:
   file_patterns: *id007
 - name: AI Book
   path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/AI Book
+  enabled: true
+  priority: medium
+  file_patterns:
+    include:
+    - '**/*.md'
+    - '**/*.txt'
+    - '**/*.py'
+    - '**/*.js'
+    - '**/*.jsx'
+    - '**/*.ts'
+    - '**/*.tsx'
+    - '**/*.dart'
+    - '**/*.json'
+    - '**/*.yaml'
+    - '**/*.yml'
+    - '**/*.toml'
+    - '**/*.sh'
+    - '**/*.sql'
+    exclude:
+    - '**/node_modules/**'
+    - '**/vendor/**'
+    - '**/ios/Pods/**'
+    - '**/.git/**'
+    - '**/venv/**'
+    - '**/__pycache__/**'
+    - '**/.pytest_cache/**'
+    - '**/.mypy_cache/**'
+    - '**/dist/**'
+    - '**/build/**'
+    - '**/target/**'
+    - '**/.next/**'
+    - '**/.nuxt/**'
+    - '**/.dart_tool/**'
+    - '**/android/.gradle/**'
+    - '**/.gradle/**'
+    - '**/archive-*/**'
+    - '**/*.lock'
+    - '**/coverage/**'
+- name: Marketing-and-Sales
+  path: /Users/liborballaty/LocalProjects/GitHubProjectsDocuments/Marketing-and-Sales
   enabled: true
   priority: medium
   file_patterns:

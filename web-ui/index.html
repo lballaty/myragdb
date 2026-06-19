@@ -7,8 +7,8 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>MyRAGDB - Hybrid Search System</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=2026.03.04.2.108.1">
-    <link rel="stylesheet" href="static/css/activity-observability.css?v=2026.01.07.2.76.0">
+    <link rel="stylesheet" href="static/css/styles.css?v=2026.06.19.2.108.2">
+    <link rel="stylesheet" href="static/css/activity-observability.css?v=2026.06.16.1">
     <link rel="stylesheet" href="static/css/cloud-llm.css?v=2026.01.08.2.83.0">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -72,6 +72,7 @@
             <button class="tab-button" data-tab="directories">Directories</button>
             <button class="tab-button" data-tab="observability">Observability</button>
             <button class="tab-button" data-tab="llm-manager">LLM Manager</button>
+            <button class="tab-button" data-tab="admin">Admin</button>
         </div>
 
         <!-- Search Tab -->
@@ -659,6 +660,40 @@
                     <button id="obs-cleanup-button" class="secondary-button">🗑️ Cleanup Old Data</button>
                 </div>
 
+                <!-- Service Status -->
+                <div id="obs-service-status" style="margin-bottom: 24px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                        <h4 style="margin: 0;">Service Status</h4>
+                        <button id="obs-start-services-btn" class="primary-button" style="padding: 6px 14px; font-size: 0.85em;" onclick="Observability.startAllServices()">
+                            ▶ Start All Services
+                        </button>
+                        <button id="obs-stop-services-btn" class="secondary-button" style="padding: 6px 14px; font-size: 0.85em; color: #fca5a5;" onclick="Observability.stopAllServices()">
+                            ■ Stop All Services
+                        </button>
+                    </div>
+                    <div id="obs-start-log" style="display:none; font-family: monospace; font-size: 0.82em; background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; max-height: 120px; overflow-y: auto; color: #94a3b8;"></div>
+                    <div class="svc-status-grid">
+                        <div class="svc-status-card" id="obs-svc-meilisearch">
+                            <div class="svc-status-name">Meilisearch</div>
+                            <div class="svc-status-role">Keyword search</div>
+                            <span class="svc-status-badge svc-status-checking" id="obs-svc-meilisearch-status">Checking…</span>
+                            <div class="svc-status-latency">Response: <span id="obs-svc-meilisearch-ms">—</span></div>
+                        </div>
+                        <div class="svc-status-card" id="obs-svc-chromadb">
+                            <div class="svc-status-name">API / ChromaDB</div>
+                            <div class="svc-status-role">Vector search (embedded in API)</div>
+                            <span class="svc-status-badge svc-status-checking" id="obs-svc-chromadb-status">Checking…</span>
+                            <div class="svc-status-latency">Response: <span id="obs-svc-chromadb-ms">—</span></div>
+                        </div>
+                        <div class="svc-status-card" id="obs-svc-mcp">
+                            <div class="svc-status-name">MCP Middleware</div>
+                            <div class="svc-status-role">LLM tool access (port 8104)</div>
+                            <span class="svc-status-badge svc-status-checking" id="obs-svc-mcp-status">Checking…</span>
+                            <div class="svc-status-latency">Response: <span id="obs-svc-mcp-ms">—</span></div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Active Alerts -->
                 <div id="obs-alerts-container" style="margin-bottom: 20px;">
                     <div class="obs-no-alerts">✅ No active alerts</div>
@@ -931,6 +966,76 @@
                 </div>
             </div>
         </div>
+
+        <!-- Admin Tab -->
+        <div id="admin-tab" class="tab-content">
+            <div class="admin-section">
+                <h3>⚙️ Admin Panel</h3>
+
+                <!-- Meilisearch Manager -->
+                <div class="meilisearch-manager">
+                    <h4>🔍 Meilisearch Database</h4>
+                    <p class="subtitle">Manage the keyword search index</p>
+
+                    <!-- Status Display -->
+                    <div class="meilisearch-status-box">
+                        <div id="meilisearch-status-display" class="status-display">
+                            <div class="status-row">
+                                <span class="status-label">Status:</span>
+                                <span id="meili-status-text" class="status-value">
+                                    <span class="spinner" style="width: 12px; height: 12px;"></span>
+                                    Checking...
+                                </span>
+                            </div>
+                            <div class="status-row" id="meili-doc-count-row" style="display: none;">
+                                <span class="status-label">Documents:</span>
+                                <span id="meili-doc-count" class="status-value">-</span>
+                            </div>
+                            <div class="status-row" id="meili-uptime-row" style="display: none;">
+                                <span class="status-label">Uptime:</span>
+                                <span id="meili-uptime" class="status-value">-</span>
+                            </div>
+                            <div class="status-row" id="meili-version-row" style="display: none;">
+                                <span class="status-label">Version:</span>
+                                <span id="meili-version" class="status-value">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Control Buttons -->
+                    <div class="meilisearch-controls">
+                        <button id="meili-start-button" class="primary-button" onclick="startMeilisearch()">
+                            ▶️ Start Meilisearch
+                        </button>
+                        <button id="meili-stop-button" class="secondary-button" onclick="stopMeilisearch()" style="display: none;">
+                            ⏹️ Stop Meilisearch
+                        </button>
+                        <button id="meili-refresh-button" class="icon-button" onclick="refreshMeilisearchStatus()" title="Refresh status">
+                            🔄 Refresh
+                        </button>
+                    </div>
+
+                    <!-- Status Message -->
+                    <div id="meili-status-message" class="status-message" style="display: none;"></div>
+
+                    <!-- Logs Display -->
+                    <div class="meilisearch-logs">
+                        <h5>Recent Logs</h5>
+                        <div id="meilisearch-logs-box" class="logs-box">
+                            <div id="meilisearch-logs" class="logs-content">
+                                <p class="logs-loading">
+                                    <span class="spinner" style="width: 12px; height: 12px;"></span>
+                                    Loading logs...
+                                </p>
+                            </div>
+                        </div>
+                        <button id="meili-logs-refresh-button" class="icon-button" onclick="refreshMeilisearchLogs()">
+                            🔄 Refresh Logs
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Confirmation Modal -->
@@ -1074,6 +1179,7 @@
     <script src="static/js/activity-monitor.js?v=2026.01.07.2.76.0"></script>
     <script src="static/js/observability.js?v=2026.01.07.2.76.0"></script>
     <script src="static/js/cloud-llm.js?v=2026.01.08.2.83.0"></script>
-    <script src="static/js/app.js?v=2026.03.04.2.108.1"></script>
+    <script src="static/js/admin.js?v=2026.06.15.1"></script>
+    <script src="static/js/app.js?v=2026.06.19.2.108.2"></script>
 </body>
 </html>

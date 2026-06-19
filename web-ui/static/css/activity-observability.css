@@ -188,6 +188,56 @@
     margin-bottom: 24px;
 }
 
+/* Service status cards — distinct from obs-stat-card which is for numbers */
+.svc-status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.svc-status-card {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border: 1px solid #475569;
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.svc-status-name {
+    font-size: 1em;
+    font-weight: 600;
+    color: #f1f5f9;
+}
+
+.svc-status-role {
+    font-size: 0.78em;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.svc-status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: 700;
+    width: fit-content;
+    letter-spacing: 0.3px;
+}
+
+.svc-status-checking { background: #334155; color: #94a3b8; }
+.svc-status-up       { background: #065f46; color: #6ee7b7; }
+.svc-status-down     { background: #7f1d1d; color: #fca5a5; }
+
+.svc-status-latency {
+    font-size: 0.78em;
+    color: #64748b;
+}
+
 .obs-stat-card {
     background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
     border: 1px solid #475569;

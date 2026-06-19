@@ -9,6 +9,7 @@ import time
 import asyncio
 import threading
 import subprocess
+import yaml
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
@@ -84,6 +85,7 @@ from myragdb.api.routes.directories import router as directories_router
 from myragdb.api.routes.activities import router as activities_router
 from myragdb.api.routes.observability import router as observability_router
 from myragdb.api.routes.llm_config import router as llm_config_router
+from myragdb.api.routes.meilisearch import router as meilisearch_router
 from myragdb.api.auth_routes import router as auth_router
 from myragdb.auth import AuthenticationManager
 from myragdb.agent.skills import (
@@ -340,6 +342,9 @@ app.include_router(auth_router)
 # Register LLM configuration routes
 app.include_router(llm_config_router)
 
+# Register Meilisearch management routes
+app.include_router(meilisearch_router)
+
 # Register agent orchestration routes
 try:
     agent_orch = get_agent_orchestrator()
@@ -537,37 +542,73 @@ async def health_check():
     Health check endpoint with dependency checks.
 
     Business Purpose: Allows monitoring systems to verify service health
-    and detect if critical dependencies (Meilisearch, ChromaDB, LLM) are unavailable.
+    and detect if critical dependencies (Meilisearch, ChromaDB, MCP, LLM) are unavailable.
+    Returns per-service status for dashboard display.
     """
+    import time
+    import urllib.request
+
     try:
         # Check if search engines can be initialized
         keyword_indexer, vector_indexer, hybrid_engine = get_search_engines()
 
-        # Try to verify Meilisearch is responding
+        # Check Meilisearch via direct HTTP to avoid stale keep-alive connection
         try:
-            keyword_indexer.get_document_count()
+            t0 = time.monotonic()
+            urllib.request.urlopen("http://localhost:7700/health", timeout=2).read()
+            meilisearch_ms = round((time.monotonic() - t0) * 1000)
             meilisearch_ok = True
         except Exception:
+            meilisearch_ms = None
             meilisearch_ok = False
 
-        # Try to verify ChromaDB is responding
+        # Try to verify ChromaDB is responding, record response time
         try:
+            t0 = time.monotonic()
             vector_indexer.get_document_count()
+            chromadb_ms = round((time.monotonic() - t0) * 1000)
             chromadb_ok = True
         except Exception:
+            chromadb_ms = None
             chromadb_ok = False
+
+        # Check MCP middleware (port 8104) — optional service
+        try:
+            t0 = time.monotonic()
+            req = urllib.request.Request("http://localhost:8104", method="GET")
+            with urllib.request.urlopen(req, timeout=2) as resp:
+                resp.read()
+            mcp_ms = round((time.monotonic() - t0) * 1000)
+            mcp_ok = True
+        except Exception:
+            mcp_ms = None
+            mcp_ok = False
 
         # Check if cloud LLM is configured and available
         try:
             session_mgr, cred_store, _, _ = get_llm_services()
             session = session_mgr.get_active_session()
-
-            # LLM is healthy if configured and valid
             llm_ok = session is not None and session.health_check_passed
             llm_configured = session is not None
         except Exception:
             llm_ok = False
             llm_configured = False
+
+        # Build per-service status dict for dashboard
+        services = {
+            "meilisearch": {
+                "status": "operational" if meilisearch_ok else "unavailable",
+                "response_time_ms": meilisearch_ms
+            },
+            "chromadb": {
+                "status": "operational" if chromadb_ok else "unavailable",
+                "response_time_ms": chromadb_ms
+            },
+            "mcp_middleware": {
+                "status": "operational" if mcp_ok else "unavailable",
+                "response_time_ms": mcp_ms
+            }
+        }
 
         # Build status message with all components
         issues = []
@@ -583,6 +624,10 @@ async def health_check():
         else:
             issues.append("ChromaDB unavailable")
 
+        if mcp_ok:
+            components.append("MCP")
+        # MCP is optional — not an issue if absent
+
         if llm_configured:
             components.append(f"LLM ({session.provider_type.value})")
             if not llm_ok:
@@ -590,34 +635,28 @@ async def health_check():
         else:
             components.append("LLM (not configured)")
 
-        # Determine overall health
+        # Determine overall health — search (Meilisearch + ChromaDB) is critical
         search_ok = meilisearch_ok and chromadb_ok
 
         if search_ok:
             if llm_ok or not llm_configured:
-                # Search is healthy, LLM is either healthy or not critical
                 return HealthResponse(
                     status="healthy",
-                    message=f"MyRAGDB service is healthy ({', '.join(components)})"
+                    message=f"MyRAGDB service is healthy ({', '.join(components)})",
+                    services=services
                 )
             else:
-                # Search is healthy but LLM is unhealthy
                 return HealthResponse(
                     status="degraded",
-                    message=f"MyRAGDB service degraded: {', '.join(issues)}"
+                    message=f"MyRAGDB service degraded: {', '.join(issues)}",
+                    services=services
                 )
         else:
-            # Search has issues
-            if issues:
-                return HealthResponse(
-                    status="unhealthy",
-                    message=f"MyRAGDB service unhealthy: {', '.join(issues)}"
-                )
-            else:
-                return HealthResponse(
-                    status="unhealthy",
-                    message="MyRAGDB service unhealthy: Critical components unavailable"
-                )
+            return HealthResponse(
+                status="unhealthy",
+                message=f"MyRAGDB service unhealthy: {', '.join(issues) if issues else 'Critical components unavailable'}",
+                services=services
+            )
     except Exception as e:
         return HealthResponse(
             status="unhealthy",
@@ -680,6 +719,135 @@ async def restart_server(background_tasks: BackgroundTasks):
         "message": "Server restart initiated. Server will shutdown in 1 second.",
         "pid": current_pid
     }
+
+
+@app.post("/admin/stop-services")
+async def stop_services():
+    """
+    Stop Meilisearch and MCP middleware. API server stays running (it is the control plane).
+    Kills ALL matching processes and cleans up stale PID files.
+    """
+    import signal as _signal
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parents[3]
+    results = {}
+    current_pid = os.getpid()
+
+    def _kill_all(pattern, pid_file=None):
+        killed = []
+        try:
+            out = subprocess.check_output(["pgrep", "-f", pattern], text=True).strip()
+            for pid in [int(p) for p in out.splitlines() if p.strip()]:
+                if pid != current_pid:
+                    try:
+                        os.kill(pid, _signal.SIGTERM)
+                        killed.append(pid)
+                    except ProcessLookupError:
+                        pass
+        except subprocess.CalledProcessError:
+            pass
+        if pid_file:
+            pid_path = repo_root / pid_file
+            if pid_path.exists():
+                pid_path.unlink(missing_ok=True)
+        return killed
+
+    pids = _kill_all("mcp_server.http_middleware", ".middleware.pid")
+    results["mcp_middleware"] = f"stopped {pids}" if pids else "not running"
+
+    pids = _kill_all("meilisearch --db-path", ".meilisearch.pid")
+    results["meilisearch"] = f"stopped {pids}" if pids else "not running"
+
+    return results
+
+
+@app.post("/admin/start-services")
+async def start_services():
+    """
+    Start Meilisearch and MCP middleware. Cleans up any duplicate/stale
+    instances first before launching fresh ones.
+    """
+    import urllib.request
+    import shutil
+    import signal as _signal
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parents[3]
+    venv_python = repo_root / "venv" / "bin" / "python"
+    python_bin = str(venv_python) if venv_python.exists() else "python3"
+    env = {**os.environ, "PYTHONPATH": str(repo_root)}
+    current_pid = os.getpid()
+    results = {}
+
+    def _kill_all_except_self(pattern):
+        try:
+            out = subprocess.check_output(["pgrep", "-f", pattern], text=True).strip()
+            for pid in [int(p) for p in out.splitlines() if p.strip()]:
+                if pid != current_pid:
+                    try:
+                        os.kill(pid, _signal.SIGTERM)
+                    except ProcessLookupError:
+                        pass
+        except subprocess.CalledProcessError:
+            pass
+
+    # --- Meilisearch: kill duplicates then start if not responding ---
+    try:
+        urllib.request.urlopen("http://localhost:7700/health", timeout=2).read()
+        # Responsive — kill any extra instances beyond the one answering
+        try:
+            out = subprocess.check_output(["pgrep", "-f", "meilisearch --db-path"], text=True).strip()
+            pids = [int(p) for p in out.splitlines() if p.strip()]
+            if len(pids) > 1:
+                for pid in pids[1:]:
+                    try:
+                        os.kill(pid, _signal.SIGTERM)
+                    except ProcessLookupError:
+                        pass
+                results["meilisearch"] = f"running (cleaned {len(pids)-1} duplicate(s))"
+            else:
+                results["meilisearch"] = "already_running"
+        except subprocess.CalledProcessError:
+            results["meilisearch"] = "already_running"
+    except Exception:
+        # Not responding — kill any stale instances and start fresh
+        _kill_all_except_self("meilisearch --db-path")
+        meili_bin = shutil.which("meilisearch")
+        if meili_bin:
+            data_dir = str(repo_root / "data" / "meilisearch")
+            Path(data_dir).mkdir(parents=True, exist_ok=True)
+            subprocess.Popen(
+                [
+                    meili_bin,
+                    "--db-path", data_dir,
+                    "--master-key", "myragdb_dev_key_2026",
+                    "--max-indexing-memory", "34359738368",
+                    "--max-indexing-threads", "10",
+                    "--http-addr", "127.0.0.1:7700",
+                    "--log-level", "info",
+                ],
+                stdout=open("/tmp/meilisearch.log", "a"),
+                stderr=subprocess.STDOUT,
+            )
+            results["meilisearch"] = "started"
+        else:
+            results["meilisearch"] = "error: meilisearch binary not found"
+
+    # --- MCP middleware: kill all existing then start fresh ---
+    _kill_all_except_self("mcp_server.http_middleware")
+    import time as _time
+    _time.sleep(0.3)  # brief pause for port to clear
+    subprocess.Popen(
+        [python_bin, "-m", "mcp_server.http_middleware"],
+        cwd=str(repo_root),
+        env=env,
+        stdout=open("/tmp/mcp_middleware.log", "a"),
+        stderr=subprocess.STDOUT,
+    )
+    results["mcp_middleware"] = "started"
+
+    return results
 
 
 @app.get("/logs")
@@ -2174,18 +2342,77 @@ async def stop_indexing(request: StopIndexingRequest):
 # LLM Management Endpoints
 # ============================================================================
 
-LLM_MODELS = [
-    {"id": "qwen-coder-7b", "name": "Qwen Coder 7B", "port": 8085, "category": "best"},
-    {"id": "qwen2.5-32b", "name": "Qwen 2.5 32B", "port": 8084, "category": "best"},
-    {"id": "deepseek-r1-qwen-32b", "name": "DeepSeek R1 Qwen 32B", "port": 8092, "category": "best"},
-    {"id": "llama-3.1-8b", "name": "Llama 3.1 8B", "port": 8087, "category": "best"},
-    {"id": "llama-4-scout-17b", "name": "Llama 4 Scout 17B", "port": 8088, "category": "best"},
-    {"id": "hermes-3-llama-8b", "name": "Hermes 3 Llama 8B", "port": 8086, "category": "best"},
-    {"id": "mistral-7b", "name": "Mistral 7B", "port": 8083, "category": "limited"},
-    {"id": "mistral-small-24b", "name": "Mistral Small 24B", "port": 8089, "category": "limited"},
-    {"id": "phi3", "name": "Phi-3", "port": 8081, "category": "limited"},
-    {"id": "smollm3", "name": "SmolLM3", "port": 8082, "category": "limited"},
-]
+_LLAMACPP_CONFIG_PATH = os.path.expanduser(
+    "~/Library/Application Support/llamaCPPManager/config.yaml"
+)
+
+_DISPLAY_NAMES = {
+    "phi3": "Phi-3",
+    "smollm3": "SmolLM3",
+    "mistral": "Mistral 7B",
+    "qwen2.5-32b": "Qwen 2.5 32B",
+    "qwen-coder-7b": "Qwen Coder 7B",
+    "qwen3-0.6b": "Qwen3 0.6B",
+    "hermes-3-llama-8b": "Hermes 3 Llama 8B",
+    "llama-3.1-8b": "Llama 3.1 8B",
+    "llama-4-scout-17b": "Llama 4 Scout 17B",
+    "mistral-small-24b": "Mistral Small 24B",
+    "deepseek-r1-qwen-32b": "DeepSeek R1 Qwen 32B",
+    "gemma-3-270m": "Gemma 3 270M",
+    "gemma-270m-compliance": "Gemma 270M Compliance",
+    "mistral-05b-compliance": "Mistral 0.5B Compliance",
+    "gemma-270m-compliance-mlx": "Gemma 270M Compliance MLX",
+    "mistral-05b-compliance-mlx": "Mistral 0.5B Compliance MLX",
+    "gemma-3-27b-mlx": "Gemma 3 27B MLX",
+    "gemma-3-27b": "Gemma 3 27B",
+    "mlx-gemma-3-1b": "MLX Gemma 3 1B",
+    "mlx-gemma4-31b": "MLX Gemma 4 31B",
+    "diffusiongemma-26b": "Diffusion Gemma 26B",
+}
+
+
+def _load_llm_models_from_config() -> list:
+    """Load LLM model list from llamaCPPManager config.yaml as the single source of truth."""
+    try:
+        with open(_LLAMACPP_CONFIG_PATH) as f:
+            cfg = yaml.safe_load(f)
+    except Exception as e:
+        logger.warning(f"Could not load llamaCPPManager config at {_LLAMACPP_CONFIG_PATH}: {e}")
+        return []
+
+    agentic_ids = set()
+    for group in cfg.get("model_groups", {}).values():
+        agentic_ids.update(group.get("members", []))
+
+    models = []
+    for m in cfg.get("models", []):
+        model_id = m["name"]
+        deployment_type = m.get("deployment_type", "native")
+
+        if model_id in agentic_ids:
+            category = "agentic"
+        elif "compliance" in model_id:
+            category = "compliance"
+        elif deployment_type == "mlx":
+            category = "mlx"
+        elif any(x in model_id for x in ["32b", "27b", "31b", "26b", "24b", "17b"]):
+            category = "large"
+        else:
+            category = "standard"
+
+        models.append({
+            "id": model_id,
+            "name": _DISPLAY_NAMES.get(model_id, model_id.replace("-", " ").title()),
+            "port": m["port"],
+            "category": category,
+            "deployment_type": deployment_type,
+        })
+
+    logger.info(f"Loaded {len(models)} LLM models from llamaCPPManager config")
+    return models
+
+
+LLM_MODELS = _load_llm_models_from_config()
 
 
 def check_llm_running(port: int) -> bool:
@@ -2277,7 +2504,7 @@ async def start_llm(request: StartLLMRequest):
             "mode": "tools"
         }
     """
-    script_path = "/Users/liborballaty/llms/restart-llm-interactive.sh"
+    _LLAMACPP_CLI = "/opt/homebrew/bin/llamacpp-manager"
 
     # Validate model_id
     valid_models = [m["id"] for m in LLM_MODELS]
@@ -2290,66 +2517,77 @@ async def start_llm(request: StartLLMRequest):
             log_file=None
         )
 
-    # Validate mode
-    valid_modes = ["basic", "tools", "performance", "extended"]
-    if request.mode not in valid_modes:
-        return StartLLMResponse(
-            status="error",
-            message=f"Invalid mode '{request.mode}'. Valid modes: {', '.join(valid_modes)}",
-            model_id=request.model_id,
-            pid=None,
-            log_file=None
-        )
+    model_info = next((m for m in LLM_MODELS if m["id"] == request.model_id), None)
+    log_file = f"/Users/liborballaty/llms/logs/{request.model_id}.log"
 
     try:
-        # Execute the restart script
-        result = subprocess.run(
-            [script_path, request.model_id, request.mode],
-            capture_output=True,
-            text=True,
-            timeout=30
+        # Use Popen so llamacpp-manager can block waiting for the port while we
+        # read the first output line (which carries the PID) and return immediately.
+        # The process keeps loading in the background regardless.
+        proc = subprocess.Popen(
+            [_LLAMACPP_CLI, "start", request.model_id],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True
         )
 
-        # Extract PID from output
+        # Read lines for up to 15s to capture "started ... pid=N ..." or an error.
+        import threading
+        first_lines = []
+        def _read():
+            try:
+                for line in proc.stdout:
+                    first_lines.append(line.rstrip())
+                    if "pid=" in line or line.startswith("error"):
+                        break
+            except Exception:
+                pass
+        t = threading.Thread(target=_read, daemon=True)
+        t.start()
+        t.join(timeout=15)
+
+        output = "\n".join(first_lines)
+
+        # Parse PID from: "started <name> pid=<pid> port=<port> (<type>)"
         pid = None
-        for line in result.stdout.split('\n'):
-            if "Started with PID:" in line:
-                pid_str = line.split("Started with PID:")[1].strip()
-                try:
-                    pid = int(pid_str)
-                except ValueError:
-                    pass
+        for line in first_lines:
+            for token in line.split():
+                if token.startswith("pid="):
+                    try:
+                        pid = int(token.split("=")[1])
+                    except ValueError:
+                        pass
 
-        # Construct log file path
-        log_file = f"/Users/liborballaty/llms/logs/{request.model_id}-{request.mode}.log"
+        # Detect hard errors (port in use, model not found, etc.)
+        if any(line.startswith("error") for line in first_lines):
+            proc.terminate()
+            err = output.strip()
+            return StartLLMResponse(
+                status="error",
+                message=f"llamacpp-manager start failed: {err}",
+                model_id=request.model_id,
+                pid=None,
+                log_file=log_file
+            )
 
-        # Check if process is actually running
-        model_info = next((m for m in LLM_MODELS if m["id"] == request.model_id), None)
+        display_name = model_info['name'] if model_info else request.model_id
         if model_info and check_llm_running(model_info["port"]):
             return StartLLMResponse(
                 status="success",
-                message=f"{model_info['name']} started successfully in {request.mode} mode",
+                message=f"{display_name} started successfully",
                 model_id=request.model_id,
                 pid=pid,
                 log_file=log_file
             )
         else:
+            # Process is spawned and loading — frontend polls /llm/models
             return StartLLMResponse(
-                status="error",
-                message=f"Failed to start {request.model_id}. Check logs: {log_file}",
+                status="starting",
+                message=f"{display_name} is loading… poll /llm/models until status = running",
                 model_id=request.model_id,
                 pid=pid,
                 log_file=log_file
             )
-
-    except subprocess.TimeoutExpired:
-        return StartLLMResponse(
-            status="error",
-            message=f"Timeout starting {request.model_id}",
-            model_id=request.model_id,
-            pid=None,
-            log_file=None
-        )
     except Exception as e:
         logger.error(f"Error starting LLM {request.model_id}: {e}")
         return StartLLMResponse(
@@ -2401,47 +2639,37 @@ async def stop_llm(request: StopLLMRequest):
 
     port = model_info["port"]
 
+    _LLAMACPP_CLI = "/opt/homebrew/bin/llamacpp-manager"
+
     try:
-        # Find process using the port (same method as restart-llm-interactive.sh)
         result = subprocess.run(
-            ["lsof", "-ti", f":{port}"],
+            [_LLAMACPP_CLI, "stop", request.model_id],
             capture_output=True,
             text=True,
-            timeout=5
+            timeout=15
         )
 
-        if result.returncode == 0 and result.stdout.strip():
-            pid = int(result.stdout.strip())
+        output = result.stdout.strip()
 
-            # Kill the process
-            subprocess.run(
-                ["kill", str(pid)],
-                timeout=5
-            )
-
-            # Wait a moment for process to stop
-            import time
-            time.sleep(1)
-
-            # Verify it stopped
-            if not check_llm_running(port):
-                logger.info(f"Stopped LLM {request.model_id} (PID: {pid})")
-                return StopLLMResponse(
-                    status="success",
-                    message=f"{model_info['name']} stopped successfully (PID: {pid})",
-                    model_id=request.model_id
-                )
-            else:
-                return StopLLMResponse(
-                    status="error",
-                    message=f"Failed to stop {model_info['name']}. Process may still be running.",
-                    model_id=request.model_id
-                )
-        else:
-            # No process found on port
+        if result.returncode == 0:
+            logger.info(f"Stopped LLM {request.model_id}: {output}")
             return StopLLMResponse(
                 status="success",
-                message=f"{model_info['name']} is not running (no process found on port {port})",
+                message=f"{model_info['name']} stopped successfully",
+                model_id=request.model_id
+            )
+        else:
+            err = (result.stderr or result.stdout).strip()
+            # "not running" is not an error from the user's perspective
+            if "not running" in err:
+                return StopLLMResponse(
+                    status="success",
+                    message=f"{model_info['name']} is not running",
+                    model_id=request.model_id
+                )
+            return StopLLMResponse(
+                status="error",
+                message=f"llamacpp-manager stop failed: {err}",
                 model_id=request.model_id
             )
 
