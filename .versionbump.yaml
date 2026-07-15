@@ -1,0 +1,20 @@
+# File: .versionbump.yaml
+# Description: Declares embedded version literal locations for ~/.ai-dev-dotfiles/tools/version-bump.py.
+#              VERSION (repo root) is the sole source of truth; version-bump.py patches every literal
+#              below to match it. src/myragdb/version.py reads VERSION directly in source checkouts,
+#              so only its installed-use fallback literal is patched here.
+#              Conforms to ~/.ai-dev-dotfiles/tools/version-bump.schema.json.
+# Author: Libor Ballaty <libor@arionetworks.com>
+# Created: 2026-07-15
+# Reference: ~/.ai-dev-dotfiles/repo-specs/release-engineering/CLAUDE.md §1 (Versioning — normative)
+
+literals:
+  - file: setup.py
+    pattern: 'version="(?P<version>[^"]+)"'
+  - file: mcp_server/__init__.py
+    pattern: '__version__ = "(?P<version>[^"]+)"'
+  - file: src/myragdb/version.py
+    pattern: '_FALLBACK_VERSION = "(?P<version>[^"]+)"'
+
+tag:
+  create: false  # tagging is optional per the release-engineering spec

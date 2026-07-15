@@ -9,4 +9,4 @@ MCP Server for MyRAGDB.
 Exposes MyRAGDB search functionality through the Model Context Protocol.
 """
 
-__version__ = "0.1.0"
+__version__ = "2026.07.15.1"

@@ -10,7 +10,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="myragdb",
-    version="0.1.0",
+    version="2026.07.15.1",
     author="Libor Ballaty",
     author_email="libor@arionetworks.com",
     description="Hybrid search system combining Keyword (Meilisearch) and vector embeddings for code/documentation discovery",
